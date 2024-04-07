@@ -1,0 +1,2 @@
+@openzeppelin-contracts/=lib/openzeppelin-contracts/
+@safe/=lib/safe-smart-account/contracts/
