@@ -8,11 +8,11 @@ import {BokkyPooBahsDateTimeLibrary} from "src/calendar/BokkyPooBahsDateTimeLibr
 contract TimeUnitTest is Test {
     using BokkyPooBahsDateTimeLibrary for *;
 
-    function testHourNeverGt23(uint256 day) public {
+    function testHourNeverGt23(uint256 day) public pure {
         assertLt(day.getHour(), 24, "Hour should be less than 24");
     }
 
-    function testDayRange(uint256 day) public {
+    function testDayRange(uint256 day) public pure {
         assertLt(
             day.getDayOfWeek(),
             8,
