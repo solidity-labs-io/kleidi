@@ -1,4 +1,4 @@
-pragma solidity 0.8.19;
+pragma solidity 0.8.25;
 
 import {BytesHelper} from "src/BytesHelper.sol";
 
@@ -140,6 +140,14 @@ contract CalldataList {
         uint16[] memory endIndexes,
         bytes[] memory datas
     ) internal {
+        require(
+            contractAddresses.length == selectors.length &&
+                selectors.length == startIndexes.length &&
+                startIndexes.length == endIndexes.length &&
+                endIndexes.length == datas.length,
+            "Array lengths must be equal"
+        );
+
         for (uint256 i = 0; i < contractAddresses.length; i++) {
             _addCalldataCheck(
                 contractAddresses[i],
@@ -176,6 +184,31 @@ contract CalldataList {
             endIndex,
             data
         );
+    }
+
+    function _removeAllCalldataChecks(
+        address contractAddress,
+        bytes4 selector
+    ) internal {
+        Index[] storage calldataChecks = calldataList[contractAddress][selector]
+            .calldataChecks;
+
+        require(calldataChecks.length > 0, "No calldata checks to remove");
+
+        /// delete all calldata in the list for the given contract and selector
+        while (calldataChecks.length != 0) {
+            emit CalldataRemoved(
+                contractAddress,
+                selector,
+                calldataChecks[0].startIndex,
+                calldataChecks[0].endIndex,
+                calldataChecks[0].data
+            );
+            calldataChecks.pop();
+        }
+
+        /// delete the calldata list for the given contract and selector
+        delete calldataList[contractAddress][selector];
     }
 
     /// @notice remove a calldata check by calldata
