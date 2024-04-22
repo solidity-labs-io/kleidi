@@ -11,9 +11,28 @@ contract TimeRestrictedUnitTest is Test {
     TimeRestricted public restricted;
     address public timelock;
 
+    address[] public owners;
+
+    address[] public modules0;
+
+    address[] public modules1;
+
+    /// @notice storage slot for the guard
+    uint256 internal constant GUARD_STORAGE_SLOT =
+        0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8;
+
     function setUp() public {
         restricted = new TimeRestricted();
         vm.etch(timelock, hex"FF");
+        owners = new address[](0);
+
+        for (uint256 i = 0; i < 10; i++) {
+            modules0.push(address(uint160(uint256(i + 100))));
+        }
+
+        for (uint256 i = 0; i < 5; i++) {
+            modules1.push(address(uint160(uint256(i + 110))));
+        }
     }
 
     function testEnableSafe() public {
@@ -454,7 +473,260 @@ contract TimeRestrictedUnitTest is Test {
         );
     }
 
-    function testNoOpCheckAfterExecution() public view {
+    function testCheckOwnersFailsRemoved() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        vm.prank(timelock);
+        restricted.addTimeRange(address(this), 1, 0, 1);
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+        owners = new address[](0);
+
+        vm.expectRevert("TimeRestricted: owners length changed");
         restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckOwnersFailsSwap() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        vm.prank(timelock);
+        restricted.addTimeRange(address(this), 1, 0, 1);
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+        owners = new address[](1);
+        owners[0] = address(100000001);
+
+        vm.expectRevert("TimeRestricted: owner not found");
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckAfterExecutionNoOpFailure() public {
+        restricted.checkAfterExecution(bytes32(0), false);
+    }
+
+    function testCheckAfterExecutionGuardChanged() public {
+        /// without mocking the value in the guard slot, it returns address 0
+        /// thus failing the check and causing the expected revert
+        vm.expectRevert("TimeRestricted: cannot remove guard");
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckAfterExecutionNoFailure() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        vm.prank(timelock);
+        restricted.addTimeRange(address(this), 1, 0, 1);
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckAfterExecutionModulesChangedInPlace() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        vm.prank(timelock);
+        restricted.addTimeRange(address(this), 1, 0, 1);
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+
+        modules1[4] = address(type(uint160).max);
+
+        vm.expectRevert("TimeRestricted: value mismatch");
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckAfterExecutionModulesCountChanged() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        vm.prank(timelock);
+        restricted.addTimeRange(address(this), 1, 0, 1);
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+
+        modules1.pop();
+
+        vm.expectRevert("TimeRestricted: value mismatch");
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    /// mocks to allow tests to pass
+
+    function getOwners() public view returns (address[] memory) {
+        return owners;
+    }
+
+    function getModulesPaginated(
+        address start,
+        uint256
+    ) public view returns (address[] memory, address) {
+        uint256 callNumber;
+
+        /// call 1 returns 10 addresses
+        if (start == address(1)) {
+            return (modules0, modules0[9]);
+        } else {
+            return (modules1, address(1));
+        }
+    }
+
+    function getStorageAt(
+        uint256 offset,
+        uint256 length
+    ) public view returns (bytes memory) {
+        bytes memory result = new bytes(length * 32);
+        for (uint256 index = 0; index < length; index++) {
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                let word := sload(add(offset, index))
+                mstore(add(add(result, 0x20), mul(index, 0x20)), word)
+            }
+        }
+        return result;
     }
 }
