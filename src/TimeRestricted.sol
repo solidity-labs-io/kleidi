@@ -276,12 +276,6 @@ contract TimeRestricted is BaseGuard {
         _traverseModules(SENTINEL_MODULES, tstoreValue, tstoreValue);
     }
 
-    function tstoreTrue(uint256 slot) internal {
-        assembly {
-            tstore(slot, 1)
-        }
-    }
-
     function tstoreValue(uint256 slot, uint256 value) internal {
         assembly {
             tstore(slot, value)
