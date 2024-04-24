@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.9.0) (governance/TimelockController.sol)
 
 pragma solidity ^0.8.0;
 
-import {AccessControlEnumerable} from "@openzeppelin-contracts/contracts/access/AccessControlEnumerable.sol";
 import {IERC1155Receiver} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {IERC721Receiver} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC165, ERC165} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import {EnumerableSet} from "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
-import {IERC165} from "@openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {Safe} from "@safe/Safe.sol";
 
 import {CalldataList} from "src/CalldataList.sol";
@@ -42,36 +40,31 @@ import {ConfigurablePauseGuardian} from "src/guardian/ConfigurablePauseGuardian.
  * By default, this contract is self administered, meaning administration tasks
  * have to go through the timelock process. The proposer (resp executor) role
  * is in charge of proposing (resp executing) operations. A common use case is
- * to position this {TimelockController} as the owner of a smart contract, with
+ * to position this {Timelock} as the owner of a smart contract, with
  * a multisig or a DAO as the sole proposer.
  *
  * _Available since v3.3._
  */
-contract TimelockController is
+contract Timelock is
     ConfigurablePauseGuardian,
-    AccessControlEnumerable,
     IERC1155Receiver,
     IERC721Receiver,
-    CalldataList
+    CalldataList,
+    ERC165
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
-
-    /// @notice role that can revoke all other roles
-    bytes32 public constant TIMELOCK_ADMIN_ROLE =
-        keccak256("TIMELOCK_ADMIN_ROLE");
-
-    /// @notice role that can execute timelocked operations, if no executor
-    /// role is set, anyone can execute timelocked operations.
-    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
 
     /// @notice timestamp indicating that an operation is done
     uint256 internal constant _DONE_TIMESTAMP = uint256(1);
 
-    /// @notice mapping of proposal id to execution time
-    mapping(bytes32 proposalId => uint256 executionTime) public timestamps;
+    /// @notice minimum delay for timelocked operations
+    uint256 public constant MIN_DELAY = 1 days;
 
-    /// @notice store list of all live proposals, remove from set once executed or cancelled
-    EnumerableSet.Bytes32Set private _liveProposals;
+    /// @notice maximum delay for timelocked operations
+    uint256 public constant MAX_DELAY = 30 days;
+
+    /// @notice the safe address that governs this timelock
+    address public immutable safe;
 
     /// @notice minimum delay for all timelock proposals
     uint256 public minDelay;
@@ -80,14 +73,11 @@ contract TimelockController is
     /// expired if it has not been executed.
     uint256 public expirationPeriod;
 
-    /// @notice the safe address that governs this timelock
-    address public immutable safe;
+    /// @notice store list of all live proposals, remove from set once executed or cancelled
+    EnumerableSet.Bytes32Set private _liveProposals;
 
-    /// @notice minimum delay for timelocked operations
-    uint256 public constant MIN_DELAY = 1 days;
-
-    /// @notice maximum delay for timelocked operations
-    uint256 public constant MAX_DELAY = 30 days;
+    /// @notice mapping of proposal id to execution time
+    mapping(bytes32 proposalId => uint256 executionTime) public timestamps;
 
     /// @notice Emitted when a call is scheduled as part of operation `id`.
     /// @param id unique identifier for the operation
@@ -138,7 +128,6 @@ contract TimelockController is
     /// @param _expirationPeriod timelocked actions expiration period
     /// @param _pauser address that can pause the contract
     /// @param _pauseDuration duration the contract can be paused for
-    /// @param executors accounts to be granted executor role
     /// @param contractAddresses accounts that will have calldata whitelisted
     /// @param selector function selectors to be whitelisted
     /// @param startIndex start index of the calldata to be whitelisted
@@ -150,7 +139,6 @@ contract TimelockController is
         uint256 _expirationPeriod,
         address _pauser,
         uint128 _pauseDuration,
-        address[] memory executors,
         address[] memory contractAddresses,
         bytes4[] memory selector,
         uint16[] memory startIndex,
@@ -159,20 +147,9 @@ contract TimelockController is
     ) {
         safe = _safe;
 
-        _setRoleAdmin(TIMELOCK_ADMIN_ROLE, TIMELOCK_ADMIN_ROLE);
-        _setRoleAdmin(EXECUTOR_ROLE, TIMELOCK_ADMIN_ROLE);
-
-        /// self administration
-        _setupRole(TIMELOCK_ADMIN_ROLE, address(this));
-
-        // register executors
-        for (uint256 i = 0; i < executors.length; ++i) {
-            _setupRole(EXECUTOR_ROLE, executors[i]);
-        }
-
         require(
-            minDelay >= MIN_DELAY && minDelay <= MAX_DELAY,
-            "TimelockController: delay out of bounds"
+            _minDelay >= MIN_DELAY && _minDelay <= MAX_DELAY,
+            "Timelock: delay out of bounds"
         );
 
         minDelay = _minDelay;
@@ -180,7 +157,7 @@ contract TimelockController is
 
         require(
             _expirationPeriod >= MIN_DELAY,
-            "TimelockController: expiry period too short"
+            "Timelock: expiry period too short"
         );
 
         expirationPeriod = _expirationPeriod;
@@ -204,32 +181,18 @@ contract TimelockController is
     /// ---------------------------------------------------------------
     /// ---------------------------------------------------------------
 
-    /// @dev Modifier to make a function callable only by a certain role. In
-    /// addition to checking the sender's role, `address(0)` 's role is also
-    /// considered. Granting a role to `address(0)` is equivalent to enabling
-    /// this role for everyone.
-    modifier onlyRoleOrOpenRole(bytes32 role) {
-        if (!hasRole(role, address(0))) {
-            _checkRole(role, _msgSender());
-        }
-        _;
-    }
-
     /// @notice allows only current safe owners to be able to call the function
     modifier onlySafeOwner() {
         require(
             Safe(payable(safe)).isOwner(msg.sender),
-            "TimelockController: caller is not the safe owner"
+            "Timelock: caller is not the safe owner"
         );
         _;
     }
 
     /// @notice allows only the safe to call the function
     modifier onlySafe() {
-        require(
-            msg.sender == safe,
-            "TimelockController: caller is not the safe"
-        );
+        require(msg.sender == safe, "Timelock: caller is not the safe");
         _;
     }
 
@@ -237,7 +200,7 @@ contract TimelockController is
     modifier onlyTimelock() {
         require(
             msg.sender == address(this),
-            "TimelockController: caller is not the timelock"
+            "Timelock: caller is not the timelock"
         );
         _;
     }
@@ -250,41 +213,37 @@ contract TimelockController is
 
     /// @notice returns all currently non cancelled and non-executed proposals
     /// some proposals may not be able to be executed if they have passed the expiration period
-    function getAllProposals() public view returns (bytes32[] memory) {
+    function getAllProposals() external view returns (bytes32[] memory) {
         return _liveProposals.values();
     }
 
+    /// TODO test transferring NFT's into this contract
     /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(
         bytes4 interfaceId
-    )
-        public
-        view
-        virtual
-        override(IERC165, AccessControlEnumerable)
-        returns (bool)
-    {
+    ) public view override(IERC165, ERC165) returns (bool) {
         return
             interfaceId == type(IERC1155Receiver).interfaceId ||
+            interfaceId == type(IERC721Receiver).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
     /// @dev Returns whether an id correspond to a registered operation. This
     /// includes both Pending, Ready and Done operations.
-    function isOperation(bytes32 id) public view virtual returns (bool) {
+    function isOperation(bytes32 id) public view returns (bool) {
         return getTimestamp(id) > 0;
     }
 
     /// @dev Returns whether an operation is pending or not.
     /// Note that a "pending" operation may also be "ready".
-    function isOperationPending(bytes32 id) public view virtual returns (bool) {
+    function isOperationPending(bytes32 id) external view returns (bool) {
         return getTimestamp(id) > _DONE_TIMESTAMP;
     }
 
     /// @dev Returns whether an operation is ready for execution.
     /// Note that a "ready" operation is also "pending".
     /// cannot be executed after the expiry period.
-    function isOperationReady(bytes32 id) public view virtual returns (bool) {
+    function isOperationReady(bytes32 id) public view returns (bool) {
         uint256 timestamp = getTimestamp(id);
         return
             timestamp > _DONE_TIMESTAMP &&
@@ -293,35 +252,45 @@ contract TimelockController is
     }
 
     /// @dev Returns whether an operation is done or not.
-    function isOperationDone(bytes32 id) public view virtual returns (bool) {
+    function isOperationDone(bytes32 id) public view returns (bool) {
         return getTimestamp(id) == _DONE_TIMESTAMP;
     }
 
     /// @dev Returns the timestamp at which an operation becomes ready (0 for
     /// unset operations, 1 for done operations).
-    function getTimestamp(bytes32 id) public view virtual returns (uint256) {
+    function getTimestamp(bytes32 id) public view returns (uint256) {
         return timestamps[id];
     }
 
     /// @dev Returns the identifier of an operation containing a single transaction.
+    /// @param target the address of the contract to call
+    /// @param value the value in native tokens to send in the call
+    /// @param data the calldata to send in the call
+    /// @param predecessor the id of the predecessor operation
+    /// @param salt the salt to be used in the operation
     function hashOperation(
         address target,
         uint256 value,
         bytes calldata data,
         bytes32 predecessor,
         bytes32 salt
-    ) public pure virtual returns (bytes32) {
+    ) public pure returns (bytes32) {
         return keccak256(abi.encode(target, value, data, predecessor, salt));
     }
 
     /// @dev Returns the identifier of an operation containing a batch of transactions.
+    /// @param targets the addresses of the contracts to call
+    /// @param values the values to send in the calls
+    /// @param payloads the calldatas to send in the calls
+    /// @param predecessor the ids of the predecessor operation
+    /// @param salt the salt to be used in the operation
     function hashOperationBatch(
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads,
         bytes32 predecessor,
         bytes32 salt
-    ) public pure virtual returns (bytes32) {
+    ) public pure returns (bytes32) {
         return
             keccak256(abi.encode(targets, values, payloads, predecessor, salt));
     }
@@ -343,7 +312,7 @@ contract TimelockController is
         bytes32 predecessor,
         bytes32 salt,
         uint256 delay
-    ) public virtual onlySafe whenNotPaused {
+    ) external onlySafe whenNotPaused {
         bytes32 id = hashOperation(target, value, data, predecessor, salt);
 
         require(_liveProposals.add(id), "failed to add proposal, duplicate id");
@@ -379,15 +348,9 @@ contract TimelockController is
         bytes32 predecessor,
         bytes32 salt,
         uint256 delay
-    ) public virtual onlySafe whenNotPaused {
-        require(
-            targets.length == values.length,
-            "TimelockController: length mismatch"
-        );
-        require(
-            targets.length == payloads.length,
-            "TimelockController: length mismatch"
-        );
+    ) external onlySafe whenNotPaused {
+        require(targets.length == values.length, "Timelock: length mismatch");
+        require(targets.length == payloads.length, "Timelock: length mismatch");
 
         bytes32 id = hashOperationBatch(
             targets,
@@ -426,8 +389,6 @@ contract TimelockController is
         /// kick the pause guardian
         pauseGuardian = address(0);
 
-        bytes32[] memory proposals = _liveProposals.values();
-
         while (_liveProposals.values().length > 0) {
             bytes32 id = _liveProposals.at(0);
 
@@ -440,7 +401,6 @@ contract TimelockController is
 
     /// @dev Execute a ready operation containing a single transaction.
     /// Requirements:
-    ///  - the caller must have the 'executor' role.
     ///  - the operation has not expired.
     /// This function can reenter, but it doesn't pose a risk because _afterCall checks that the proposal is pending,
     /// thus any modifications to the operation during reentrancy should be caught.
@@ -456,7 +416,7 @@ contract TimelockController is
         bytes calldata payload,
         bytes32 predecessor,
         bytes32 salt
-    ) public payable virtual onlyRoleOrOpenRole(EXECUTOR_ROLE) whenNotPaused {
+    ) external payable whenNotPaused {
         bytes32 id = hashOperation(target, value, payload, predecessor, salt);
 
         require(
@@ -471,7 +431,7 @@ contract TimelockController is
 
     /// @dev Execute an (ready) operation containing a batch of transactions.
     /// Requirements:
-    ///  - the caller must have the 'executor' role.
+    ///  - the operation has not expired.
     /// This function can reenter, but it doesn't pose a risk because _afterCall checks that the proposal is pending,
     /// thus any modifications to the operation during reentrancy should be caught.
     /// slither-disable-next-line reentrancy-eth
@@ -486,15 +446,9 @@ contract TimelockController is
         bytes[] calldata payloads,
         bytes32 predecessor,
         bytes32 salt
-    ) public payable virtual onlyRoleOrOpenRole(EXECUTOR_ROLE) whenNotPaused {
-        require(
-            targets.length == values.length,
-            "TimelockController: length mismatch"
-        );
-        require(
-            targets.length == payloads.length,
-            "TimelockController: length mismatch"
-        );
+    ) external payable whenNotPaused {
+        require(targets.length == values.length, "Timelock: length mismatch");
+        require(targets.length == payloads.length, "Timelock: length mismatch");
 
         bytes32 id = hashOperationBatch(
             targets,
@@ -528,11 +482,11 @@ contract TimelockController is
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads
-    ) public payable onlySafeOwner {
+    ) external payable onlySafeOwner {
         require(
             targets.length == values.length &&
                 targets.length == payloads.length,
-            "TimelockController: length mismatch"
+            "Timelock: length mismatch"
         );
 
         for (uint256 i = 0; i < targets.length; ++i) {
@@ -602,7 +556,7 @@ contract TimelockController is
     ) external onlyTimelock {
         require(
             contractAddress.length == selector.length,
-            "TimelockController: arity mismatch"
+            "Timelock: arity mismatch"
         );
         for (uint256 i = 0; i < contractAddress.length; ++i) {
             _removeAllCalldataChecks(contractAddress[i], selector[i]);
@@ -618,7 +572,7 @@ contract TimelockController is
     function updateDelay(uint256 newDelay) external onlyTimelock {
         require(
             newDelay >= MIN_DELAY && newDelay <= MAX_DELAY,
-            "TimelockController: delay out of bounds"
+            "Timelock: delay out of bounds"
         );
 
         emit MinDelayChange(minDelay, newDelay);
@@ -628,10 +582,7 @@ contract TimelockController is
     /// @notice update the expiration period for timelocked actions
     /// @param newPeriod the new expiration period
     function updateExpirationPeriod(uint256 newPeriod) external onlyTimelock {
-        require(
-            newPeriod >= MIN_DELAY,
-            "TimelockController: delay out of bounds"
-        );
+        require(newPeriod >= MIN_DELAY, "Timelock: delay out of bounds");
 
         emit ExpirationPeriodChange(expirationPeriod, newPeriod);
         expirationPeriod = newPeriod;
@@ -647,11 +598,8 @@ contract TimelockController is
     /// @param id the identifier of the operation
     /// @param delay the delay before the operation becomes valid
     function _schedule(bytes32 id, uint256 delay) private {
-        require(
-            !isOperation(id),
-            "TimelockController: operation already scheduled"
-        );
-        require(delay >= minDelay, "TimelockController: insufficient delay");
+        require(!isOperation(id), "Timelock: operation already scheduled");
+        require(delay >= minDelay, "Timelock: insufficient delay");
         timestamps[id] = block.timestamp + delay;
     }
 
@@ -659,23 +607,17 @@ contract TimelockController is
     /// @param id the identifier of the operation
     /// @param predecessor the identifier of the predecessor operation
     function _beforeCall(bytes32 id, bytes32 predecessor) private view {
-        require(
-            isOperationReady(id),
-            "TimelockController: operation is not ready"
-        );
+        require(isOperationReady(id), "Timelock: operation is not ready");
         require(
             predecessor == bytes32(0) || isOperationDone(predecessor),
-            "TimelockController: missing dependency"
+            "Timelock: missing dependency"
         );
     }
 
     /// @dev Checks after execution of an operation's calls.
     /// @param id the identifier of the operation
     function _afterCall(bytes32 id) private {
-        require(
-            isOperationReady(id),
-            "TimelockController: operation is not ready"
-        );
+        require(isOperationReady(id), "Timelock: operation is not ready");
         timestamps[id] = _DONE_TIMESTAMP;
     }
 
@@ -687,9 +629,9 @@ contract TimelockController is
         address target,
         uint256 value,
         bytes calldata data
-    ) internal virtual {
+    ) private {
         (bool success, ) = target.call{value: value}(data);
-        require(success, "TimelockController: underlying transaction reverted");
+        require(success, "Timelock: underlying transaction reverted");
     }
 
     /// ---------------------------------------------------------------
@@ -704,7 +646,7 @@ contract TimelockController is
         address,
         uint256,
         bytes memory
-    ) public virtual override returns (bytes4) {
+    ) external pure override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
@@ -717,7 +659,7 @@ contract TimelockController is
         uint256,
         uint256,
         bytes memory
-    ) public virtual override returns (bytes4) {
+    ) external pure override returns (bytes4) {
         return this.onERC1155Received.selector;
     }
 
@@ -730,7 +672,7 @@ contract TimelockController is
         uint256[] memory,
         uint256[] memory,
         bytes memory
-    ) public virtual override returns (bytes4) {
+    ) external pure override returns (bytes4) {
         return this.onERC1155BatchReceived.selector;
     }
 
