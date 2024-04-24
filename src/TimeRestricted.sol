@@ -41,16 +41,12 @@ contract TimeRestricted is BaseGuard {
     using BokkyPooBahsDateTimeLibrary for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
 
-    /// @notice allowed days to interact with the contract
-    mapping(address safe => EnumerableSet.UintSet allowedDay)
-        private _allowedDays;
-
     /// @notice storage slot for the guard
-    uint256 internal constant GUARD_STORAGE_SLOT =
+    uint256 private constant GUARD_STORAGE_SLOT =
         0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8;
 
     /// @notice sentinel modules address
-    address internal constant SENTINEL_MODULES = address(0x1);
+    address private constant SENTINEL_MODULES = address(0x1);
 
     /// @notice TSTORE slot for the number of owners
     uint256 public constant OWNER_LENGTH_SLOT =
@@ -63,6 +59,16 @@ contract TimeRestricted is BaseGuard {
     /// @notice the number of modules to retrieve in a single call
     uint256 public constant PAGE_SIZE = 10;
 
+    /// @notice TSTORE slot salt for the stored owners
+    uint256 public constant OWNER_TSTORE_OFFSET = 0;
+
+    /// @notice TSTORE slot salt for the stored modules
+    uint256 public constant MODULE_TSTORE_OFFSET = 1;
+    
+    /// @notice maximum number of allowed windows per day
+    uint256 public constant MAXIMUM_PERIODS_PER_DAY = 3;
+
+    /// @notice period in 24 hour time range
     struct TimeRange {
         /// @notice start hour of the allowed time range
         uint8 startHour;
@@ -71,11 +77,16 @@ contract TimeRestricted is BaseGuard {
     }
 
     /// @notice hours allowed to interact with the contract for each given day
+    /// there can only be a single periods per day that transactions can be proposed
     mapping(address safe => mapping(uint8 dayOfWeek => TimeRange allowedHours))
         public dayTimeRanges;
 
     /// @notice mapping of safe to authorized timelock that can add time ranges
     mapping(address safe => address timelock) public authorizedTimelock;
+
+    /// @notice allowed days to interact with the contract
+    mapping(address safe => EnumerableSet.UintSet allowedDay)
+        private _allowedDays;
 
     /// @notice Emitted when a time range is added to the allowed days
     /// @param safe address of the safe
@@ -202,24 +213,29 @@ contract TimeRestricted is BaseGuard {
         address safe,
         uint256 timestamp
     ) public view returns (bool) {
+        /// if safe is not enabled, all actions are allowed
+        if (!safeEnabled(safe)) {
+            return true;
+        }
+
         /// the following downcasts to uint8 are safe because
         /// getDayOfWeek() returns values in the range of [1, 7], inclusive, and
         /// getHour() returns values in the range of [0, 23], inclusive
         uint8 dayOfWeek = uint8(timestamp.getDayOfWeek());
         uint8 hour = uint8(timestamp.getHour());
 
-        TimeRange memory time = dayTimeRanges[safe][dayOfWeek];
-
-        /// if safe is not enabled, all actions are allowed
-        if (!safeEnabled(safe)) {
-            return true;
+        /// if not in currently allowed day, return false as there will be no allowed hours
+        if (!_allowedDays[safe].contains(dayOfWeek)) {
+            return false;
         }
 
-        /// otherwise actions are restricted to day and time windows
+        /// only allocate memory and read from storage if the day is allowed
+        TimeRange memory time = dayTimeRanges[safe][dayOfWeek];
+
+        /// actions are restricted to day and time windows
         return
             hour >= time.startHour &&
-            hour <= time.endHour &&
-            _allowedDays[safe].contains(dayOfWeek);
+            hour <= time.endHour;
     }
 
     /// @notice primitive contract that restricts interaction
@@ -257,14 +273,16 @@ contract TimeRestricted is BaseGuard {
             uint256 ownerLength = owners.length;
             uint256 ownerSlot = OWNER_LENGTH_SLOT;
 
+            // store the number of owners in a TSTORE slot
             assembly {
                 tstore(ownerSlot, ownerLength)
             }
 
             for (uint256 i = 0; i < ownerLength; i++) {
-                uint256 ownerAddress = uint256(uint160(owners[i]));
                 // store owners in TSTORE slots
-                // store the number of owners in another TSTORE slot
+                uint256 ownerAddress = uint256(
+                    keccak256(abi.encode(owners[i], OWNER_TSTORE_OFFSET))
+                );
                 assembly {
                     tstore(ownerAddress, 1)
                 }
@@ -273,19 +291,40 @@ contract TimeRestricted is BaseGuard {
 
         /// store modules in transient storage
         /// store number of modules in transient storage
-        _traverseModules(SENTINEL_MODULES, tstoreValue, tstoreValue);
+        _traverseModules(
+            SENTINEL_MODULES,
+            tstoreValueModule,
+            tstoreValueModule
+        );
     }
 
-    function tstoreValue(uint256 slot, uint256 value) internal {
+    /// @notice stores an address for a module in the module mapping
+    /// @param slot address to store the value in
+    /// @param value value to store in the slot
+    function tstoreValueModule(uint256 slot, uint256 value) private {
+        uint256 calculatedSlot = uint256(
+            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
+        );
         assembly {
-            tstore(slot, value)
+            tstore(calculatedSlot, value)
         }
     }
 
-    function checktTstoreValue(uint256 slot, uint256 value) internal view {
+    /// @notice checks whether an address for a module is stored in
+    /// the module mapping
+    /// @param slot address to check the value in
+    /// @param value expected in the given slot
+    function checktTstoreValueModule(
+        uint256 slot,
+        uint256 value
+    ) private view {
+        uint256 calculatedSlot = uint256(
+            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
+        );
         uint256 storedValue;
+
         assembly {
-            storedValue := tload(slot)
+            storedValue := tload(calculatedSlot)
         }
 
         require(storedValue == value, "TimeRestricted: value mismatch");
@@ -302,7 +341,7 @@ contract TimeRestricted is BaseGuard {
         address start,
         function(uint256, uint256) internal moduleOperation,
         function(uint256, uint256) internal moduleLengthOperation
-    ) internal returns (uint256 moduleAmountFound) {
+    ) private returns (uint256 moduleAmountFound) {
         (address[] memory modules, address next) = Safe(payable(msg.sender))
             .getModulesPaginated(start, PAGE_SIZE);
         uint256 moduleLength = modules.length;
@@ -367,7 +406,9 @@ contract TimeRestricted is BaseGuard {
         );
 
         for (uint256 i = 0; i < ownerLength; i++) {
-            uint256 ownerAddress = uint256(uint160(owners[i]));
+            uint256 ownerAddress = uint256(
+                keccak256(abi.encode(owners[i], OWNER_TSTORE_OFFSET))
+            );
             uint256 found;
             // retrieve whether owners were stored from TSTORE slots
             assembly {
@@ -381,8 +422,8 @@ contract TimeRestricted is BaseGuard {
         /// if both of these are true, it means there were no changes made to the modules
         _traverseModules(
             SENTINEL_MODULES,
-            checktTstoreValue,
-            checktTstoreValue
+            checktTstoreValueModule,
+            checktTstoreValueModule
         );
     }
 
