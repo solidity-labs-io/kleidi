@@ -78,7 +78,7 @@ contract TimeRestrictedUnitTest is Test {
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3; /// only allowed on Wednesday
 
-        bytes32 slot = keccak256(abi.encode(address(this), 2));
+        bytes32 slot = keccak256(abi.encode(address(this), 1));
         vm.store(address(restricted), slot, bytes32(type(uint256).max));
         assertEq(
             restricted.authorizedTimelock(address(this)),
@@ -705,8 +705,6 @@ contract TimeRestrictedUnitTest is Test {
         address start,
         uint256
     ) public view returns (address[] memory, address) {
-        uint256 callNumber;
-
         /// call 1 returns 10 addresses
         if (start == address(1)) {
             return (modules0, modules0[9]);
