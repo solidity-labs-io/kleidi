@@ -6,6 +6,7 @@ import {Enum} from "@safe/common/Enum.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 import {TimeRestricted} from "src/TimeRestricted.sol";
+import {MockTimeRestricted} from "test/mock/MockTimeRestricted.sol";
 
 contract TimeRestrictedUnitTest is Test {
     TimeRestricted public restricted;
@@ -655,6 +656,11 @@ contract TimeRestrictedUnitTest is Test {
     function testCheckAfterExecutionModulesCountChanged() public {
         testEnableSafe();
 
+        {
+            MockTimeRestricted mock = new MockTimeRestricted();
+            vm.etch(address(restricted), address(mock).code);
+        }
+
         address guard = address(restricted);
         // for checkAfterExecution guard check
         assembly {
@@ -689,10 +695,97 @@ contract TimeRestrictedUnitTest is Test {
             address(0)
         );
 
+        assertEq(
+            MockTimeRestricted(address(restricted)).getTloadValue(
+                MockTimeRestricted(address(restricted)).MODULE_LENGTH_SLOT()
+            ),
+            15,
+            "incorrect number of modules"
+        );
+
+        assertEq(
+            MockTimeRestricted(address(restricted)).getTloadValue(
+                MockTimeRestricted(address(restricted)).OWNER_LENGTH_SLOT()
+            ),
+            1,
+            "incorrect number of owners"
+        );
+
         modules1.pop();
 
         vm.expectRevert("TimeRestricted: value mismatch");
         restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testGetSentinelModuleCount() public {
+        MockTimeRestricted mock = new MockTimeRestricted();
+        TimeRestricted.TimeRange[]
+            memory ranges = new TimeRestricted.TimeRange[](1);
+        ranges[0] = TimeRestricted.TimeRange(10, 11);
+
+        uint8[] memory allowedDays = new uint8[](1);
+        allowedDays[0] = 3; /// only allowed on Wednesday
+
+        mock.initializeConfiguration(timelock, ranges, allowedDays);
+
+        mock.tstoreLoadAddresses(modules0);
+        mock.tstoreLoadAddresses(modules1);
+        mock.tstoreModuleAddressesLength(15);
+
+        assertEq(
+            mock.getSentinelModuleCount(),
+            15,
+            "incorrect number of modules"
+        );
+    }
+
+    function testGetSentinelModuleCountNine() public {
+        MockTimeRestricted mock = new MockTimeRestricted();
+        TimeRestricted.TimeRange[]
+            memory ranges = new TimeRestricted.TimeRange[](1);
+        ranges[0] = TimeRestricted.TimeRange(10, 11);
+
+        uint8[] memory allowedDays = new uint8[](1);
+        allowedDays[0] = 3; /// only allowed on Wednesday
+
+        mock.initializeConfiguration(timelock, ranges, allowedDays);
+
+        mock.tstoreLoadAddresses(modules0);
+        mock.tstoreModuleAddressesLength(9);
+
+        delete modules0;
+
+        for (uint256 i = 0; i < 9; i++) {
+            modules0.push(address(uint160(uint256(i + 100))));
+        }
+
+        assertEq(
+            mock.getSentinelModuleCount(),
+            9,
+            "incorrect number of modules"
+        );
+    }
+
+    function testGetSentinelModuleCountTen() public {
+        MockTimeRestricted mock = new MockTimeRestricted();
+        TimeRestricted.TimeRange[]
+            memory ranges = new TimeRestricted.TimeRange[](1);
+        ranges[0] = TimeRestricted.TimeRange(10, 11);
+        uint8[] memory allowedDays = new uint8[](1);
+        allowedDays[0] = 3; /// only allowed on Wednesday
+        mock.initializeConfiguration(timelock, ranges, allowedDays);
+
+        mock.tstoreLoadAddresses(modules0);
+        mock.tstoreLoadAddresses(modules1);
+        mock.tstoreModuleAddressesLength(10);
+
+        /// set to empty array so that the second call will return no modules
+        modules1 = new address[](0);
+        assertEq(
+            mock.getSentinelModuleCount(),
+            10,
+            "incorrect number of modules"
+        );
     }
 
     /// mocks to allow tests to pass
@@ -707,7 +800,7 @@ contract TimeRestrictedUnitTest is Test {
     ) public view returns (address[] memory, address) {
         /// call 1 returns 10 addresses
         if (start == address(1)) {
-            return (modules0, modules0[9]);
+            return (modules0, modules0[modules0.length - 1]);
         } else {
             return (modules1, address(1));
         }
