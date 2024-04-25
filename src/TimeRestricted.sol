@@ -64,7 +64,7 @@ contract TimeRestricted is BaseGuard {
 
     /// @notice TSTORE slot salt for the stored modules
     uint256 public constant MODULE_TSTORE_OFFSET = 1;
-    
+
     /// @notice maximum number of allowed windows per day
     uint256 public constant MAXIMUM_PERIODS_PER_DAY = 3;
 
@@ -233,10 +233,14 @@ contract TimeRestricted is BaseGuard {
         TimeRange memory time = dayTimeRanges[safe][dayOfWeek];
 
         /// actions are restricted to day and time windows
-        return
-            hour >= time.startHour &&
-            hour <= time.endHour;
+        return hour >= time.startHour && hour <= time.endHour;
     }
+
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
+    /// ----------------- Safe Hooks ------------------------
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
 
     /// @notice primitive contract that restricts interaction
     /// to only a specific time range in specified days.
@@ -293,84 +297,10 @@ contract TimeRestricted is BaseGuard {
         /// store number of modules in transient storage
         _traverseModules(
             SENTINEL_MODULES,
-            tstoreValueModule,
-            tstoreValueModule
+            0,
+            _tstoreValueModule,
+            _tstoreValueDirect
         );
-    }
-
-    /// @notice stores an address for a module in the module mapping
-    /// @param slot address to store the value in
-    /// @param value value to store in the slot
-    function tstoreValueModule(uint256 slot, uint256 value) private {
-        uint256 calculatedSlot = uint256(
-            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
-        );
-        assembly {
-            tstore(calculatedSlot, value)
-        }
-    }
-
-    /// @notice checks whether an address for a module is stored in
-    /// the module mapping
-    /// @param slot address to check the value in
-    /// @param value expected in the given slot
-    function checktTstoreValueModule(
-        uint256 slot,
-        uint256 value
-    ) private view {
-        uint256 calculatedSlot = uint256(
-            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
-        );
-        uint256 storedValue;
-
-        assembly {
-            storedValue := tload(calculatedSlot)
-        }
-
-        require(storedValue == value, "TimeRestricted: value mismatch");
-    }
-
-    /// @notice recursively traverse through all modules by asking the Safe for its
-    /// modules in a paginated manner, storing the module addresses in TSTORE slots
-    /// and finally storing the total number of module addresses in a TSTORE slot.
-    /// Algorithm:
-    ///     query for 10 modules at a time, starting at sentinel address
-    ///     if the number of modules is less than 10, store the number of modules and total number of module addresses
-    ///     else, recurse with the next address and the total number of modules found so far
-    function _traverseModules(
-        address start,
-        function(uint256, uint256) internal moduleOperation,
-        function(uint256, uint256) internal moduleLengthOperation
-    ) private returns (uint256 moduleAmountFound) {
-        (address[] memory modules, address next) = Safe(payable(msg.sender))
-            .getModulesPaginated(start, PAGE_SIZE);
-        uint256 moduleLength = modules.length;
-
-        for (uint256 i = 0; i < moduleLength; i++) {
-            uint256 moduleAddress = uint256(uint160(modules[i]));
-            // there should be no overlap between modules and owners so this operation is safe
-            // store modules in TSTORE slots
-            // store the number of modules in another TSTORE slot
-            moduleOperation(moduleAddress, 1);
-        }
-
-        /// if next == modules[modules.length - 1], we need to recurse
-        /// otherwise we are at the end of the modules list
-
-        /// if there are less than page_size modules, or the next is
-        /// the sentinel module, traversal ends
-        if (modules.length < PAGE_SIZE || next == SENTINEL_MODULES) {
-            moduleLengthOperation(
-                MODULE_LENGTH_SLOT,
-                moduleAmountFound + modules.length
-            );
-
-            return 0;
-        } else {
-            return
-                _traverseModules(next, moduleOperation, moduleLengthOperation) +
-                modules.length;
-        }
     }
 
     /// @notice no-op function, required by the Guard interface.
@@ -422,8 +352,9 @@ contract TimeRestricted is BaseGuard {
         /// if both of these are true, it means there were no changes made to the modules
         _traverseModules(
             SENTINEL_MODULES,
-            checktTstoreValueModule,
-            checktTstoreValueModule
+            0,
+            _checktTstoreValueModule,
+            _checktStoreValueDirect
         );
     }
 
@@ -445,36 +376,6 @@ contract TimeRestricted is BaseGuard {
         _addTimeRange(safe, dayOfWeek, startHour, endHour);
     }
 
-    /// @notice callable by a safe, adds a time range to the allowed days
-    /// for the safe to execute transactions
-    /// @param safe address of the safe to add the time range to
-    /// @param dayOfWeek day of the week to allow transactions
-    /// - valid range [1, 7]
-    /// @param startHour start hour of the allowed time range
-    /// - valid range: [0, 23]
-    /// @param endHour end hour of the allowed time range
-    /// - valid range: [0, 23]
-    function _addTimeRange(
-        address safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
-    ) private {
-        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
-        require(!_allowedDays[safe].contains(dayOfWeek), "day already allowed");
-        require(endHour <= 23, "invalid end hour");
-        require(startHour < endHour, "invalid time range");
-
-        _allowedDays[safe].add(dayOfWeek);
-
-        TimeRange storage time = dayTimeRanges[safe][dayOfWeek];
-
-        time.startHour = startHour;
-        time.endHour = endHour;
-
-        emit TimeRangeAdded(safe, dayOfWeek, startHour, endHour);
-    }
-
     /// @notice callable by a safe, updates the time range for the allowed days
     /// @param safe address of the safe
     /// @param dayOfWeek day of the week to allow transactions
@@ -488,39 +389,6 @@ contract TimeRestricted is BaseGuard {
         uint8 endHour
     ) external onlyTimelock(safe) {
         _editTimeRange(safe, dayOfWeek, startHour, endHour);
-    }
-
-    /// @notice callable by a safe, updates the time range for the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to allow transactions
-    /// @param startHour start hour of the allowed time range
-    /// @param endHour end hour of the allowed time range
-    /// must allow at least a 1 hour window for transactions be executed
-    function _editTimeRange(
-        address safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
-    ) private {
-        require(endHour <= 23, "invalid end hour");
-        require(startHour < endHour, "invalid time range");
-        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
-        require(_allowedDays[safe].contains(dayOfWeek), "day not allowed");
-
-        TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
-
-        TimeRange storage currentTime = dayTimeRanges[safe][dayOfWeek];
-        currentTime.startHour = startHour;
-        currentTime.endHour = endHour;
-
-        emit TimeRangeUpdated(
-            safe,
-            dayOfWeek,
-            oldTime.startHour,
-            startHour,
-            oldTime.endHour,
-            endHour
-        );
     }
 
     /// @notice remove an allowed day from the safe. This will remove
@@ -570,5 +438,172 @@ contract TimeRestricted is BaseGuard {
         }
 
         emit GuardDisabled(safe);
+    }
+
+    /// @notice recursively traverse through all modules by asking the Safe for its
+    /// modules in a paginated manner, storing the module addresses in TSTORE slots
+    /// and finally storing the total number of module addresses in a TSTORE slot.
+    /// Algorithm:
+    ///     query for 10 modules at a time, starting at sentinel address
+    ///     if the number of modules is less than 10, store the number of modules and total number of module addresses
+    ///     else, recurse with the next address and the total number of modules found so far
+    function _traverseModules(
+        address start,
+        uint256 moduleAmountFound,
+        function(uint256, uint256) internal moduleOperation,
+        function(uint256, uint256) internal moduleLengthOperation
+    ) internal {
+        (address[] memory modules, address next) = Safe(payable(msg.sender))
+            .getModulesPaginated(start, PAGE_SIZE);
+        uint256 moduleLength = modules.length;
+
+        for (uint256 i = 0; i < moduleLength; i++) {
+            uint256 moduleAddress = uint256(uint160(modules[i]));
+            // there should be no overlap between modules and owners so this operation is safe
+            // store modules in TSTORE slots
+            // store the number of modules in another TSTORE slot
+            moduleOperation(moduleAddress, 1);
+        }
+
+        /// if next == modules[modules.length - 1], we need to recurse
+        /// otherwise we are at the end of the modules list
+
+        /// if there are less than page_size modules, or the next is
+        /// the sentinel module, traversal ends
+        if (modules.length < PAGE_SIZE || next == SENTINEL_MODULES) {
+            moduleLengthOperation(
+                MODULE_LENGTH_SLOT,
+                moduleAmountFound + modules.length
+            );
+        } else {
+            /// add found modules to the total amount of modules found so far
+            /// and continue recursion without writing to transient storage
+            return
+                _traverseModules(
+                    next,
+                    modules.length + moduleAmountFound,
+                    moduleOperation,
+                    moduleLengthOperation
+                );
+        }
+    }
+
+    /// @notice callable by a safe, updates the time range for the allowed days
+    /// @param safe address of the safe
+    /// @param dayOfWeek day of the week to allow transactions
+    /// @param startHour start hour of the allowed time range
+    /// @param endHour end hour of the allowed time range
+    /// must allow at least a 1 hour window for transactions be executed
+    function _editTimeRange(
+        address safe,
+        uint8 dayOfWeek,
+        uint8 startHour,
+        uint8 endHour
+    ) private {
+        require(endHour <= 23, "invalid end hour");
+        require(startHour < endHour, "invalid time range");
+        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
+        require(_allowedDays[safe].contains(dayOfWeek), "day not allowed");
+
+        TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
+
+        TimeRange storage currentTime = dayTimeRanges[safe][dayOfWeek];
+        currentTime.startHour = startHour;
+        currentTime.endHour = endHour;
+
+        emit TimeRangeUpdated(
+            safe,
+            dayOfWeek,
+            oldTime.startHour,
+            startHour,
+            oldTime.endHour,
+            endHour
+        );
+    }
+
+    /// @notice callable by a safe, adds a time range to the allowed days
+    /// for the safe to execute transactions
+    /// @param safe address of the safe to add the time range to
+    /// @param dayOfWeek day of the week to allow transactions
+    /// - valid range [1, 7]
+    /// @param startHour start hour of the allowed time range
+    /// - valid range: [0, 23]
+    /// @param endHour end hour of the allowed time range
+    /// - valid range: [0, 23]
+    function _addTimeRange(
+        address safe,
+        uint8 dayOfWeek,
+        uint8 startHour,
+        uint8 endHour
+    ) private {
+        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
+        require(!_allowedDays[safe].contains(dayOfWeek), "day already allowed");
+        require(endHour <= 23, "invalid end hour");
+        require(startHour < endHour, "invalid time range");
+
+        _allowedDays[safe].add(dayOfWeek);
+
+        TimeRange storage time = dayTimeRanges[safe][dayOfWeek];
+
+        time.startHour = startHour;
+        time.endHour = endHour;
+
+        emit TimeRangeAdded(safe, dayOfWeek, startHour, endHour);
+    }
+
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
+    /// -------------- Transient Storage Ops ----------------
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
+
+    /// @notice stores an address for a module in the module mapping
+    /// @param slot address to store the value in,
+    /// will then have slot calculated from it
+    /// @param value value to store in the slot
+    function _tstoreValueModule(uint256 slot, uint256 value) internal {
+        uint256 calculatedSlot = uint256(
+            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
+        );
+        _tstoreValueDirect(calculatedSlot, value);
+    }
+
+    /// @notice stores a value in transient storage
+    /// @param slot to store the value in
+    /// @param value value to store in the slot
+    function _tstoreValueDirect(uint256 slot, uint256 value) internal {
+        assembly {
+            tstore(slot, value)
+        }
+    }
+
+    /// @notice checks whether an address for a module is stored in
+    /// the module mapping
+    /// @param slot address to check the value in
+    /// @param value expected in the given slot
+    function _checktTstoreValueModule(
+        uint256 slot,
+        uint256 value
+    ) internal view {
+        uint256 calculatedSlot = uint256(
+            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
+        );
+        _checktStoreValueDirect(calculatedSlot, value);
+    }
+
+    /// @notice checks whether a value is stored in a transient slot
+    /// @param slot to check the value in
+    /// @param value expected in the given slot
+    function _checktStoreValueDirect(
+        uint256 slot,
+        uint256 value
+    ) internal view {
+        uint256 storedValue;
+
+        assembly {
+            storedValue := tload(slot)
+        }
+
+        require(storedValue == value, "TimeRestricted: value mismatch");
     }
 }
