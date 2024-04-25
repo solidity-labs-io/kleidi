@@ -315,7 +315,7 @@ contract Timelock is
     ) external onlySafe whenNotPaused {
         bytes32 id = hashOperation(target, value, data, predecessor, salt);
 
-        require(_liveProposals.add(id), "failed to add proposal, duplicate id");
+        require(_liveProposals.add(id), "Timelock: duplicate id");
 
         _schedule(id, delay);
 
@@ -457,10 +457,8 @@ contract Timelock is
             predecessor,
             salt
         );
-        require(
-            _liveProposals.remove(id),
-            "cannot execute non-existent proposal"
-        );
+
+        require(_liveProposals.remove(id), "Timelock: proposal does not exist");
 
         _beforeCall(id, predecessor);
         for (uint256 i = 0; i < targets.length; ++i) {
@@ -473,6 +471,23 @@ contract Timelock is
         _afterCall(id);
     }
 
+    /// @notice any safe owner can call this function and execute
+    /// a call to whitelisted contracts with whitelisted calldatas
+    /// @param target the addresses of the contracts to call
+    /// @param value the values to send in the calls
+    /// @param payload the calldata to send in the calls
+    function executeWhitelisted(
+        address target,
+        uint256 value,
+        bytes calldata payload
+    ) external payable onlySafeOwner {
+        /// first ensure calldata to target is whitelisted,
+        /// and that parameters are not malicious
+        checkCalldata(target, value, payload);
+        _execute(target, value, payload);
+
+        emit CallExecuted(bytes32(0), 0, target, value, payload);
+    }
     /// @notice any safe owner can call this function and execute calls
     /// to whitelisted contracts with whitelisted calldatas
     /// @param targets the addresses of the contracts to call
