@@ -65,9 +65,6 @@ contract TimeRestricted is BaseGuard {
     /// @notice TSTORE slot salt for the stored modules
     uint256 public constant MODULE_TSTORE_OFFSET = 1;
 
-    /// @notice maximum number of allowed windows per day
-    uint256 public constant MAXIMUM_PERIODS_PER_DAY = 3;
-
     /// @notice period in 24 hour time range
     struct TimeRange {
         /// @notice start hour of the allowed time range
