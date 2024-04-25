@@ -6,7 +6,9 @@ import {BytesHelper} from "src/BytesHelper.sol";
 /// allows whitelisting of specific calldata parameters for specific functions.
 /// This enables the contract to check that the calldata conforms to the expected values.
 /// While allowing flexibility in the calldata structure.
-contract CalldataList {
+/// This is an abstract contract because it does not offer any public functions,
+/// and must be inherited by another contract to be used.
+abstract contract CalldataList {
     using BytesHelper for bytes;
 
     /// @notice event emitted when a new calldata check is added
