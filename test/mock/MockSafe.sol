@@ -7,6 +7,16 @@ contract MockSafe {
         owners = _owners;
     }
 
+    function isOwner(address user) public view returns (bool) {
+        for (uint256 i = 0; i < owners.length; i++) {
+            if (owners[i] == user) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function getOwners() public view returns (address[] memory) {
         return owners;
     }
