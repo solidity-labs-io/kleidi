@@ -428,6 +428,7 @@ contract TimeRestricted is BaseGuard {
 
         for (uint256 i = 0; i < allowedDays.length; i++) {
             delete dayTimeRanges[safe][uint8(allowedDays[i])];
+            /// should not be possible to reach this path
             require(
                 _allowedDays[safe].remove(uint8(allowedDays[i])),
                 "day not allowed to be removed"
@@ -562,6 +563,7 @@ contract TimeRestricted is BaseGuard {
         uint256 calculatedSlot = uint256(
             keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
         );
+
         _tstoreValueDirect(calculatedSlot, value);
     }
 
@@ -585,6 +587,7 @@ contract TimeRestricted is BaseGuard {
         uint256 calculatedSlot = uint256(
             keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
         );
+
         _checktStoreValueDirect(calculatedSlot, value);
     }
 
