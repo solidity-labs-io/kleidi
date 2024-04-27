@@ -11,6 +11,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Environment
+        uses: ./.github/actions
+
       - name: Run linter and check for errors
         id: lint
         run: forge fmt --check
