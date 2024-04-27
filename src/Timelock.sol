@@ -23,6 +23,10 @@ import {ConfigurablePauseGuardian} from "src/guardian/ConfigurablePauseGuardian.
 /// - incorrect calldata can allow any safe owner to arbitrarily change
 /// date/time restrictions on the multisig guard.
 /// the owner must ensure no calldata is created that allows this.
+/// There are no checks on native asset balance enshrined into this contract
+/// because it is impossible to reason about the state of the native asset
+/// given this contract may withdraw from DeFi protocols, or unwrap WETH,
+/// thus increasing the native balance.
 
 /// @notice protocol invariants:
 /// - there must always be at least 1 proposer
@@ -30,21 +34,15 @@ import {ConfigurablePauseGuardian} from "src/guardian/ConfigurablePauseGuardian.
 /// this ensures there is no way to instantly make modifications to the
 /// whitelisted timelock calldata.
 
-/**
- * @dev Contract module which acts as a timelocked controller. When set as the
- * owner of an `Ownable` smart contract, it enforces a timelock on all
- * `onlyOwner` maintenance operations. This gives time for users of the
- * controlled contract to exit before a potentially dangerous maintenance
- * operation is applied.
- *
- * By default, this contract is self administered, meaning administration tasks
- * have to go through the timelock process. The proposer (resp executor) role
- * is in charge of proposing (resp executing) operations. A common use case is
- * to position this {Timelock} as the owner of a smart contract, with
- * a multisig or a DAO as the sole proposer.
- *
- * _Available since v3.3._
- */
+///  @dev Contract module which acts as a timelocked controller. When set as the
+/// owner of an `Ownable` smart contract, it enforces a timelock on all
+/// `onlyOwner` maintenance operations. This gives time for users of the
+/// controlled contract to exit before a potentially dangerous maintenance
+/// operation is applied.
+///
+/// By default, this contract is self administered, meaning administration tasks
+/// have to go through the timelock process. The gnosis safe can propose
+/// timelocked operations.
 contract Timelock is
     ConfigurablePauseGuardian,
     IERC1155Receiver,
@@ -85,7 +83,6 @@ contract Timelock is
     /// @param target the address of the contract to call
     /// @param value the amount of native asset to send with the call
     /// @param data the calldata to send with the call
-    /// @param predecessor the id of the predecessor operation
     /// @param salt the salt to be used in the operation
     /// @param delay the delay before the operation becomes valid
     event CallScheduled(
@@ -94,7 +91,6 @@ contract Timelock is
         address target,
         uint256 value,
         bytes data,
-        bytes32 predecessor,
         bytes32 salt,
         uint256 delay
     );
@@ -266,33 +262,28 @@ contract Timelock is
     /// @param target the address of the contract to call
     /// @param value the value in native tokens to send in the call
     /// @param data the calldata to send in the call
-    /// @param predecessor the id of the predecessor operation
     /// @param salt the salt to be used in the operation
     function hashOperation(
         address target,
         uint256 value,
         bytes calldata data,
-        bytes32 predecessor,
         bytes32 salt
     ) public pure returns (bytes32) {
-        return keccak256(abi.encode(target, value, data, predecessor, salt));
+        return keccak256(abi.encode(target, value, data, salt));
     }
 
     /// @dev Returns the identifier of an operation containing a batch of transactions.
     /// @param targets the addresses of the contracts to call
     /// @param values the values to send in the calls
     /// @param payloads the calldatas to send in the calls
-    /// @param predecessor the ids of the predecessor operation
     /// @param salt the salt to be used in the operation
     function hashOperationBatch(
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads,
-        bytes32 predecessor,
         bytes32 salt
     ) public pure returns (bytes32) {
-        return
-            keccak256(abi.encode(targets, values, payloads, predecessor, salt));
+        return keccak256(abi.encode(targets, values, payloads, salt));
     }
 
     /// ---------------------------------------------------------------
@@ -309,26 +300,16 @@ contract Timelock is
         address target,
         uint256 value,
         bytes calldata data,
-        bytes32 predecessor,
         bytes32 salt,
         uint256 delay
     ) external onlySafe whenNotPaused {
-        bytes32 id = hashOperation(target, value, data, predecessor, salt);
+        bytes32 id = hashOperation(target, value, data, salt);
 
         require(_liveProposals.add(id), "Timelock: duplicate id");
 
         _schedule(id, delay);
 
-        emit CallScheduled(
-            id,
-            0,
-            target,
-            value,
-            data,
-            predecessor,
-            salt,
-            delay
-        );
+        emit CallScheduled(id, 0, target, value, data, salt, delay);
     }
 
     /// @dev Schedule an operation containing a batch of transactions.
@@ -338,29 +319,21 @@ contract Timelock is
     /// @param targets the addresses of the contracts to call
     /// @param values the values to send in the calls
     /// @param payloads the calldata to send in the calls
-    /// @param predecessor the id of the predecessor operation
     /// @param salt the salt to be used in the operation
     /// @param delay the delay before the operation becomes valid
     function scheduleBatch(
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads,
-        bytes32 predecessor,
         bytes32 salt,
         uint256 delay
     ) external onlySafe whenNotPaused {
         require(targets.length == values.length, "Timelock: length mismatch");
         require(targets.length == payloads.length, "Timelock: length mismatch");
 
-        bytes32 id = hashOperationBatch(
-            targets,
-            values,
-            payloads,
-            predecessor,
-            salt
-        );
+        bytes32 id = hashOperationBatch(targets, values, payloads, salt);
 
-        require(_liveProposals.add(id), "failed to add proposal, duplicate id");
+        require(_liveProposals.add(id), "Timelock: duplicate id");
 
         _schedule(id, delay);
 
@@ -372,7 +345,6 @@ contract Timelock is
                     targets[i],
                     values[i],
                     payloads[i],
-                    predecessor,
                     salt,
                     delay
                 );
@@ -408,22 +380,17 @@ contract Timelock is
     /// @param target the address of the contract to call
     /// @param value the value in native tokens to send in the call
     /// @param payload the calldata to send in the call
-    /// @param predecessor the id of the predecessor operation
     /// @param salt the salt to be used in the operation of creating the ID.
     function execute(
         address target,
         uint256 value,
         bytes calldata payload,
-        bytes32 predecessor,
         bytes32 salt
     ) external payable whenNotPaused {
-        bytes32 id = hashOperation(target, value, payload, predecessor, salt);
+        bytes32 id = hashOperation(target, value, payload, salt);
 
-        require(
-            _liveProposals.remove(id),
-            "cannot execute non-existent proposal"
-        );
-        _beforeCall(id, predecessor);
+        require(_liveProposals.remove(id), "Timelock: proposal does not exist");
+        _beforeCall(id);
         _execute(target, value, payload);
         emit CallExecuted(id, 0, target, value, payload);
         _afterCall(id);
@@ -438,29 +405,21 @@ contract Timelock is
     /// @param targets the addresses of the contracts to call
     /// @param values the values to send in the calls
     /// @param payloads the calldata to send in the calls
-    /// @param predecessor the id of the predecessor operation
     /// @param salt the salt to be used in the operation
     function executeBatch(
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads,
-        bytes32 predecessor,
         bytes32 salt
     ) external payable whenNotPaused {
         require(targets.length == values.length, "Timelock: length mismatch");
         require(targets.length == payloads.length, "Timelock: length mismatch");
 
-        bytes32 id = hashOperationBatch(
-            targets,
-            values,
-            payloads,
-            predecessor,
-            salt
-        );
+        bytes32 id = hashOperationBatch(targets, values, payloads, salt);
 
         require(_liveProposals.remove(id), "Timelock: proposal does not exist");
 
-        _beforeCall(id, predecessor);
+        _beforeCall(id);
         for (uint256 i = 0; i < targets.length; ++i) {
             address target = targets[i];
             uint256 value = values[i];
@@ -524,12 +483,13 @@ contract Timelock is
     /// ---------------------------------------------------------------
     /// ---------------------------------------------------------------
 
-    /// @notice add a calldata check
-    /// @param contractAddresses the address of the contract that the calldata check is added to
-    /// @param selectors the function selector of the function that the calldata check is added to
+    /// @notice add multiple calldata checks
+    /// @param contractAddresses the addresses of the contract that the calldata check is added to
+    /// @param selectors the function selectors of the function that the calldata check is added to
     /// @param startIndexes the start indexes of the calldata
     /// @param endIndexes the end indexes of the calldata
-    /// @param datas the calldata that is stored
+    /// @param datas the calldatas that are checked for each corresponding function at each index
+    /// on each contract
     function addCalldataChecks(
         address[] memory contractAddresses,
         bytes4[] memory selectors,
@@ -546,13 +506,35 @@ contract Timelock is
         );
     }
 
-    /// @notice remove all calldata checks for a given contract address
+    /// @notice add a single calldata check
+    /// @param contractAddress the address of the contract that the calldata check is added to
+    /// @param selector the function selector of the function that the calldata check is added to
+    /// @param startIndex the start indexes of the calldata
+    /// @param endIndex the end indexes of the calldata
+    /// @param data the calldata that is stored
+    function addCalldataCheck(
+        address contractAddress,
+        bytes4 selector,
+        uint16 startIndex,
+        uint16 endIndex,
+        bytes memory data
+    ) external onlyTimelock {
+        _addCalldataCheck(
+            contractAddress,
+            selector,
+            startIndex,
+            endIndex,
+            data
+        );
+    }
+
+    /// @notice remove a single calldata check for a given contract address
     /// @param contractAddress the address of the contract that the
     /// calldata checks are removed from
     /// @param selector the function selector of the function that the
     /// checks will be removed from
     /// @param index the starting index of the calldata check to remove
-    function removeAllCalldataChecks(
+    function removeCalldataChecks(
         address contractAddress,
         bytes4 selector,
         uint256 index
@@ -613,25 +595,24 @@ contract Timelock is
     /// @param id the identifier of the operation
     /// @param delay the delay before the operation becomes valid
     function _schedule(bytes32 id, uint256 delay) private {
+        /// this line is never reachable as no duplicate id's are enforced before this call is made
         require(!isOperation(id), "Timelock: operation already scheduled");
+        /// this line is reachable
         require(delay >= minDelay, "Timelock: insufficient delay");
         timestamps[id] = block.timestamp + delay;
     }
 
     /// @dev Checks before execution of an operation's calls.
     /// @param id the identifier of the operation
-    /// @param predecessor the identifier of the predecessor operation
-    function _beforeCall(bytes32 id, bytes32 predecessor) private view {
+    function _beforeCall(bytes32 id) private view {
         require(isOperationReady(id), "Timelock: operation is not ready");
-        require(
-            predecessor == bytes32(0) || isOperationDone(predecessor),
-            "Timelock: missing dependency"
-        );
     }
 
     /// @dev Checks after execution of an operation's calls.
     /// @param id the identifier of the operation
     function _afterCall(bytes32 id) private {
+        /// unreachable state because removing the proposal id from the _liveProposals
+        /// set prevents this function from being called on the same id twice
         require(isOperationReady(id), "Timelock: operation is not ready");
         timestamps[id] = _DONE_TIMESTAMP;
     }
