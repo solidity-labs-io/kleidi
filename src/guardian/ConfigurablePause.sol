@@ -1,6 +1,6 @@
 pragma solidity 0.8.25;
 
-import {Pausable} from "@openzeppelin-contracts/contracts/security/Pausable.sol";
+import {Pausable} from "@openzeppelin-contracts/contracts/utils/Pausable.sol";
 
 /// @notice pause contract that has a duration for each pause period.
 /// This contract has a pause duration and a pause start time.
