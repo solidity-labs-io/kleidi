@@ -1,7 +1,5 @@
 pragma solidity 0.8.25;
 
-import {Pausable} from "@openzeppelin-contracts/contracts/utils/Pausable.sol";
-
 /// @notice pause contract that has a duration for each pause period.
 /// This contract has a pause duration and a pause start time.
 /// Invariants:
@@ -10,7 +8,7 @@ import {Pausable} from "@openzeppelin-contracts/contracts/utils/Pausable.sol";
 ///  contract is automatically unpaused.
 ///  - Block timestamp gte pause start time && block timestamp lte pause start time + pause
 ///  duration, then the contract is paused
-contract ConfigurablePause is Pausable {
+contract ConfigurablePause {
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
     /// ------------------ SINGLE STORAGE SLOT ------------------
@@ -37,10 +35,22 @@ contract ConfigurablePause is Pausable {
         uint256 newPauseDuration
     );
 
+    /// @dev Emitted when the pause is triggered by `account`.
+    event Paused(address account);
+
+    /// @dev Emitted when the pause is lifted by `account`.
+    event Unpaused(address account);
+
+    /// @dev Modifier to make a function callable only when the contract is not paused.
+    modifier whenNotPaused() {
+        _requireNotPaused();
+        _;
+    }
+
     /// @notice return the current pause status
     /// if pauseStartTime is 0, contract is not paused
     /// if pauseStartTime is not 0, contract could be paused in the pauseDuration window
-    function paused() public view virtual override returns (bool) {
+    function paused() public view returns (bool) {
         return
             pauseStartTime == 0
                 ? false
@@ -68,5 +78,11 @@ contract ConfigurablePause is Pausable {
         pauseStartTime = newPauseStartTime;
 
         emit PauseTimeUpdated(newPauseStartTime);
+    }
+
+    /// @dev Reverts with error: "Pausable: paused"
+    /// Throws if the contract is paused.
+    function _requireNotPaused() private view {
+        require(!paused(), "Pausable: paused");
     }
 }
