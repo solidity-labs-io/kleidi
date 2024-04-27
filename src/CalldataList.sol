@@ -60,6 +60,14 @@ abstract contract CalldataList {
     mapping(address contractAddress => mapping(bytes4 selector => CallRestriction calldataChecks))
         public calldataList;
 
+    /// @notice get the calldata checks for a specific contract and function selector
+    function getCalldataChecks(
+        address contractAddress,
+        bytes4 selector
+    ) public view returns (Index[] memory) {
+        return calldataList[contractAddress][selector].calldataChecks;
+    }
+
     /// @notice check if the calldata conforms to the expected values
     /// extracts indexes and checks that the data within the indexes
     /// matches the expected data
@@ -79,21 +87,19 @@ abstract contract CalldataList {
         require(calldataChecks.length > 0, "No calldata checks found");
         require(
             value <= calldataList[contractAddress][selector].maxValue,
-            "Value exceeds maximum value"
+            "Value exceeds maximum"
         );
 
-        unchecked {
-            for (uint256 i = 0; i < calldataChecks.length; i++) {
-                Index storage calldataCheck = calldataChecks[i];
+        for (uint256 i = 0; i < calldataChecks.length; i++) {
+            Index storage calldataCheck = calldataChecks[i];
 
-                require(
-                    data.getSlicedBytesHash(
-                        calldataCheck.startIndex,
-                        calldataCheck.endIndex
-                    ) == calldataCheck.data.getBytesHash(),
-                    "Calldata does not match expected values"
-                );
-            }
+            require(
+                data.getSlicedBytesHash(
+                    calldataCheck.startIndex,
+                    calldataCheck.endIndex
+                ) == calldataCheck.data.getBytesHash(),
+                "Calldata does not match expected value"
+            );
         }
     }
 
@@ -111,6 +117,10 @@ abstract contract CalldataList {
         bytes memory data
     ) internal {
         require(startIndex >= 4, "Start index must be greater than 3");
+        require(
+            endIndex > startIndex,
+            "End index must be greater than start index"
+        );
         require(
             contractAddress != address(this),
             "Contract address cannot be this"
@@ -172,6 +182,8 @@ abstract contract CalldataList {
     ) internal {
         Index[] storage calldataChecks = calldataList[contractAddress][selector]
             .calldataChecks;
+        require(index < calldataChecks.length, "Calldata index out of bounds");
+
         uint16 startIndex = calldataChecks[index].startIndex;
         uint16 endIndex = calldataChecks[index].endIndex;
         bytes memory data = calldataChecks[index].data;
@@ -211,45 +223,5 @@ abstract contract CalldataList {
 
         /// delete the calldata list for the given contract and selector
         delete calldataList[contractAddress][selector];
-    }
-
-    /// @notice remove a calldata check by calldata
-    /// @param contractAddress the address of the contract that the calldata check is removed from
-    /// @param selector the function selector of the function that the calldata check is removed from
-    /// @param startIndex the start index of the calldata
-    /// @param endIndex the end index of the calldata
-    /// @param data the calldata that is removed
-    function _removeCalldataCheck(
-        address contractAddress,
-        bytes4 selector,
-        uint16 startIndex,
-        uint16 endIndex,
-        bytes memory data
-    ) internal {
-        Index[] storage calldataChecks = calldataList[contractAddress][selector]
-            .calldataChecks;
-
-        for (uint256 i = 0; i < calldataChecks.length; i++) {
-            if (
-                calldataChecks[i].startIndex == startIndex &&
-                calldataChecks[i].endIndex == endIndex &&
-                keccak256(calldataChecks[i].data) == keccak256(data)
-            ) {
-                calldataChecks[i] = calldataChecks[calldataChecks.length - 1];
-                calldataChecks.pop();
-
-                emit CalldataRemoved(
-                    contractAddress,
-                    selector,
-                    startIndex,
-                    endIndex,
-                    data
-                );
-
-                return;
-            }
-        }
-
-        revert("Calldata check not found");
     }
 }
