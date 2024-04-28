@@ -31,8 +31,7 @@ contract ConfigurablePause {
     /// @param oldPauseDuration old pause duration
     /// @param newPauseDuration new pause duration
     event PauseDurationUpdated(
-        uint256 oldPauseDuration,
-        uint256 newPauseDuration
+        uint256 oldPauseDuration, uint256 newPauseDuration
     );
 
     /// @dev Emitted when the pause is triggered by `account`.
@@ -51,10 +50,9 @@ contract ConfigurablePause {
     /// if pauseStartTime is 0, contract is not paused
     /// if pauseStartTime is not 0, contract could be paused in the pauseDuration window
     function paused() public view returns (bool) {
-        return
-            pauseStartTime == 0
-                ? false
-                : block.timestamp <= pauseStartTime + pauseDuration;
+        return pauseStartTime == 0
+            ? false
+            : block.timestamp <= pauseStartTime + pauseDuration;
     }
 
     /// ------------- INTERNAL HELPERS -------------

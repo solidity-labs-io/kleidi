@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC1155Receiver} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC165, ERC165} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import {IERC1155Receiver} from
+    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC721Receiver} from
+    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC165,
+    ERC165
+} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 

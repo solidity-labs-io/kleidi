@@ -37,12 +37,13 @@ contract TimeRestrictedUnitTest is Test {
     }
 
     function testEnableSafe() public {
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         restricted.initializeConfiguration(timelock, ranges, allowedDays);
 
@@ -60,24 +61,26 @@ contract TimeRestrictedUnitTest is Test {
 
     function testInitializeFailsAlreadyConfigured() public {
         testEnableSafe();
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: already initialized");
         restricted.initializeConfiguration(timelock, ranges, allowedDays);
     }
 
     function testInitializeFailsTimelockSet() public {
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         bytes32 slot = keccak256(abi.encode(address(this), 1));
         vm.store(address(restricted), slot, bytes32(type(uint256).max));
@@ -92,52 +95,54 @@ contract TimeRestrictedUnitTest is Test {
     }
 
     function testInitializeFailsArityMismatch() public {
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](2);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: arity mismatch");
         restricted.initializeConfiguration(timelock, ranges, allowedDays);
     }
 
     function testInitializeFailsTimelockEqSafe() public {
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: safe cannot equal timelock");
         restricted.initializeConfiguration(address(this), ranges, allowedDays);
     }
 
     function testInitializeFailsTimelockNoBytecode() public {
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: invalid timelock");
         restricted.initializeConfiguration(
-            address(100000000),
-            ranges,
-            allowedDays
+            address(100000000), ranges, allowedDays
         );
     }
 
     function testInitializeFailsSafeNoBytecode() public {
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         vm.prank(address(100000000));
         vm.expectRevert("TimeRestricted: invalid safe");
@@ -180,9 +185,10 @@ contract TimeRestrictedUnitTest is Test {
         );
     }
 
-    function testTransactionsAlwaysAllowedEnabled(
-        uint256 timestamp
-    ) public view {
+    function testTransactionsAlwaysAllowedEnabled(uint256 timestamp)
+        public
+        view
+    {
         assertFalse(restricted.safeEnabled(address(this)), "safe not enabled");
         assertTrue(
             restricted.transactionAllowed(address(this), timestamp),
@@ -197,10 +203,8 @@ contract TimeRestrictedUnitTest is Test {
         restricted.addTimeRange(address(this), 1, 0, 1);
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
-        (uint8 startHour, uint8 endHour) = restricted.dayTimeRanges(
-            address(this),
-            1
-        );
+        (uint8 startHour, uint8 endHour) =
+            restricted.dayTimeRanges(address(this), 1);
 
         assertEq(startHour, 0, "start hour");
         assertEq(endHour, 1, "end hour");
@@ -266,10 +270,8 @@ contract TimeRestrictedUnitTest is Test {
         restricted.editTimeRange(address(this), 1, 1, 2);
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
-        (uint8 startHour, uint8 endHour) = restricted.dayTimeRanges(
-            address(this),
-            1
-        );
+        (uint8 startHour, uint8 endHour) =
+            restricted.dayTimeRanges(address(this), 1);
 
         assertEq(startHour, 1, "start hour");
         assertEq(endHour, 2, "end hour");
@@ -330,20 +332,16 @@ contract TimeRestrictedUnitTest is Test {
         restricted.removeAllowedDay(address(this), 1);
 
         {
-            (uint8 startHour, uint8 endHour) = restricted.dayTimeRanges(
-                address(this),
-                1
-            );
+            (uint8 startHour, uint8 endHour) =
+                restricted.dayTimeRanges(address(this), 1);
 
             assertEq(startHour, 0, "start hour");
             assertEq(endHour, 0, "end hour");
         }
 
         {
-            (uint8 startHour, uint8 endHour) = restricted.dayTimeRanges(
-                address(this),
-                2
-            );
+            (uint8 startHour, uint8 endHour) =
+                restricted.dayTimeRanges(address(this), 2);
 
             assertEq(startHour, 0, "start hour");
             assertEq(endHour, 1, "end hour");
@@ -419,10 +417,8 @@ contract TimeRestrictedUnitTest is Test {
         restricted.disableGuard(address(this));
         assertFalse(restricted.safeEnabled(address(this)), "safe not disabled");
 
-        (uint8 startHour, uint8 endHour) = restricted.dayTimeRanges(
-            address(this),
-            1
-        );
+        (uint8 startHour, uint8 endHour) =
+            restricted.dayTimeRanges(address(this), 1);
 
         assertEq(startHour, 0, "start hour");
         assertEq(endHour, 0, "end hour");
@@ -719,12 +715,13 @@ contract TimeRestrictedUnitTest is Test {
 
     function testGetSentinelModuleCount() public {
         MockTimeRestricted mock = new MockTimeRestricted();
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         mock.initializeConfiguration(timelock, ranges, allowedDays);
 
@@ -733,20 +730,19 @@ contract TimeRestrictedUnitTest is Test {
         mock.tstoreModuleAddressesLength(15);
 
         assertEq(
-            mock.getSentinelModuleCount(),
-            15,
-            "incorrect number of modules"
+            mock.getSentinelModuleCount(), 15, "incorrect number of modules"
         );
     }
 
     function testGetSentinelModuleCountNine() public {
         MockTimeRestricted mock = new MockTimeRestricted();
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
 
         mock.initializeConfiguration(timelock, ranges, allowedDays);
 
@@ -760,19 +756,18 @@ contract TimeRestrictedUnitTest is Test {
         }
 
         assertEq(
-            mock.getSentinelModuleCount(),
-            9,
-            "incorrect number of modules"
+            mock.getSentinelModuleCount(), 9, "incorrect number of modules"
         );
     }
 
     function testGetSentinelModuleCountTen() public {
         MockTimeRestricted mock = new MockTimeRestricted();
-        TimeRestricted.TimeRange[]
-            memory ranges = new TimeRestricted.TimeRange[](1);
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
         uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3; /// only allowed on Wednesday
+        allowedDays[0] = 3;
+        /// only allowed on Wednesday
         mock.initializeConfiguration(timelock, ranges, allowedDays);
 
         mock.tstoreLoadAddresses(modules0);
@@ -782,9 +777,7 @@ contract TimeRestrictedUnitTest is Test {
         /// set to empty array so that the second call will return no modules
         modules1 = new address[](0);
         assertEq(
-            mock.getSentinelModuleCount(),
-            10,
-            "incorrect number of modules"
+            mock.getSentinelModuleCount(), 10, "incorrect number of modules"
         );
     }
 
@@ -794,10 +787,11 @@ contract TimeRestrictedUnitTest is Test {
         return owners;
     }
 
-    function getModulesPaginated(
-        address start,
-        uint256
-    ) public view returns (address[] memory, address) {
+    function getModulesPaginated(address start, uint256)
+        public
+        view
+        returns (address[] memory, address)
+    {
         /// call 1 returns 10 addresses
         if (start == address(1)) {
             return (modules0, modules0[modules0.length - 1]);
@@ -806,10 +800,11 @@ contract TimeRestrictedUnitTest is Test {
         }
     }
 
-    function getStorageAt(
-        uint256 offset,
-        uint256 length
-    ) public view returns (bytes memory) {
+    function getStorageAt(uint256 offset, uint256 length)
+        public
+        view
+        returns (bytes memory)
+    {
         bytes memory result = new bytes(length * 32);
         for (uint256 index = 0; index < length; index++) {
             // solhint-disable-next-line no-inline-assembly

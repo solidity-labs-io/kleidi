@@ -2,14 +2,21 @@
 
 pragma solidity ^0.8.0;
 
-import {IERC1155Receiver} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC165, ERC165} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
-import {EnumerableSet} from "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
+import {IERC1155Receiver} from
+    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC721Receiver} from
+    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC165,
+    ERC165
+} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import {EnumerableSet} from
+    "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Safe} from "@safe/Safe.sol";
 
 import {CalldataList} from "src/CalldataList.sol";
-import {ConfigurablePauseGuardian} from "src/guardian/ConfigurablePauseGuardian.sol";
+import {ConfigurablePauseGuardian} from
+    "src/guardian/ConfigurablePauseGuardian.sol";
 
 /// @notice known issues:
 /// - a malicious canceler can cancel proposals indefinitely,
@@ -152,8 +159,7 @@ contract Timelock is
         emit MinDelayChange(0, minDelay);
 
         require(
-            _expirationPeriod >= MIN_DELAY,
-            "Timelock: expiry period too short"
+            _expirationPeriod >= MIN_DELAY, "Timelock: expiry period too short"
         );
 
         expirationPeriod = _expirationPeriod;
@@ -163,11 +169,7 @@ contract Timelock is
         _updatePauseDuration(_pauseDuration);
 
         _addCalldataChecks(
-            contractAddresses,
-            selector,
-            startIndex,
-            endIndex,
-            data
+            contractAddresses, selector, startIndex, endIndex, data
         );
     }
 
@@ -195,8 +197,7 @@ contract Timelock is
     /// @notice allows timelocked actions to make certain parameter changes
     modifier onlyTimelock() {
         require(
-            msg.sender == address(this),
-            "Timelock: caller is not the timelock"
+            msg.sender == address(this), "Timelock: caller is not the timelock"
         );
         _;
     }
@@ -215,13 +216,15 @@ contract Timelock is
 
     /// TODO test transferring NFT's into this contract
     /// @dev See {IERC165-supportsInterface}.
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(IERC165, ERC165) returns (bool) {
-        return
-            interfaceId == type(IERC1155Receiver).interfaceId ||
-            interfaceId == type(IERC721Receiver).interfaceId ||
-            super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(IERC165, ERC165)
+        returns (bool)
+    {
+        return interfaceId == type(IERC1155Receiver).interfaceId
+            || interfaceId == type(IERC721Receiver).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     /// @dev Returns whether an id correspond to a registered operation. This
@@ -241,10 +244,8 @@ contract Timelock is
     /// cannot be executed after the expiry period.
     function isOperationReady(bytes32 id) public view returns (bool) {
         uint256 timestamp = getTimestamp(id);
-        return
-            timestamp > _DONE_TIMESTAMP &&
-            timestamp <= block.timestamp &&
-            timestamp + expirationPeriod > block.timestamp;
+        return timestamp > _DONE_TIMESTAMP && timestamp <= block.timestamp
+            && timestamp + expirationPeriod > block.timestamp;
     }
 
     /// @dev Returns whether an operation is done or not.
@@ -340,13 +341,7 @@ contract Timelock is
         unchecked {
             for (uint256 i = 0; i < targets.length; ++i) {
                 emit CallScheduled(
-                    id,
-                    i,
-                    targets[i],
-                    values[i],
-                    payloads[i],
-                    salt,
-                    delay
+                    id, i, targets[i], values[i], payloads[i], salt, delay
                 );
             }
         }
@@ -452,14 +447,14 @@ contract Timelock is
     /// @param targets the addresses of the contracts to call
     /// @param values the values to send in the calls
     /// @param payloads the calldata to send in the calls
+
     function executeWhitelistedBatch(
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads
     ) external payable onlySafeOwner {
         require(
-            targets.length == values.length &&
-                targets.length == payloads.length,
+            targets.length == values.length && targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
@@ -498,11 +493,7 @@ contract Timelock is
         bytes[] memory datas
     ) external onlyTimelock {
         _addCalldataChecks(
-            contractAddresses,
-            selectors,
-            startIndexes,
-            endIndexes,
-            datas
+            contractAddresses, selectors, startIndexes, endIndexes, datas
         );
     }
 
@@ -519,13 +510,7 @@ contract Timelock is
         uint16 endIndex,
         bytes memory data
     ) external onlyTimelock {
-        _addCalldataCheck(
-            contractAddress,
-            selector,
-            startIndex,
-            endIndex,
-            data
-        );
+        _addCalldataCheck(contractAddress, selector, startIndex, endIndex, data);
     }
 
     /// @notice remove a single calldata check for a given contract address
@@ -621,12 +606,10 @@ contract Timelock is
     /// @param target the address of the contract to call
     /// @param value the value in native tokens to send in the call
     /// @param data the calldata to send in the call
-    function _execute(
-        address target,
-        uint256 value,
-        bytes calldata data
-    ) private {
-        (bool success, ) = target.call{value: value}(data);
+    function _execute(address target, uint256 value, bytes calldata data)
+        private
+    {
+        (bool success,) = target.call{value: value}(data);
         require(success, "Timelock: underlying transaction reverted");
     }
 
@@ -637,25 +620,24 @@ contract Timelock is
     /// ---------------------------------------------------------------
 
     /// @dev See {IERC721Receiver-onERC721Received}.
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes memory
-    ) external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes memory)
+        external
+        pure
+        override
+        returns (bytes4)
+    {
         return this.onERC721Received.selector;
     }
 
     /**
      * @dev See {IERC1155Receiver-onERC1155Received}.
      */
-    function onERC1155Received(
-        address,
-        address,
-        uint256,
-        uint256,
-        bytes memory
-    ) external pure override returns (bytes4) {
+    function onERC1155Received(address, address, uint256, uint256, bytes memory)
+        external
+        pure
+        override
+        returns (bytes4)
+    {
         return this.onERC1155Received.selector;
     }
 

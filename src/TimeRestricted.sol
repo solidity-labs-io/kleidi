@@ -1,7 +1,9 @@
 pragma solidity 0.8.25;
 
-import {BokkyPooBahsDateTimeLibrary} from "src/calendar/BokkyPooBahsDateTimeLibrary.sol";
-import {EnumerableSet} from "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
+import {BokkyPooBahsDateTimeLibrary} from
+    "src/calendar/BokkyPooBahsDateTimeLibrary.sol";
+import {EnumerableSet} from
+    "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {BaseGuard} from "@safe/base/GuardManager.sol";
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
@@ -82,8 +84,8 @@ contract TimeRestricted is BaseGuard {
     mapping(address safe => address timelock) public authorizedTimelock;
 
     /// @notice allowed days to interact with the contract
-    mapping(address safe => EnumerableSet.UintSet allowedDay)
-        private _allowedDays;
+    mapping(address safe => EnumerableSet.UintSet allowedDay) private
+        _allowedDays;
 
     /// @notice Emitted when a time range is added to the allowed days
     /// @param safe address of the safe
@@ -91,10 +93,7 @@ contract TimeRestricted is BaseGuard {
     /// @param startHour start hour of the allowed time range
     /// @param endHour end hour of the allowed time range
     event TimeRangeAdded(
-        address indexed safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
+        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
     );
 
     /// @notice Emitted when a time range is updated for the allowed days
@@ -119,10 +118,7 @@ contract TimeRestricted is BaseGuard {
     /// @param startHour previous start hour of the allowed time range
     /// @param endHour previous end hour of the allowed time range
     event TimeRangeDeleted(
-        address indexed safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
+        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
     );
 
     /// @notice Emitted when the guard is removed from a safe
@@ -151,10 +147,7 @@ contract TimeRestricted is BaseGuard {
             timeRanges.length == allowedDays.length,
             "TimeRestricted: arity mismatch"
         );
-        require(
-            !safeEnabled(msg.sender),
-            "TimeRestricted: already initialized"
-        );
+        require(!safeEnabled(msg.sender), "TimeRestricted: already initialized");
         require(
             authorizedTimelock[msg.sender] == address(0),
             "TimeRestricted: timelock already set"
@@ -162,8 +155,7 @@ contract TimeRestricted is BaseGuard {
         require(msg.sender.code.length != 0, "TimeRestricted: invalid safe");
         require(timelock.code.length != 0, "TimeRestricted: invalid timelock");
         require(
-            timelock != msg.sender,
-            "TimeRestricted: safe cannot equal timelock"
+            timelock != msg.sender, "TimeRestricted: safe cannot equal timelock"
         );
 
         authorizedTimelock[msg.sender] = timelock;
@@ -197,19 +189,22 @@ contract TimeRestricted is BaseGuard {
     /// Day 1 is Monday, 7 is Sunday
     /// should never have duplicates
     /// @param safe to retrieve current allowed days
-    function safeDaysEnabled(
-        address safe
-    ) public view returns (uint256[] memory) {
+    function safeDaysEnabled(address safe)
+        public
+        view
+        returns (uint256[] memory)
+    {
         return _allowedDays[safe].values();
     }
 
     /// @notice returns whether or not a transaction is allowed
     /// @param safe address of the safe
     /// @param timestamp timestamp of the transaction
-    function transactionAllowed(
-        address safe,
-        uint256 timestamp
-    ) public view returns (bool) {
+    function transactionAllowed(address safe, uint256 timestamp)
+        public
+        view
+        returns (bool)
+    {
         /// if safe is not enabled, all actions are allowed
         if (!safeEnabled(safe)) {
             return true;
@@ -293,10 +288,7 @@ contract TimeRestricted is BaseGuard {
         /// store modules in transient storage
         /// store number of modules in transient storage
         _traverseModules(
-            SENTINEL_MODULES,
-            0,
-            _tstoreValueModule,
-            _tstoreValueDirect
+            SENTINEL_MODULES, 0, _tstoreValueModule, _tstoreValueDirect
         );
     }
 
@@ -307,12 +299,11 @@ contract TimeRestricted is BaseGuard {
         /// if the transaction failed, no need to waste gas on further checks
         if (!success) return;
 
-        bytes memory guardBytesPostExecution = Safe(payable(msg.sender))
-            .getStorageAt(GUARD_STORAGE_SLOT, 1);
+        bytes memory guardBytesPostExecution =
+            Safe(payable(msg.sender)).getStorageAt(GUARD_STORAGE_SLOT, 1);
 
-        address guardPostExecution = address(
-            uint160(uint256(guardBytesPostExecution.getFirstWord()))
-        );
+        address guardPostExecution =
+            address(uint160(uint256(guardBytesPostExecution.getFirstWord())));
 
         require(
             guardPostExecution == address(this),
@@ -333,9 +324,8 @@ contract TimeRestricted is BaseGuard {
         );
 
         for (uint256 i = 0; i < ownerLength; i++) {
-            uint256 ownerAddress = uint256(
-                keccak256(abi.encode(owners[i], OWNER_TSTORE_OFFSET))
-            );
+            uint256 ownerAddress =
+                uint256(keccak256(abi.encode(owners[i], OWNER_TSTORE_OFFSET)));
             uint256 found;
             // retrieve whether owners were stored from TSTORE slots
             assembly {
@@ -393,10 +383,10 @@ contract TimeRestricted is BaseGuard {
     /// There must always be at least a single day allowed.
     /// @param safe address of the safe to remove the allowed day from
     /// @param dayOfWeek day of the week to remove
-    function removeAllowedDay(
-        address safe,
-        uint8 dayOfWeek
-    ) external onlyTimelock(safe) {
+    function removeAllowedDay(address safe, uint8 dayOfWeek)
+        external
+        onlyTimelock(safe)
+    {
         require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
 
         TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
@@ -413,10 +403,7 @@ contract TimeRestricted is BaseGuard {
         assert(_allowedDays[safe].length() != 0);
 
         emit TimeRangeDeleted(
-            msg.sender,
-            dayOfWeek,
-            oldTime.startHour,
-            oldTime.endHour
+            msg.sender, dayOfWeek, oldTime.startHour, oldTime.endHour
         );
     }
 
@@ -451,8 +438,8 @@ contract TimeRestricted is BaseGuard {
         function(uint256, uint256) internal moduleOperation,
         function(uint256, uint256) internal moduleLengthOperation
     ) internal {
-        (address[] memory modules, address next) = Safe(payable(msg.sender))
-            .getModulesPaginated(start, PAGE_SIZE);
+        (address[] memory modules, address next) =
+            Safe(payable(msg.sender)).getModulesPaginated(start, PAGE_SIZE);
         uint256 moduleLength = modules.length;
 
         for (uint256 i = 0; i < moduleLength; i++) {
@@ -470,19 +457,17 @@ contract TimeRestricted is BaseGuard {
         /// the sentinel module, traversal ends
         if (modules.length < PAGE_SIZE || next == SENTINEL_MODULES) {
             moduleLengthOperation(
-                MODULE_LENGTH_SLOT,
-                moduleAmountFound + modules.length
+                MODULE_LENGTH_SLOT, moduleAmountFound + modules.length
             );
         } else {
             /// add found modules to the total amount of modules found so far
             /// and continue recursion without writing to transient storage
-            return
-                _traverseModules(
-                    next,
-                    modules.length + moduleAmountFound,
-                    moduleOperation,
-                    moduleLengthOperation
-                );
+            return _traverseModules(
+                next,
+                modules.length + moduleAmountFound,
+                moduleOperation,
+                moduleLengthOperation
+            );
         }
     }
 
@@ -560,9 +545,8 @@ contract TimeRestricted is BaseGuard {
     /// will then have slot calculated from it
     /// @param value value to store in the slot
     function _tstoreValueModule(uint256 slot, uint256 value) internal {
-        uint256 calculatedSlot = uint256(
-            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
-        );
+        uint256 calculatedSlot =
+            uint256(keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET)));
 
         _tstoreValueDirect(calculatedSlot, value);
     }
@@ -580,13 +564,12 @@ contract TimeRestricted is BaseGuard {
     /// the module mapping
     /// @param slot address to check the value in
     /// @param value expected in the given slot
-    function _checktTstoreValueModule(
-        uint256 slot,
-        uint256 value
-    ) internal view {
-        uint256 calculatedSlot = uint256(
-            keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET))
-        );
+    function _checktTstoreValueModule(uint256 slot, uint256 value)
+        internal
+        view
+    {
+        uint256 calculatedSlot =
+            uint256(keccak256(abi.encode(slot, MODULE_TSTORE_OFFSET)));
 
         _checktStoreValueDirect(calculatedSlot, value);
     }
@@ -594,10 +577,10 @@ contract TimeRestricted is BaseGuard {
     /// @notice checks whether a value is stored in a transient slot
     /// @param slot to check the value in
     /// @param value expected in the given slot
-    function _checktStoreValueDirect(
-        uint256 slot,
-        uint256 value
-    ) internal view {
+    function _checktStoreValueDirect(uint256 slot, uint256 value)
+        internal
+        view
+    {
         uint256 storedValue;
 
         assembly {

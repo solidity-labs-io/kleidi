@@ -3,7 +3,8 @@ pragma solidity 0.8.25;
 
 import {Test, console} from "forge-std/Test.sol";
 
-import {BokkyPooBahsDateTimeLibrary} from "src/calendar/BokkyPooBahsDateTimeLibrary.sol";
+import {BokkyPooBahsDateTimeLibrary} from
+    "src/calendar/BokkyPooBahsDateTimeLibrary.sol";
 
 contract TimeUnitTest is Test {
     using BokkyPooBahsDateTimeLibrary for *;

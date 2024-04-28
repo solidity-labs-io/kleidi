@@ -15,8 +15,7 @@ contract ConfigurablePauseGuardian is ConfigurablePause {
     /// @param oldPauseGuardian old pause guardian
     /// @param newPauseGuardian new pause guardian
     event PauseGuardianUpdated(
-        address indexed oldPauseGuardian,
-        address indexed newPauseGuardian
+        address indexed oldPauseGuardian, address indexed newPauseGuardian
     );
 
     /// @notice returns whether the pause has been used by the pause guardian
