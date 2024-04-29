@@ -65,6 +65,7 @@ contract BytesHelperTest is Test {
         vm.expectRevert("Start index not less than end index");
         toSlice.sliceBytes(6, 5);
     }
+
     function testSliceBytesFailsStartEqEnd() public {
         bytes memory toSlice = new bytes(10);
         vm.expectRevert("Start index not less than end index");
