@@ -208,13 +208,20 @@ contract Timelock is
     /// ---------------------------------------------------------------
     /// ---------------------------------------------------------------
 
+    /// ---------------------------------------------------------------
+    /// ---------------------- System Invariants ----------------------
+    /// ---------------------------------------------------------------
+
+    /// getAllProposals length gt 0 => contract is not paused
+    /// contract is paused => getAllProposals length eq 0
+
     /// @notice returns all currently non cancelled and non-executed proposals
     /// some proposals may not be able to be executed if they have passed the expiration period
     function getAllProposals() external view returns (bytes32[] memory) {
         return _liveProposals.values();
     }
 
-    /// TODO test transferring NFT's into this contract
+    /// TODO test transferring NFT's (721 and 1155) into this contract
     /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId)
         public
@@ -477,6 +484,13 @@ contract Timelock is
     /// ------------------- Timelock Only Functions -------------------
     /// ---------------------------------------------------------------
     /// ---------------------------------------------------------------
+
+    /// @notice function to grant the guardian to a new address
+    /// resets the pauseStartTime to 0, which unpauses the contract
+    /// @param newGuardian the address of the new guardian
+    function setGuardian(address newGuardian) public onlyTimelock {
+        _grantGuardian(newGuardian);
+    }
 
     /// @notice add multiple calldata checks
     /// @param contractAddresses the addresses of the contract that the calldata check is added to
