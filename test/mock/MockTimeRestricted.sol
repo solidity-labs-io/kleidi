@@ -19,10 +19,7 @@ contract MockTimeRestricted is TimeRestricted {
     }
 
     function tstoreModuleAddressesLength(uint256 value) public {
-        uint256 slot = MODULE_LENGTH_SLOT;
-        assembly {
-            tstore(slot, value)
-        }
+        _tstoreValueDirect(MODULE_LENGTH_SLOT, value);
     }
 
     function tstoreLoadAddresses(address[] memory values) public {
