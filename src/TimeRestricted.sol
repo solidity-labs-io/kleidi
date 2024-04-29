@@ -12,25 +12,23 @@ import {BytesHelper} from "src/BytesHelper.sol";
 
 /// @notice Only the timelock can add, edit, remove or disable
 /// time ranges after initialization.
-/// @title TimeRestricted contract that restricts
-/// contract interaction to a specific time range
-/// This guard also restricts changing owners and modules
-/// It enforce that the owners and modules
-/// remain the same after a transaction is executed
-/// If there is any changes, transactions are reverted
+/// Contract that restricts Safe interactions to a specific time range
+/// This guard also restricts changing owners and modules It enforce
+/// that the owners and modules remain the same after a transaction is
+/// executed. If there is any changes, transactions are reverted
 
 /// Config:
 ///  - the timelock must be a module of the safe to enact changes to the owners and modules
 ///  - the safe must not be the only executor on the timelock, otherwise the safe could be
 ///  locked out of making changes, except dark spells
 
-/// implements checks that no new modules were added or removed by a transaction
+/// checks that no new modules were added or removed by a transaction
 /// uses TSTORE/TLOAD to store the current state of the modules
 /// iterate over modules starting at the sentinel address, then go through the linked list
 /// until the end is reached, storing the address of each module in a TSTORE slot
 /// store the number of modules in another TSTORE slot
 
-/// implement checks that no new owners were added or removed by a transaction
+/// checks that no new owners were added or removed by a transaction
 /// uses getOwners() method for this
 /// then store the owners in TSTORE slots
 
@@ -132,44 +130,6 @@ contract TimeRestricted is BaseGuard {
             "TimeRestricted: only timelock"
         );
         _;
-    }
-
-    /// @notice initialize configuration for a safe as the gnosis safe
-    /// @param timelock address of the timelock that can add time ranges
-    /// @param timeRanges array of time ranges to allow transactions
-    /// @param allowedDays corresponding array of days to allow transactions
-    function initializeConfiguration(
-        address timelock,
-        TimeRange[] memory timeRanges,
-        uint8[] memory allowedDays
-    ) external {
-        require(
-            timeRanges.length == allowedDays.length,
-            "TimeRestricted: arity mismatch"
-        );
-        require(!safeEnabled(msg.sender), "TimeRestricted: already initialized");
-        require(
-            authorizedTimelock[msg.sender] == address(0),
-            "TimeRestricted: timelock already set"
-        );
-        require(msg.sender.code.length != 0, "TimeRestricted: invalid safe");
-        require(timelock.code.length != 0, "TimeRestricted: invalid timelock");
-        require(
-            timelock != msg.sender, "TimeRestricted: safe cannot equal timelock"
-        );
-
-        authorizedTimelock[msg.sender] = timelock;
-
-        unchecked {
-            for (uint256 i = 0; i < timeRanges.length; i++) {
-                _addTimeRange(
-                    msg.sender,
-                    allowedDays[i],
-                    timeRanges[i].startHour,
-                    timeRanges[i].endHour
-                );
-            }
-        }
     }
 
     /// @notice returns whether or not the safe has this guard enabled
@@ -345,6 +305,48 @@ contract TimeRestricted is BaseGuard {
         );
     }
 
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
+    /// ------------ External Mutative Functions ------------
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
+
+    /// @notice initialize configuration for a safe as the gnosis safe
+    /// @param timelock address of the timelock that can add time ranges
+    /// @param timeRanges array of time ranges to allow transactions
+    /// @param allowedDays corresponding array of days to allow transactions
+    function initializeConfiguration(
+        address timelock,
+        TimeRange[] calldata timeRanges,
+        uint8[] calldata allowedDays
+    ) external {
+        require(
+            timeRanges.length == allowedDays.length,
+            "TimeRestricted: arity mismatch"
+        );
+        require(!safeEnabled(msg.sender), "TimeRestricted: already initialized");
+        require(
+            authorizedTimelock[msg.sender] == address(0),
+            "TimeRestricted: timelock already set"
+        );
+        require(msg.sender.code.length != 0, "TimeRestricted: invalid safe");
+        require(timelock.code.length != 0, "TimeRestricted: invalid timelock");
+        require(
+            timelock != msg.sender, "TimeRestricted: safe cannot equal timelock"
+        );
+
+        authorizedTimelock[msg.sender] = timelock;
+
+        for (uint256 i = 0; i < timeRanges.length; i++) {
+            _addTimeRange(
+                msg.sender,
+                allowedDays[i],
+                timeRanges[i].startHour,
+                timeRanges[i].endHour
+            );
+        }
+    }
+
     /// @notice callable by a safe, adds a time range to the allowed days
     /// for the safe to execute transactions
     /// @param safe address of the safe to add the time range to
@@ -375,7 +377,25 @@ contract TimeRestricted is BaseGuard {
         uint8 startHour,
         uint8 endHour
     ) external onlyTimelock(safe) {
-        _editTimeRange(safe, dayOfWeek, startHour, endHour);
+        require(endHour <= 23, "invalid end hour");
+        require(startHour < endHour, "invalid time range");
+        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
+        require(_allowedDays[safe].contains(dayOfWeek), "day not allowed");
+
+        TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
+
+        TimeRange storage currentTime = dayTimeRanges[safe][dayOfWeek];
+        currentTime.startHour = startHour;
+        currentTime.endHour = endHour;
+
+        emit TimeRangeUpdated(
+            safe,
+            dayOfWeek,
+            oldTime.startHour,
+            startHour,
+            oldTime.endHour,
+            endHour
+        );
     }
 
     /// @notice remove an allowed day from the safe. This will remove
@@ -425,6 +445,12 @@ contract TimeRestricted is BaseGuard {
         emit GuardDisabled(safe);
     }
 
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
+    /// ----------------- Internal Helpers ------------------
+    /// -----------------------------------------------------
+    /// -----------------------------------------------------
+
     /// @notice recursively traverse through all modules by asking the Safe for its
     /// modules in a paginated manner, storing the module addresses in TSTORE slots
     /// and finally storing the total number of module addresses in a TSTORE slot.
@@ -469,39 +495,6 @@ contract TimeRestricted is BaseGuard {
                 moduleLengthOperation
             );
         }
-    }
-
-    /// @notice callable by a safe, updates the time range for the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to allow transactions
-    /// @param startHour start hour of the allowed time range
-    /// @param endHour end hour of the allowed time range
-    /// must allow at least a 1 hour window for transactions be executed
-    function _editTimeRange(
-        address safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
-    ) private {
-        require(endHour <= 23, "invalid end hour");
-        require(startHour < endHour, "invalid time range");
-        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
-        require(_allowedDays[safe].contains(dayOfWeek), "day not allowed");
-
-        TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
-
-        TimeRange storage currentTime = dayTimeRanges[safe][dayOfWeek];
-        currentTime.startHour = startHour;
-        currentTime.endHour = endHour;
-
-        emit TimeRangeUpdated(
-            safe,
-            dayOfWeek,
-            oldTime.startHour,
-            startHour,
-            oldTime.endHour,
-            endHour
-        );
     }
 
     /// @notice callable by a safe, adds a time range to the allowed days
