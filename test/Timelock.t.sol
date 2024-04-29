@@ -91,7 +91,7 @@ contract TimelockTest is Test {
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
     }
 
-    function testSupportsInterface() public {
+    function testSupportsInterface() public view {
         assertTrue(
             timelock.supportsInterface(type(IERC1155Receiver).interfaceId),
             "Timelock should support 1155 Receiver interface"
@@ -375,6 +375,8 @@ contract TimelockTest is Test {
 
     /// ACL Tests
     /// - test that only the timelock can:
+    ///     - setGuardian
+    ///     - addCalldataCheck
     ///     - addCalldataChecks
     ///     - removeCalldataChecks
     ///     - removeAllCalldataChecks
@@ -382,6 +384,16 @@ contract TimelockTest is Test {
     ///     - updateExpirationPeriod
     /// prove this through both positive and negative tests
     /// revert when not timelock, and succeed when timelock
+
+    function testSetGuardianFailsNonTimelock() public {
+        vm.expectRevert("Timelock: caller is not the timelock");
+        timelock.setGuardian(address(0));
+    }
+
+    function testAddCalldataCheckFailsNonTimelock() public {
+        vm.expectRevert("Timelock: caller is not the timelock");
+        timelock.addCalldataCheck(address(0), bytes4(0xFFFFFFFF), 0, 1, "");
+    }
 
     function testAddCalldataChecksFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
@@ -408,6 +420,37 @@ contract TimelockTest is Test {
     function testUpdateExpirationPeriodFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.updateExpirationPeriod(0);
+    }
+
+    function testSetGuardianSucceedsAsTimelock(address newGuardian) public {
+        vm.prank(address(timelock));
+        timelock.setGuardian(newGuardian);
+
+        assertEq(
+            timelock.pauseGuardian(),
+            newGuardian,
+            "new guardian not correctly set"
+        );
+        assertEq(timelock.pauseStartTime(), 0, "pauseStartTime should be 0");
+        assertFalse(timelock.paused(), "timelock should not be paused");
+        assertFalse(timelock.pauseUsed(), "pause should not be used");
+    }
+
+    function testSetGuardianSucceedsAsTimelockAndUnpauses(address newGuardian)
+        public
+    {
+        vm.prank(guardian);
+        timelock.pause();
+
+        assertTrue(timelock.paused(), "not paused");
+        assertTrue(timelock.pauseUsed(), "pause should not be used");
+        assertEq(
+            timelock.pauseStartTime(),
+            block.timestamp,
+            "pauseStartTime should be 0"
+        );
+
+        testSetGuardianSucceedsAsTimelock(newGuardian);
     }
 
     function testUpdateDelaySucceedsAsTimelock() public {
