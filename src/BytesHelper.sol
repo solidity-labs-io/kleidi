@@ -4,9 +4,11 @@ library BytesHelper {
     /// @notice function to grab the first 4 bytes of calldata payload
     /// returns the function selector
     /// @param toSlice the calldata payload
-    function getFunctionSignature(
-        bytes memory toSlice
-    ) public pure returns (bytes4 functionSignature) {
+    function getFunctionSignature(bytes memory toSlice)
+        public
+        pure
+        returns (bytes4 functionSignature)
+    {
         require(toSlice.length >= 4, "No function signature");
 
         assembly {
@@ -15,9 +17,12 @@ library BytesHelper {
     }
     /// @notice function to grab the first 32 bytes of returned memory
     /// @param toSlice the calldata payload
-    function getFirstWord(
-        bytes memory toSlice
-    ) public pure returns (uint256 value) {
+
+    function getFirstWord(bytes memory toSlice)
+        public
+        pure
+        returns (uint256 value)
+    {
         require(toSlice.length >= 32, "Length less than 32 bytes");
 
         assembly {
@@ -30,11 +35,11 @@ library BytesHelper {
     /// @param toSlice the byte string to slice
     /// @param start the start index of the slice
     /// @param end the end index of the slice
-    function sliceBytes(
-        bytes memory toSlice,
-        uint256 start,
-        uint256 end
-    ) public pure returns (bytes memory) {
+    function sliceBytes(bytes memory toSlice, uint256 start, uint256 end)
+        public
+        pure
+        returns (bytes memory)
+    {
         require(
             start < toSlice.length,
             "Start index is greater than the length of the byte string"
