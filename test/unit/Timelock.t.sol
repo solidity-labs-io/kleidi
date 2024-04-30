@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {
-    IERC165,
-    ERC165
-} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import {IERC1155Receiver} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC721Receiver} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC165, ERC165} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -17,7 +12,7 @@ import {MockSafe} from "test/mock/MockSafe.sol";
 import {MockLending} from "test/mock/MockLending.sol";
 import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
 
-contract TimelockTest is Test {
+contract TimelockUnitTest is Test {
     /// @notice reference to the Timelock contract
     Timelock private timelock;
 
@@ -88,8 +83,16 @@ contract TimelockTest is Test {
 
     function testSetup() public view {
         assertEq(timelock.safe(), address(safe), "safe incorrectly set");
-        assertEq(timelock.minDelay(), MINIMUM_DELAY, "minDelay incorrectly set");
-        assertEq(timelock.pauseGuardian(), guardian, "guardian incorrectly set");
+        assertEq(
+            timelock.minDelay(),
+            MINIMUM_DELAY,
+            "minDelay incorrectly set"
+        );
+        assertEq(
+            timelock.pauseGuardian(),
+            guardian,
+            "guardian incorrectly set"
+        );
         assertEq(
             timelock.pauseDuration(),
             PAUSE_DURATION,
@@ -155,7 +158,10 @@ contract TimelockTest is Test {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -163,26 +169,36 @@ contract TimelockTest is Test {
         bytes32 id = timelock.hashOperation(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0)
         );
 
         assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+            timelock.isOperationPending(id),
+            "operation should be pending"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id), "operation should not be ready"
+            timelock.isOperationReady(id),
+            "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
+            timelock.isOperationDone(id),
+            "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0], id, "proposal should be in proposals"
+            timelock.getAllProposals()[0],
+            id,
+            "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length, 1, "proposal length incorrect"
+            timelock.getAllProposals().length,
+            1,
+            "proposal length incorrect"
         );
 
         return id;
@@ -201,33 +217,50 @@ contract TimelockTest is Test {
         values[0] = 0;
 
         bytes[] memory datas = new bytes[](1);
-        datas[0] =
-            abi.encodeWithSelector(timelock.updateDelay.selector, newDelay);
+        datas[0] = abi.encodeWithSelector(
+            timelock.updateDelay.selector,
+            newDelay
+        );
 
         vm.prank(address(safe));
         timelock.scheduleBatch(
-            targets, values, datas, bytes32(0), MINIMUM_DELAY
+            targets,
+            values,
+            datas,
+            bytes32(0),
+            MINIMUM_DELAY
         );
 
-        bytes32 id =
-            timelock.hashOperationBatch(targets, values, datas, bytes32(0));
+        bytes32 id = timelock.hashOperationBatch(
+            targets,
+            values,
+            datas,
+            bytes32(0)
+        );
 
         assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+            timelock.isOperationPending(id),
+            "operation should be pending"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id), "operation should not be ready"
+            timelock.isOperationReady(id),
+            "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
+            timelock.isOperationDone(id),
+            "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0], id, "proposal should be in proposals"
+            timelock.getAllProposals()[0],
+            id,
+            "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length, 1, "proposal length incorrect"
+            timelock.getAllProposals().length,
+            1,
+            "proposal length incorrect"
         );
 
         return (id, targets, values, datas);
@@ -252,7 +285,9 @@ contract TimelockTest is Test {
             "minDelay should be updated"
         );
         assertEq(
-            timelock.getAllProposals().length, 0, "proposal length incorrect"
+            timelock.getAllProposals().length,
+            0,
+            "proposal length incorrect"
         );
 
         vm.expectRevert("Timelock: proposal does not exist");
@@ -265,14 +300,17 @@ contract TimelockTest is Test {
         vm.warp(block.timestamp + MINIMUM_DELAY);
 
         assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+            timelock.isOperationPending(id),
+            "operation should be pending"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertTrue(
-            timelock.isOperationReady(id), "operation should not be ready"
+            timelock.isOperationReady(id),
+            "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
+            timelock.isOperationDone(id),
+            "operation should not be done"
         );
     }
 
@@ -281,7 +319,10 @@ contract TimelockTest is Test {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -314,14 +355,20 @@ contract TimelockTest is Test {
         assertTrue(timelock.paused(), "timelock should be paused");
 
         assertFalse(
-            timelock.isOperationPending(id), "operation should not be pending"
-        );
-        assertFalse(timelock.isOperation(id), "operation should not be present");
-        assertFalse(
-            timelock.isOperationReady(id), "operation should not be ready"
+            timelock.isOperationPending(id),
+            "operation should not be pending"
         );
         assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
+            timelock.isOperation(id),
+            "operation should not be present"
+        );
+        assertFalse(
+            timelock.isOperationReady(id),
+            "operation should not be ready"
+        );
+        assertFalse(
+            timelock.isOperationDone(id),
+            "operation should not be done"
         );
 
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
@@ -343,7 +390,10 @@ contract TimelockTest is Test {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -372,7 +422,10 @@ contract TimelockTest is Test {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0)
         );
     }
@@ -383,7 +436,10 @@ contract TimelockTest is Test {
 
         vm.expectRevert("Pausable: paused");
         timelock.executeBatch(
-            new address[](0), new uint256[](0), new bytes[](0), bytes32(0)
+            new address[](0),
+            new uint256[](0),
+            new bytes[](0),
+            bytes32(0)
         );
     }
 
@@ -412,7 +468,11 @@ contract TimelockTest is Test {
     function testAddCalldataChecksFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.addCalldataChecks(
-            contractAddresses, selector, startIndex, endIndex, data
+            contractAddresses,
+            selector,
+            startIndex,
+            endIndex,
+            data
         );
     }
 
@@ -450,9 +510,9 @@ contract TimelockTest is Test {
         assertFalse(timelock.pauseUsed(), "pause should not be used");
     }
 
-    function testSetGuardianSucceedsAsTimelockAndUnpauses(address newGuardian)
-        public
-    {
+    function testSetGuardianSucceedsAsTimelockAndUnpauses(
+        address newGuardian
+    ) public {
         vm.prank(guardian);
         timelock.pause();
 
@@ -520,7 +580,10 @@ contract TimelockTest is Test {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -530,7 +593,10 @@ contract TimelockTest is Test {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -544,7 +610,10 @@ contract TimelockTest is Test {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY - 1
         );
@@ -598,13 +667,19 @@ contract TimelockTest is Test {
         vm.expectRevert("Timelock: length mismatch");
         vm.prank(address(safe));
         timelock.executeBatch(
-            new address[](1), new uint256[](0), new bytes[](0), bytes32(0)
+            new address[](1),
+            new uint256[](0),
+            new bytes[](0),
+            bytes32(0)
         );
 
         vm.expectRevert("Timelock: length mismatch");
         vm.prank(address(safe));
         timelock.executeBatch(
-            new address[](1), new uint256[](1), new bytes[](0), bytes32(0)
+            new address[](1),
+            new uint256[](1),
+            new bytes[](0),
+            bytes32(0)
         );
     }
 
@@ -629,12 +704,17 @@ contract TimelockTest is Test {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0)
         );
 
         assertEq(
-            timelock.minDelay(), MINIMUM_DELAY, "minDelay should be updated"
+            timelock.minDelay(),
+            MINIMUM_DELAY,
+            "minDelay should be updated"
         );
         assertTrue(timelock.isOperationDone(id), "operation should be done");
     }
@@ -646,7 +726,10 @@ contract TimelockTest is Test {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0)
         );
     }
@@ -659,7 +742,8 @@ contract TimelockTest is Test {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateExpirationPeriod.selector, newExpirationPeriod
+                timelock.updateExpirationPeriod.selector,
+                newExpirationPeriod
             ),
             bytes32(0),
             MINIMUM_DELAY
@@ -673,7 +757,8 @@ contract TimelockTest is Test {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateExpirationPeriod.selector, newExpirationPeriod
+                timelock.updateExpirationPeriod.selector,
+                newExpirationPeriod
             ),
             bytes32(0)
         );
@@ -682,7 +767,8 @@ contract TimelockTest is Test {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateExpirationPeriod.selector, newExpirationPeriod
+                timelock.updateExpirationPeriod.selector,
+                newExpirationPeriod
             ),
             bytes32(0)
         );
@@ -694,7 +780,8 @@ contract TimelockTest is Test {
         );
 
         assertFalse(
-            timelock.isOperationPending(id), "operation should not be pending"
+            timelock.isOperationPending(id),
+            "operation should not be pending"
         );
         assertTrue(timelock.isOperationDone(id), "operation should be done");
         assertTrue(timelock.isOperation(id), "operation should exist");
@@ -705,7 +792,9 @@ contract TimelockTest is Test {
             "expirationPeriod should be updated"
         );
         assertEq(
-            timelock.minDelay(), MINIMUM_DELAY, "minDelay should be updated"
+            timelock.minDelay(),
+            MINIMUM_DELAY,
+            "minDelay should be updated"
         );
     }
 
@@ -752,28 +841,43 @@ contract TimelockTest is Test {
 
         vm.prank(address(safe));
         timelock.scheduleBatch(
-            targets, values, datas, bytes32(0), MINIMUM_DELAY
+            targets,
+            values,
+            datas,
+            bytes32(0),
+            MINIMUM_DELAY
         );
 
-        bytes32 id =
-            timelock.hashOperationBatch(targets, values, datas, bytes32(0));
+        bytes32 id = timelock.hashOperationBatch(
+            targets,
+            values,
+            datas,
+            bytes32(0)
+        );
 
         assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+            timelock.isOperationPending(id),
+            "operation should be pending"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id), "operation should not be ready"
+            timelock.isOperationReady(id),
+            "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
+            timelock.isOperationDone(id),
+            "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0], id, "proposal should be in proposals"
+            timelock.getAllProposals()[0],
+            id,
+            "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length, 1, "proposal length incorrect"
+            timelock.getAllProposals().length,
+            1,
+            "proposal length incorrect"
         );
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -790,7 +894,9 @@ contract TimelockTest is Test {
             address(lending),
             0,
             abi.encodeWithSelector(
-                lending.deposit.selector, address(timelock), 100
+                lending.deposit.selector,
+                address(timelock),
+                100
             )
         );
 
@@ -798,7 +904,9 @@ contract TimelockTest is Test {
             address(lending),
             0,
             abi.encodeWithSelector(
-                lending.withdraw.selector, address(timelock), 100
+                lending.withdraw.selector,
+                address(timelock),
+                100
             )
         );
 
@@ -807,7 +915,9 @@ contract TimelockTest is Test {
             address(lending),
             1,
             abi.encodeWithSelector(
-                lending.withdraw.selector, address(timelock), 100
+                lending.withdraw.selector,
+                address(timelock),
+                100
             )
         );
 
@@ -820,7 +930,8 @@ contract TimelockTest is Test {
         );
 
         Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
-            address(lending), MockLending.deposit.selector
+            address(lending),
+            MockLending.deposit.selector
         );
 
         assertEq(calldataChecks.length, 1, "calldata checks should be added");
@@ -878,28 +989,43 @@ contract TimelockTest is Test {
 
         vm.prank(address(safe));
         timelock.scheduleBatch(
-            targets, values, datas, bytes32(0), MINIMUM_DELAY
+            targets,
+            values,
+            datas,
+            bytes32(0),
+            MINIMUM_DELAY
         );
 
-        bytes32 id =
-            timelock.hashOperationBatch(targets, values, datas, bytes32(0));
+        bytes32 id = timelock.hashOperationBatch(
+            targets,
+            values,
+            datas,
+            bytes32(0)
+        );
 
         assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+            timelock.isOperationPending(id),
+            "operation should be pending"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id), "operation should not be ready"
+            timelock.isOperationReady(id),
+            "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
+            timelock.isOperationDone(id),
+            "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0], id, "proposal should be in proposals"
+            timelock.getAllProposals()[0],
+            id,
+            "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length, 1, "proposal length incorrect"
+            timelock.getAllProposals().length,
+            1,
+            "proposal length incorrect"
         );
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -918,28 +1044,43 @@ contract TimelockTest is Test {
 
         bytes[] memory lendingPayloads = new bytes[](2);
         lendingPayloads[0] = abi.encodeWithSelector(
-            lending.deposit.selector, address(timelock), 100
+            lending.deposit.selector,
+            address(timelock),
+            100
         );
         lendingPayloads[1] = abi.encodeWithSelector(
-            lending.withdraw.selector, address(timelock), 100
+            lending.withdraw.selector,
+            address(timelock),
+            100
         );
 
         vm.expectEmit(true, true, true, true, address(timelock));
         emit CallExecuted(
-            bytes32(0), 0, address(lending), 0, lendingPayloads[0]
+            bytes32(0),
+            0,
+            address(lending),
+            0,
+            lendingPayloads[0]
         );
 
         vm.expectEmit(true, true, true, true, address(timelock));
         emit CallExecuted(
-            bytes32(0), 1, address(lending), 0, lendingPayloads[1]
+            bytes32(0),
+            1,
+            address(lending),
+            0,
+            lendingPayloads[1]
         );
 
         timelock.executeWhitelistedBatch(
-            lendingAddresses, new uint256[](2), lendingPayloads
+            lendingAddresses,
+            new uint256[](2),
+            lendingPayloads
         );
 
         Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
-            address(lending), MockLending.deposit.selector
+            address(lending),
+            MockLending.deposit.selector
         );
 
         assertEq(calldataChecks.length, 1, "calldata checks should exist");
@@ -962,7 +1103,9 @@ contract TimelockTest is Test {
     function testExecuteWhitelistedBatchNonSafeOwnerFails() public {
         vm.expectRevert("Timelock: caller is not the safe owner");
         timelock.executeWhitelistedBatch(
-            new address[](0), new uint256[](0), new bytes[](0)
+            new address[](0),
+            new uint256[](0),
+            new bytes[](0)
         );
     }
 
@@ -973,12 +1116,16 @@ contract TimelockTest is Test {
         safe.setOwners(safeSigner);
         vm.expectRevert("Timelock: length mismatch");
         timelock.executeWhitelistedBatch(
-            new address[](1), new uint256[](0), new bytes[](0)
+            new address[](1),
+            new uint256[](0),
+            new bytes[](0)
         );
 
         vm.expectRevert("Timelock: length mismatch");
         timelock.executeWhitelistedBatch(
-            new address[](1), new uint256[](1), new bytes[](0)
+            new address[](1),
+            new uint256[](1),
+            new bytes[](0)
         );
     }
 
@@ -1001,11 +1148,14 @@ contract TimelockTest is Test {
 
         vm.prank(address(timelock));
         timelock.removeCalldataChecks(
-            address(lending), MockLending.deposit.selector, 0
+            address(lending),
+            MockLending.deposit.selector,
+            0
         );
 
         Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
-            address(lending), MockLending.deposit.selector
+            address(lending),
+            MockLending.deposit.selector
         );
 
         assertEq(calldataChecks.length, 0, "calldata checks should be removed");
@@ -1030,20 +1180,26 @@ contract TimelockTest is Test {
 
         {
             Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
-                address(lending), MockLending.deposit.selector
+                address(lending),
+                MockLending.deposit.selector
             );
 
             assertEq(
-                calldataChecks.length, 0, "calldata checks should be removed"
+                calldataChecks.length,
+                0,
+                "calldata checks should be removed"
             );
         }
         {
             Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
-                address(lending), MockLending.withdraw.selector
+                address(lending),
+                MockLending.withdraw.selector
             );
 
             assertEq(
-                calldataChecks.length, 0, "calldata checks should be removed"
+                calldataChecks.length,
+                0,
+                "calldata checks should be removed"
             );
         }
 
@@ -1052,7 +1208,9 @@ contract TimelockTest is Test {
             address(lending),
             0,
             abi.encodeWithSelector(
-                MockLending.deposit.selector, address(timelock), 100
+                MockLending.deposit.selector,
+                address(timelock),
+                100
             )
         );
 
@@ -1061,7 +1219,9 @@ contract TimelockTest is Test {
             address(lending),
             0,
             abi.encodeWithSelector(
-                MockLending.withdraw.selector, address(timelock), 100
+                MockLending.withdraw.selector,
+                address(timelock),
+                100
             )
         );
     }
@@ -1089,7 +1249,10 @@ contract TimelockTest is Test {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0)
         );
 
@@ -1099,7 +1262,10 @@ contract TimelockTest is Test {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY
+            ),
             bytes32(0)
         );
     }
@@ -1124,7 +1290,8 @@ contract TimelockTest is Test {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateDelay.selector, MINIMUM_DELAY - 1
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY - 1
             ),
             bytes32(0),
             MINIMUM_DELAY
@@ -1134,27 +1301,35 @@ contract TimelockTest is Test {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateDelay.selector, MINIMUM_DELAY - 1
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY - 1
             ),
             bytes32(0)
         );
 
         assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+            timelock.isOperationPending(id),
+            "operation should be pending"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id), "operation should not be ready"
+            timelock.isOperationReady(id),
+            "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
+            timelock.isOperationDone(id),
+            "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0], id, "proposal should be in proposals"
+            timelock.getAllProposals()[0],
+            id,
+            "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length, 1, "proposal length incorrect"
+            timelock.getAllProposals().length,
+            1,
+            "proposal length incorrect"
         );
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -1164,7 +1339,8 @@ contract TimelockTest is Test {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateDelay.selector, MINIMUM_DELAY - 1
+                timelock.updateDelay.selector,
+                MINIMUM_DELAY - 1
             ),
             bytes32(0)
         );
@@ -1175,12 +1351,16 @@ contract TimelockTest is Test {
     function testNoopReceiveNoRevert() public {
         timelock.onERC1155Received(address(0), address(0), 0, 0, "");
         timelock.onERC1155BatchReceived(
-            address(0), address(0), new uint256[](0), new uint256[](0), ""
+            address(0),
+            address(0),
+            new uint256[](0),
+            new uint256[](0),
+            ""
         );
         timelock.onERC721Received(address(0), address(0), 0, "");
 
         vm.deal(address(this), 1);
-        (bool success,) = address(timelock).call{value: 1}("");
+        (bool success, ) = address(timelock).call{value: 1}("");
         assertTrue(success, "payable call failed");
     }
 }
