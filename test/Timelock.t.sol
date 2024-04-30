@@ -51,6 +51,20 @@ contract TimelockTest is Test {
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
 
+    /// @notice Emitted when a call is performed as part of operation `id`.
+    /// @param id unique identifier for the operation
+    /// @param index index of the call within the operation, non zero if not first call in a batch
+    /// @param target the address of the contract called
+    /// @param value the amount of native asset sent with the call
+    /// @param data the calldata sent with the call
+    event CallExecuted(
+        bytes32 indexed id,
+        uint256 indexed index,
+        address target,
+        uint256 value,
+        bytes data
+    );
+
     function setUp() public {
         // at least start at unix timestamp of 1m so that block timestamp isn't 0
         vm.warp(block.timestamp + 1_000_000);
@@ -910,6 +924,16 @@ contract TimelockTest is Test {
             lending.withdraw.selector, address(timelock), 100
         );
 
+        vm.expectEmit(true, true, true, true, address(timelock));
+        emit CallExecuted(
+            bytes32(0), 0, address(lending), 0, lendingPayloads[0]
+        );
+
+        vm.expectEmit(true, true, true, true, address(timelock));
+        emit CallExecuted(
+            bytes32(0), 1, address(lending), 0, lendingPayloads[1]
+        );
+
         timelock.executeWhitelistedBatch(
             lendingAddresses, new uint256[](2), lendingPayloads
         );
@@ -918,7 +942,7 @@ contract TimelockTest is Test {
             address(lending), MockLending.deposit.selector
         );
 
-        assertEq(calldataChecks.length, 1, "calldata checks should be added");
+        assertEq(calldataChecks.length, 1, "calldata checks should exist");
         assertEq(calldataChecks[0].startIndex, 16, "startIndex should be 16");
         assertEq(calldataChecks[0].endIndex, 36, "startIndex should be 16");
         assertEq(
