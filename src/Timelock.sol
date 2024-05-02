@@ -221,7 +221,6 @@ contract Timelock is
         return _liveProposals.values();
     }
 
-    /// TODO test transferring NFT's (721 and 1155) into this contract
     /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(bytes4 interfaceId)
         public
@@ -666,6 +665,21 @@ contract Timelock is
         bytes memory
     ) external pure override returns (bytes4) {
         return this.onERC1155BatchReceived.selector;
+    }
+
+    /// code snippet from https://github.com/safe-global/safe-smart-account/blob/main/contracts/handler/TokenCallbackHandler.sol
+
+    /// @notice Handles ERC777 Token callback.
+    /// return nothing (not standardized)
+    function tokensReceived(
+        address,
+        address,
+        address,
+        uint256,
+        bytes calldata,
+        bytes calldata
+    ) external pure {
+        /// We implement this for completeness, doesn't really have any value
     }
 
     /// @dev Contract might receive/hold ETH as part of the maintenance process.
