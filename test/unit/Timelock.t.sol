@@ -802,7 +802,7 @@ contract TimelockUnitTest is Test {
             )
         );
 
-        vm.expectRevert("Value exceeds maximum");
+        vm.expectRevert("CalldataList: Value exceeds maximum");
         timelock.checkCalldata(
             address(lending),
             1,
@@ -812,22 +812,45 @@ contract TimelockUnitTest is Test {
         );
 
         /// cannot withdraw funds to the safe
-        vm.expectRevert("Calldata does not match expected value");
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
         timelock.executeWhitelisted(
             address(lending),
             0,
             abi.encodeWithSelector(lending.deposit.selector, address(safe), 100)
         );
 
-        Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
-            address(lending), MockLending.deposit.selector
+        Timelock.Index[] memory calldataDepositChecks = timelock
+            .getCalldataChecks(address(lending), MockLending.deposit.selector);
+
+        assertEq(
+            calldataDepositChecks.length, 1, "calldata checks should be added"
+        );
+        assertEq(
+            calldataDepositChecks[0].startIndex, 16, "startIndex should be 16"
+        );
+        assertEq(
+            calldataDepositChecks[0].endIndex, 36, "startIndex should be 16"
+        );
+        assertEq(
+            calldataDepositChecks[0].data,
+            abi.encodePacked(address(timelock)),
+            "data should be correct"
         );
 
-        assertEq(calldataChecks.length, 1, "calldata checks should be added");
-        assertEq(calldataChecks[0].startIndex, 16, "startIndex should be 16");
-        assertEq(calldataChecks[0].endIndex, 36, "startIndex should be 16");
+        Timelock.Index[] memory calldataWithdrawChecks = timelock
+            .getCalldataChecks(address(lending), MockLending.withdraw.selector);
+
         assertEq(
-            calldataChecks[0].data,
+            calldataWithdrawChecks.length, 1, "calldata checks should be added"
+        );
+        assertEq(
+            calldataWithdrawChecks[0].startIndex, 16, "startIndex should be 16"
+        );
+        assertEq(
+            calldataWithdrawChecks[0].endIndex, 36, "startIndex should be 16"
+        );
+        assertEq(
+            calldataWithdrawChecks[0].data,
             abi.encodePacked(address(timelock)),
             "data should be correct"
         );
@@ -991,7 +1014,7 @@ contract TimelockUnitTest is Test {
     function testRemoveCalldataChecksNonExistentChecksFails() public {
         address lending = testWhitelistingCalldataSucceeds();
 
-        vm.expectRevert("Calldata index out of bounds");
+        vm.expectRevert("CalldataList: Calldata index out of bounds");
         vm.prank(address(timelock));
         timelock.removeCalldataChecks(address(lending), bytes4(0xFFFFFFFF), 0);
     }
@@ -1047,7 +1070,7 @@ contract TimelockUnitTest is Test {
             );
         }
 
-        vm.expectRevert("No calldata checks found");
+        vm.expectRevert("CalldataList: No calldata checks found");
         timelock.executeWhitelisted(
             address(lending),
             0,
@@ -1056,7 +1079,7 @@ contract TimelockUnitTest is Test {
             )
         );
 
-        vm.expectRevert("No calldata checks found");
+        vm.expectRevert("CalldataList: No calldata checks found");
         timelock.executeWhitelisted(
             address(lending),
             0,
@@ -1078,7 +1101,7 @@ contract TimelockUnitTest is Test {
         selectors[1] = MockLending.withdraw.selector;
 
         vm.prank(address(timelock));
-        vm.expectRevert("No calldata checks to remove");
+        vm.expectRevert("CalldataList: No calldata checks to remove");
         timelock.removeAllCalldataChecks(targets, selectors);
     }
 
@@ -1116,6 +1139,30 @@ contract TimelockUnitTest is Test {
 
         vm.expectRevert("Timelock: underlying transaction reverted");
         timelock.execute(address(executor), 0, "", bytes32(0));
+    }
+
+    function testReentrantExecuteBatchFails() public {
+        MockReentrancyExecutor executor = new MockReentrancyExecutor();
+        executor.setExecuteBatch(true);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(executor);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory datas = new bytes[](1);
+        datas[0] = "";
+
+        vm.prank(address(safe));
+        timelock.scheduleBatch(
+            targets, values, datas, bytes32(0), MINIMUM_DELAY
+        );
+
+        vm.warp(block.timestamp + MINIMUM_DELAY);
+
+        vm.expectRevert("Timelock: underlying transaction reverted");
+        timelock.executeBatch(targets, values, datas, bytes32(0));
     }
 
     function testCallBubblesUpRevert() public {
@@ -1169,8 +1216,6 @@ contract TimelockUnitTest is Test {
             bytes32(0)
         );
     }
-
-    /// TODO test transferring NFT into the timelock and see that it succeeds
 
     function testNoopReceiveNoRevert() public {
         timelock.onERC1155Received(address(0), address(0), 0, 0, "");
