@@ -36,14 +36,54 @@ import {BytesHelper} from "src/BytesHelper.sol";
 /// and the actual module addresses are the same
 /// check that the owners are the same
 
+/// Blocks all delegate calls, as the owners and modules could be changed.
+/// Does not allow changing of the implementation contract either through
+/// a normal safe transaction.
+/// The implementation contract can still be upgraded through the timelock
+/// using module calls back into the safe with a delegatecall.
+
+///
+///    ----------------------------
+///    | Transient Storage Layout |
+///    ----------------------------
+///
+///   OWNER LENGTH SLOT: keccak256("OWNER_LENGTH_SLOT")
+///     bc7e8d41d75c307c01ea641eda963f96ac09a6542df3a05c010a2fd29d630d82
+///
+///   MODULE LENGTH SLOT: keccak256("MODULE_LENGTH_SLOT")
+///     bde7218dcb21739a1aaca037623a8b8214be11b3dfd84faa6057b1c05ed1c1c7
+///
+///   PROXY IMPL SLOT: keccak256("PROXY_IMPL_SLOT")
+///     f4960e73deed6441b1be092948373dda9c9143f60826d8929193d006148a875e
+///
+///    OWNER TSTORE OFFSET: 0
+///        Owner: 0x388C818CA8B9251b393131C08a736A67ccB19297
+///        data: abi.encode(owner, OWNER_TSTORE_OFFSET) => 0x000000000000000000000000388c818ca8b9251b393131c08a736a67ccb192970000000000000000000000000000000000000000000000000000000000000000
+///        hash: keccak256(data) => 0xd6a6c19fc1a19d228284c0c19a930aa3ae80b6cbdaafbca10ae2ef8fd16f0eca
+///
+///    MODULE TSTORE OFFSET: 1
+///        Module: 0x55F772c952f9d040C2b1d2E896Ad4BD2C84d70ee
+///        data: abi.encode(module, MODULE_TSTORE_OFFSET) => 00000000000000000000000055f772c952f9d040c2b1d2e896ad4bd2c84d70ee0000000000000000000000000000000000000000000000000000000000000001
+///        hash: keccak256(data) => 0x36e88d08a3a3be0e16d482ab0136429625bd305e6614234840d96ab0d091eb48
+///
+
 contract TimeRestricted is BaseGuard {
     using BytesHelper for bytes;
     using BokkyPooBahsDateTimeLibrary for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @notice storage slot for the guard
+    /// keccak256("guard_manager.guard.address")
     uint256 private constant GUARD_STORAGE_SLOT =
         0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8;
+
+    /// @notice storage slot for the fallback handler
+    /// keccak256("fallback_manager.handler.address")
+    uint256 private constant FALLBACK_HANDLER_STORAGE_SLOT =
+        0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
+
+    /// @notice storage slot for the singleton contract address
+    uint256 private constant SINGLETON_STORAGE_SLOT = 0;
 
     /// @notice sentinel modules address
     address private constant SENTINEL_MODULES = address(0x1);
@@ -55,6 +95,10 @@ contract TimeRestricted is BaseGuard {
     /// @notice TSTORE slot for the number of modules
     uint256 public constant MODULE_LENGTH_SLOT =
         uint256(keccak256("MODULE_LENGTH_SLOT"));
+
+    /// @notice TSTORE slot for proxy implementation
+    uint256 public constant PROXY_IMPL_SLOT =
+        uint256(keccak256("PROXY_IMPL_SLOT"));
 
     /// @notice the number of modules to retrieve in a single call
     uint256 public constant PAGE_SIZE = 10;
@@ -204,7 +248,7 @@ contract TimeRestricted is BaseGuard {
         address,
         uint256,
         bytes memory,
-        Enum.Operation,
+        Enum.Operation operationType,
         uint256,
         uint256,
         uint256,
@@ -213,6 +257,15 @@ contract TimeRestricted is BaseGuard {
         bytes memory,
         address
     ) external {
+        /// if delegate calls are allowed, owners or modules could be added
+        /// or removed outside of the expected flow, and the only way to reason
+        /// about this is to disallow delegate calls as we cannot prove unknown
+        /// slots were not written to in the owner or modules mapping
+        require(
+            operationType == Enum.Operation.Call,
+            "TimeRestricted: delegate call disallowed"
+        );
+
         /// If a safe has no allowed days, all actions are allowed
         /// once the safe has allowed days, transactions can only
         /// execute within the allowed hours.
@@ -221,7 +274,7 @@ contract TimeRestricted is BaseGuard {
         /// the safe from any further transactions, forever.
         require(
             transactionAllowed(msg.sender, block.timestamp),
-            "transaction outside of allowed hours"
+            "TimeRestricted: transaction outside of allowed hours"
         );
 
         {
@@ -245,6 +298,17 @@ contract TimeRestricted is BaseGuard {
             }
         }
 
+        /// ensure the safe contract is not upgraded
+        {
+            bytes memory singletonBytesPreExecution = Safe(payable(msg.sender))
+                .getStorageAt(SINGLETON_STORAGE_SLOT, 1);
+
+            uint256 singletonPreExecution =
+                uint256(singletonBytesPreExecution.getFirstWord());
+
+            _tstoreValueDirect(PROXY_IMPL_SLOT, singletonPreExecution);
+        }
+
         /// store modules in transient storage
         /// store number of modules in transient storage
         _traverseModules(
@@ -259,16 +323,49 @@ contract TimeRestricted is BaseGuard {
         /// if the transaction failed, no need to waste gas on further checks
         if (!success) return;
 
-        bytes memory guardBytesPostExecution =
-            Safe(payable(msg.sender)).getStorageAt(GUARD_STORAGE_SLOT, 1);
+        /// check that the guard did not change
+        {
+            bytes memory guardBytesPostExecution =
+                Safe(payable(msg.sender)).getStorageAt(GUARD_STORAGE_SLOT, 1);
 
-        address guardPostExecution =
-            address(uint160(uint256(guardBytesPostExecution.getFirstWord())));
+            address guardPostExecution = address(
+                uint160(uint256(guardBytesPostExecution.getFirstWord()))
+            );
 
-        require(
-            guardPostExecution == address(this),
-            "TimeRestricted: cannot remove guard"
-        );
+            require(
+                guardPostExecution == address(this),
+                "TimeRestricted: cannot remove guard"
+            );
+        }
+
+        /// check that fallback handler did not get set
+        {
+            bytes memory fallBackHandlerBytesPostExecution = Safe(
+                payable(msg.sender)
+            ).getStorageAt(FALLBACK_HANDLER_STORAGE_SLOT, 1);
+
+            address fallbackHandlerPostExecution = address(
+                uint160(
+                    uint256(fallBackHandlerBytesPostExecution.getFirstWord())
+                )
+            );
+
+            require(
+                fallbackHandlerPostExecution == address(0),
+                "TimeRestricted: cannot add fallback handler"
+            );
+        }
+
+        /// check that the safe contract did not upgrade its implementation
+        {
+            bytes memory singletonBytesPostExecution = Safe(payable(msg.sender))
+                .getStorageAt(SINGLETON_STORAGE_SLOT, 1);
+
+            uint256 singletonPostExecution =
+                uint256(singletonBytesPostExecution.getFirstWord());
+
+            _checktStoreValueDirect(PROXY_IMPL_SLOT, singletonPostExecution);
+        }
 
         address[] memory owners = Safe(payable(msg.sender)).getOwners();
         uint256 ownerLength;
@@ -286,12 +383,7 @@ contract TimeRestricted is BaseGuard {
         for (uint256 i = 0; i < ownerLength; i++) {
             uint256 ownerAddress =
                 uint256(keccak256(abi.encode(owners[i], OWNER_TSTORE_OFFSET)));
-            uint256 found;
-            // retrieve whether owners were stored from TSTORE slots
-            assembly {
-                found := tload(ownerAddress)
-            }
-            require(found == 1, "TimeRestricted: owner not found");
+            _checktStoreValueDirect(ownerAddress, 1);
         }
 
         /// check the modules in TSTORE slots, ensuring they are all 1
@@ -336,6 +428,17 @@ contract TimeRestricted is BaseGuard {
         );
 
         authorizedTimelock[msg.sender] = timelock;
+
+        bytes memory fallBackHandlerBytes = Safe(payable(msg.sender))
+            .getStorageAt(FALLBACK_HANDLER_STORAGE_SLOT, 1);
+
+        address fallbackHandler =
+            address(uint160(uint256(fallBackHandlerBytes.getFirstWord())));
+
+        require(
+            fallbackHandler == address(0),
+            "TimeRestricted: cannot initialize with fallback handler"
+        );
 
         for (uint256 i = 0; i < timeRanges.length; i++) {
             _addTimeRange(

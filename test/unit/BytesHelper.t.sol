@@ -5,7 +5,7 @@ import {BytesHelper} from "@src/BytesHelper.sol";
 
 import {Test} from "forge-std/Test.sol";
 
-contract BytesHelperTest is Test {
+contract BytesHelperUnitTest is Test {
     using BytesHelper for bytes;
 
     function testGetFunctionSignatureFailsLt4Bytes() public {

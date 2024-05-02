@@ -15,9 +15,8 @@ import {Test, console} from "forge-std/Test.sol";
 import {Timelock} from "src/Timelock.sol";
 import {MockSafe} from "test/mock/MockSafe.sol";
 import {MockLending} from "test/mock/MockLending.sol";
-import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
 
-contract CalldataListTest is Test {
+contract CalldataListUnitTest is Test {
     /// @notice reference to the Timelock contract
     Timelock private timelock;
 
@@ -105,7 +104,7 @@ contract CalldataListTest is Test {
         bytes[] memory checkedCalldata = new bytes[](1);
         checkedCalldata[0] = abi.encodePacked(address(timelock));
 
-        vm.expectRevert("Array lengths must be equal");
+        vm.expectRevert("CalldataList: Array lengths must be equal");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
             targetAddresses,
@@ -118,7 +117,7 @@ contract CalldataListTest is Test {
 
     function testAddCalldataCheckFailsStartIndexLt4() public {
         vm.prank(address(timelock));
-        vm.expectRevert("Start index must be greater than 3");
+        vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
             address(lending),
             MockLending.deposit.selector,
@@ -130,7 +129,9 @@ contract CalldataListTest is Test {
 
     function testAddCalldataCheckFailsStartIndexEqEndIndex() public {
         vm.prank(address(timelock));
-        vm.expectRevert("End index must be greater than start index");
+        vm.expectRevert(
+            "CalldataList: End index must be greater than start index"
+        );
         timelock.addCalldataCheck(
             address(lending),
             MockLending.deposit.selector,
@@ -142,7 +143,9 @@ contract CalldataListTest is Test {
 
     function testAddCalldataCheckFailsStartIndexGtEndIndex() public {
         vm.prank(address(timelock));
-        vm.expectRevert("End index must be greater than start index");
+        vm.expectRevert(
+            "CalldataList: End index must be greater than start index"
+        );
         timelock.addCalldataCheck(
             address(lending),
             MockLending.deposit.selector,
@@ -154,7 +157,7 @@ contract CalldataListTest is Test {
 
     function testAddCalldataCheckFailsWhitelistedCalldataTimelock() public {
         vm.prank(address(timelock));
-        vm.expectRevert("Contract address cannot be this");
+        vm.expectRevert("CalldataList: Contract address cannot be this");
         timelock.addCalldataCheck(
             address(timelock),
             Timelock.schedule.selector,

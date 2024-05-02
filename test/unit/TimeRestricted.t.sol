@@ -22,6 +22,11 @@ contract TimeRestrictedUnitTest is Test {
     uint256 internal constant GUARD_STORAGE_SLOT =
         0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8;
 
+    /// @notice storage slot for the fallback handler
+    /// keccak256("fallback_manager.handler.address")
+    uint256 private constant FALLBACK_HANDLER_STORAGE_SLOT =
+        0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
+
     function setUp() public {
         restricted = new TimeRestricted();
         vm.etch(timelock, hex"FF");
@@ -41,9 +46,9 @@ contract TimeRestrictedUnitTest is Test {
             new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
+        /// tx's only allowed on Wednesday
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3;
-        /// only allowed on Wednesday
 
         restricted.initializeConfiguration(timelock, ranges, allowedDays);
 
@@ -65,9 +70,9 @@ contract TimeRestrictedUnitTest is Test {
             new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
+        /// tx's only allowed on Wednesday
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3;
-        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: already initialized");
         restricted.initializeConfiguration(timelock, ranges, allowedDays);
@@ -78,9 +83,9 @@ contract TimeRestrictedUnitTest is Test {
             new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
+        /// tx's only allowed on Wednesday
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3;
-        /// only allowed on Wednesday
 
         bytes32 slot = keccak256(abi.encode(address(this), 1));
         vm.store(address(restricted), slot, bytes32(type(uint256).max));
@@ -99,9 +104,9 @@ contract TimeRestrictedUnitTest is Test {
             new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
+        /// tx's only allowed on Wednesday
         uint8[] memory allowedDays = new uint8[](2);
         allowedDays[0] = 3;
-        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: arity mismatch");
         restricted.initializeConfiguration(timelock, ranges, allowedDays);
@@ -112,9 +117,9 @@ contract TimeRestrictedUnitTest is Test {
             new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
+        /// tx's only allowed on Wednesday
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3;
-        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: safe cannot equal timelock");
         restricted.initializeConfiguration(address(this), ranges, allowedDays);
@@ -125,9 +130,9 @@ contract TimeRestrictedUnitTest is Test {
             new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
+        /// tx's only allowed on Wednesday
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3;
-        /// only allowed on Wednesday
 
         vm.expectRevert("TimeRestricted: invalid timelock");
         restricted.initializeConfiguration(
@@ -140,12 +145,32 @@ contract TimeRestrictedUnitTest is Test {
             new TimeRestricted.TimeRange[](1);
         ranges[0] = TimeRestricted.TimeRange(10, 11);
 
+        /// tx's only allowed on Wednesday
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3;
-        /// only allowed on Wednesday
 
         vm.prank(address(100000000));
         vm.expectRevert("TimeRestricted: invalid safe");
+        restricted.initializeConfiguration(timelock, ranges, allowedDays);
+    }
+
+    function testInitializeFailsSafeHasFallbackHandler() public {
+        TimeRestricted.TimeRange[] memory ranges =
+            new TimeRestricted.TimeRange[](1);
+        ranges[0] = TimeRestricted.TimeRange(10, 11);
+
+        /// tx's only allowed on Wednesday
+        uint8[] memory allowedDays = new uint8[](1);
+        allowedDays[0] = 3;
+
+        uint256 slot = FALLBACK_HANDLER_STORAGE_SLOT;
+        assembly {
+            sstore(slot, 1)
+        }
+
+        vm.expectRevert(
+            "TimeRestricted: cannot initialize with fallback handler"
+        );
         restricted.initializeConfiguration(timelock, ranges, allowedDays);
     }
 
@@ -454,12 +479,29 @@ contract TimeRestrictedUnitTest is Test {
 
         vm.warp(block.timestamp + 1 days);
 
-        vm.expectRevert("transaction outside of allowed hours");
+        vm.expectRevert("TimeRestricted: transaction outside of allowed hours");
         restricted.checkTransaction(
             address(0),
             0,
             "",
             Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+    }
+
+    function testTransactionDelegateCallFails() public {
+        vm.expectRevert("TimeRestricted: delegate call disallowed");
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.DelegateCall,
             0,
             0,
             0,
@@ -551,7 +593,7 @@ contract TimeRestrictedUnitTest is Test {
         owners = new address[](1);
         owners[0] = address(100000001);
 
-        vm.expectRevert("TimeRestricted: owner not found");
+        vm.expectRevert("TimeRestricted: value mismatch");
         restricted.checkAfterExecution(bytes32(0), true);
     }
 
@@ -603,6 +645,96 @@ contract TimeRestrictedUnitTest is Test {
             address(0)
         );
 
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckAfterExecutionFallbackHandlerAddedFails() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        vm.prank(timelock);
+        restricted.addTimeRange(address(this), 1, 0, 1);
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+
+        assembly {
+            sstore(FALLBACK_HANDLER_STORAGE_SLOT, 1)
+        }
+
+        vm.expectRevert("TimeRestricted: cannot add fallback handler");
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckAfterExecutionImplChangeFailure() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        vm.prank(timelock);
+        restricted.addTimeRange(address(this), 1, 0, 1);
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+
+        assembly {
+            sstore(0, 1000000)
+        }
+
+        vm.expectRevert("TimeRestricted: value mismatch");
         restricted.checkAfterExecution(bytes32(0), true);
     }
 

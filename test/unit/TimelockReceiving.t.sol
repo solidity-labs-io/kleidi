@@ -17,7 +17,7 @@ import {MockSafe} from "test/mock/MockSafe.sol";
 import {MockERC721} from "test/mock/MockERC721.sol";
 import {MockERC1155} from "test/mock/MockERC1155.sol";
 
-contract TimelockReceivingTest is Test {
+contract TimelockReceivingUnitTest is Test {
     /// @notice reference to the Timelock contract
     Timelock private timelock;
 
