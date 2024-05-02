@@ -87,10 +87,12 @@ abstract contract CalldataList {
         Index[] storage calldataChecks =
             calldataList[contractAddress][selector].calldataChecks;
 
-        require(calldataChecks.length > 0, "No calldata checks found");
+        require(
+            calldataChecks.length > 0, "CalldataList: No calldata checks found"
+        );
         require(
             value <= calldataList[contractAddress][selector].maxValue,
-            "Value exceeds maximum"
+            "CalldataList: Value exceeds maximum"
         );
 
         for (uint256 i = 0; i < calldataChecks.length; i++) {
@@ -100,7 +102,7 @@ abstract contract CalldataList {
                 data.getSlicedBytesHash(
                     calldataCheck.startIndex, calldataCheck.endIndex
                 ) == calldataCheck.data.getBytesHash(),
-                "Calldata does not match expected value"
+                "CalldataList: Calldata does not match expected value"
             );
         }
     }
@@ -118,12 +120,16 @@ abstract contract CalldataList {
         uint16 endIndex,
         bytes memory data
     ) internal {
-        require(startIndex >= 4, "Start index must be greater than 3");
         require(
-            endIndex > startIndex, "End index must be greater than start index"
+            startIndex >= 4, "CalldataList: Start index must be greater than 3"
         );
         require(
-            contractAddress != address(this), "Contract address cannot be this"
+            endIndex > startIndex,
+            "CalldataList: End index must be greater than start index"
+        );
+        require(
+            contractAddress != address(this),
+            "CalldataList: Contract address cannot be this"
         );
 
         calldataList[contractAddress][selector].calldataChecks.push(
@@ -153,7 +159,7 @@ abstract contract CalldataList {
                 && selectors.length == startIndexes.length
                 && startIndexes.length == endIndexes.length
                 && endIndexes.length == datas.length,
-            "Array lengths must be equal"
+            "CalldataList: Array lengths must be equal"
         );
 
         for (uint256 i = 0; i < contractAddresses.length; i++) {
@@ -178,7 +184,10 @@ abstract contract CalldataList {
     ) internal {
         Index[] storage calldataChecks =
             calldataList[contractAddress][selector].calldataChecks;
-        require(index < calldataChecks.length, "Calldata index out of bounds");
+        require(
+            index < calldataChecks.length,
+            "CalldataList: Calldata index out of bounds"
+        );
 
         uint16 startIndex = calldataChecks[index].startIndex;
         uint16 endIndex = calldataChecks[index].endIndex;
@@ -198,7 +207,10 @@ abstract contract CalldataList {
         Index[] storage calldataChecks =
             calldataList[contractAddress][selector].calldataChecks;
 
-        require(calldataChecks.length > 0, "No calldata checks to remove");
+        require(
+            calldataChecks.length > 0,
+            "CalldataList: No calldata checks to remove"
+        );
 
         /// delete all calldata in the list for the given contract and selector
         while (calldataChecks.length != 0) {
