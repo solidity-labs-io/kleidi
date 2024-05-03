@@ -27,7 +27,7 @@ contract TimeRestrictedUnitTest is Test {
     uint256 private constant FALLBACK_HANDLER_STORAGE_SLOT =
         0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
 
-        /// @notice Emitted when a time range is added to the allowed days
+    /// @notice Emitted when a time range is added to the allowed days
     /// @param safe address of the safe
     /// @param dayOfWeek day of the week to modify transactions allow time
     /// @param startHour start hour of the allowed time range
