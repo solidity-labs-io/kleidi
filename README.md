@@ -39,7 +39,7 @@ In order to configure this contract to work with a Gnosis Safe, use the followin
 1. Deploy a timelock contract with the desired delay, guardian, pause duration, whitelisted targets, calldatas, with the users' Gnosis Safe as the owner.
 2. Queue a transaction in the Gnosis Safe to perform the following actions:
    - initialize configuration with the timelock address, and allowed time ranges and their corresponding allowed days
-   - add the guard to the Safe
+   - add the TimeRestricted guard to the Safe
    - add the Timelock as a Safe module
 3. Execute the queued transaction. This will set the timelock as a module of the Safe, and the Safe will now only allow transactions to be executed within the time ranges specified.
 4. To edit the time range, call the `editTimeRange` function with the new time range. This will replace the existing time range for that day. This function cannot be called if the day does not have a time range already set.
@@ -47,7 +47,7 @@ In order to configure this contract to work with a Gnosis Safe, use the followin
 
 ## Edge Cases
 
-- If no time ranges are added, all transactions are allowed.
+- If no time ranges are added, transactions are allowed at any time.
 - To remove all time ranges, the `disableGuard()` function can be called. Once called, all transactions are allowed, regardless of time submitted.
 - If a transaction is submitted on chain outside of the allowed time ranges, it will revert.
 - If the timelock is removed as a module from the Safe before the TimeRestricted guard is disabled, there will be no way to rotate the signers of the Safe, add new modules, or remove modules. This is because the TimeRestricted guard will prevent these actions from being executed.
