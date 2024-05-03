@@ -201,6 +201,13 @@ abstract contract CalldataList {
         );
     }
 
+    /// @notice remove all calldata checks for a given contract and selector
+    /// iterates over all checks for the given contract and selector and removes
+    /// them from the array.
+    /// @param contractAddress the address of the contract that the calldata
+    /// checks are removed from
+    /// @param selector the function selector of the function that the calldata
+    /// checks are removed from
     function _removeAllCalldataChecks(address contractAddress, bytes4 selector)
         internal
     {
