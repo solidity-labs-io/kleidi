@@ -1,6 +1,12 @@
+
 [profile.default]
 src = "src"
 out = "out"
 libs = ["lib"]
+optimizer_runs = 1
+solc_version = "0.8.25"
+evm_version="Cancun"
+[fmt]
+line_length = 80
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
