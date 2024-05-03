@@ -13,9 +13,9 @@ import {BytesHelper} from "src/BytesHelper.sol";
 /// @notice Only the timelock can add, edit, remove or disable
 /// time ranges after initialization.
 /// Contract that restricts Safe interactions to a specific time range
-/// This guard also restricts changing owners and modules It enforce
+/// This guard also restricts changing owners and modules. It enforces
 /// that the owners and modules remain the same after a transaction is
-/// executed. If there is any changes, transactions are reverted
+/// executed. If there is any changes, transactions are reverted.
 
 /// Config:
 ///  - the timelock must be a module of the safe to enact changes to the owners and modules
@@ -238,7 +238,7 @@ contract TimeRestricted is BaseGuard {
     /// -----------------------------------------------------
     /// -----------------------------------------------------
 
-    /// @notice primitive contract that restricts interaction
+    /// @notice function that restricts Gnosis Safe interaction
     /// to only a specific time range in specified days.
     /// no granularity to specify different hours for different allowed days.
     /// all allowed days have the same allowed hours.
