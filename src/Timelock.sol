@@ -38,6 +38,8 @@ import {ConfigurablePauseGuardian} from
 /// @notice protocol invariants:
 /// - there must always be at least 1 proposer
 /// - there should be no whitelisted calldata checks for the timelock itself
+/// - only safe can propose non-whitelisted calldatas
+/// - only safe owners can execute whitelisted calldatas
 /// this ensures there is no way to instantly make modifications to the
 /// whitelisted timelock calldata.
 
