@@ -40,6 +40,15 @@ import {ConfigurablePauseGuardian} from
 /// - there should be no whitelisted calldata checks for the timelock itself
 /// - only safe can propose non-whitelisted calldatas
 /// - only safe owners can execute whitelisted calldatas
+/// - whitelisted calldata can be executed at any time, even outside of the
+/// time restricted window and while the contract is paused.
+/// - pausing clears all queued timelock actions
+/// - the timelock can only be paused by the pause guardian
+/// - pausing the timelock revokes the pause guardian
+/// - the timelock automatically unpauses after the pause duration
+/// - getAllProposals length gt 0 => contract is not paused
+/// - contract is paused => getAllProposals length is 0
+/// - getAllProposal length eq 0 does not => contract is paused
 /// this ensures there is no way to instantly make modifications to the
 /// whitelisted timelock calldata.
 
@@ -210,13 +219,6 @@ contract Timelock is
     /// ---------------------------------------------------------------
     /// ---------------------------------------------------------------
 
-    /// ---------------------------------------------------------------
-    /// ---------------------- System Invariants ----------------------
-    /// ---------------------------------------------------------------
-
-    /// getAllProposals length gt 0 => contract is not paused
-    /// contract is paused => getAllProposals length eq 0
-
     /// @notice returns all currently non cancelled and non-executed proposals
     /// some proposals may not be able to be executed if they have passed the expiration period
     function getAllProposals() external view returns (bytes32[] memory) {
@@ -303,8 +305,7 @@ contract Timelock is
 
     /// @dev Schedule an operation containing a single transaction.
     /// Emits {CallSalt} if salt is nonzero, and {CallScheduled}.
-    /// Requirements:
-    ///   the caller must have the 'proposer' role.
+    /// the caller must be the safe.
     function schedule(
         address target,
         uint256 value,
