@@ -20,4 +20,4 @@ jobs:
         uses: ./.github/actions
 
       - name: Integration Test Contracts
-        run: time forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL
+        run: echo $ETH_RPC_URL ; time forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL
