@@ -16,13 +16,13 @@ abstract contract CalldataList {
     /// @param selector the function selector of the function that the calldata check is added to
     /// @param startIndex the start index of the calldata
     /// @param endIndex the end index of the calldata
-    /// @param data the calldata that is stored
+    /// @param dataHash the hash of the calldata that is stored
     event CalldataAdded(
         address indexed contractAddress,
         bytes4 indexed selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes data
+        bytes32 dataHash
     );
 
     /// @notice event emitted when a calldata check is removed
@@ -30,13 +30,13 @@ abstract contract CalldataList {
     /// @param selector the function selector of the function that the calldata check is removed from
     /// @param startIndex the start index of the calldata
     /// @param endIndex the end index of the calldata
-    /// @param data the calldata that is removed
+    /// @param dataHash the hash of the calldata that is stored
     event CalldataRemoved(
         address indexed contractAddress,
         bytes4 indexed selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes data
+        bytes32 dataHash
     );
 
     /// @notice struct used to store the start and end index of the calldata
@@ -46,20 +46,13 @@ abstract contract CalldataList {
     struct Index {
         uint16 startIndex;
         uint16 endIndex;
-        bytes data;
+        bytes32 dataHash;
     }
 
-    /// @notice struct used to store the calldata checks and the maximum
-    /// amount of native tokens to be sent in a single call to a contract
-    struct CallRestriction {
-        Index[] calldataChecks;
-        uint256 maxValue;
-    }
-
-    /// @notice mapping of contract address to function selector to Index struct
+    /// @notice mapping of contract address to function selector to array of Index structs
     mapping(
         address contractAddress
-            => mapping(bytes4 selector => CallRestriction calldataChecks)
+            => mapping(bytes4 selector => Index[] calldataChecks)
     ) public calldataList;
 
     /// @notice get the calldata checks for a specific contract and function selector
@@ -68,31 +61,24 @@ abstract contract CalldataList {
         view
         returns (Index[] memory)
     {
-        return calldataList[contractAddress][selector].calldataChecks;
+        return calldataList[contractAddress][selector];
     }
 
     /// @notice check if the calldata conforms to the expected values
     /// extracts indexes and checks that the data within the indexes
     /// matches the expected data
     /// @param contractAddress the address of the contract that the calldata check is applied to
-    /// @param value the amount of native asset sent with the call
     /// @param data the calldata to check
-    function checkCalldata(
-        address contractAddress,
-        uint256 value,
-        bytes memory data
-    ) public view {
+    function checkCalldata(address contractAddress, bytes memory data)
+        public
+        view
+    {
         bytes4 selector = data.getFunctionSignature();
 
-        Index[] storage calldataChecks =
-            calldataList[contractAddress][selector].calldataChecks;
+        Index[] storage calldataChecks = calldataList[contractAddress][selector];
 
         require(
             calldataChecks.length > 0, "CalldataList: No calldata checks found"
-        );
-        require(
-            value <= calldataList[contractAddress][selector].maxValue,
-            "CalldataList: Value exceeds maximum"
         );
 
         for (uint256 i = 0; i < calldataChecks.length; i++) {
@@ -101,7 +87,7 @@ abstract contract CalldataList {
             require(
                 data.getSlicedBytesHash(
                     calldataCheck.startIndex, calldataCheck.endIndex
-                ) == calldataCheck.data.getBytesHash(),
+                ) == calldataCheck.dataHash,
                 "CalldataList: Calldata does not match expected value"
             );
         }
@@ -131,13 +117,14 @@ abstract contract CalldataList {
             contractAddress != address(this),
             "CalldataList: Contract address cannot be this"
         );
+        bytes32 dataHash = keccak256(data);
 
-        calldataList[contractAddress][selector].calldataChecks.push(
-            Index(startIndex, endIndex, data)
+        calldataList[contractAddress][selector].push(
+            Index(startIndex, endIndex, dataHash)
         );
 
         emit CalldataAdded(
-            contractAddress, selector, startIndex, endIndex, data
+            contractAddress, selector, startIndex, endIndex, dataHash
         );
     }
 
@@ -182,8 +169,9 @@ abstract contract CalldataList {
         bytes4 selector,
         uint256 index
     ) internal {
-        Index[] storage calldataChecks =
-            calldataList[contractAddress][selector].calldataChecks;
+        Index[] storage calldataChecks = calldataList[contractAddress][selector];
+        /// if no calldata checks are found, this check will fail because
+        /// calldataChecks.length will be 0, and no uint value can be lt 0
         require(
             index < calldataChecks.length,
             "CalldataList: Calldata index out of bounds"
@@ -191,13 +179,13 @@ abstract contract CalldataList {
 
         uint16 startIndex = calldataChecks[index].startIndex;
         uint16 endIndex = calldataChecks[index].endIndex;
-        bytes memory data = calldataChecks[index].data;
+        bytes32 dataHash = calldataChecks[index].dataHash;
 
         calldataChecks[index] = calldataChecks[calldataChecks.length - 1];
         calldataChecks.pop();
 
         emit CalldataRemoved(
-            contractAddress, selector, startIndex, endIndex, data
+            contractAddress, selector, startIndex, endIndex, dataHash
         );
     }
 
@@ -211,8 +199,7 @@ abstract contract CalldataList {
     function _removeAllCalldataChecks(address contractAddress, bytes4 selector)
         internal
     {
-        Index[] storage calldataChecks =
-            calldataList[contractAddress][selector].calldataChecks;
+        Index[] storage calldataChecks = calldataList[contractAddress][selector];
 
         require(
             calldataChecks.length > 0,
@@ -226,7 +213,7 @@ abstract contract CalldataList {
                 selector,
                 calldataChecks[0].startIndex,
                 calldataChecks[0].endIndex,
-                calldataChecks[0].data
+                calldataChecks[0].dataHash
             );
             calldataChecks.pop();
         }
