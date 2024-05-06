@@ -802,15 +802,6 @@ contract TimelockUnitTest is Test {
             )
         );
 
-        vm.expectRevert("CalldataList: Value exceeds maximum");
-        timelock.checkCalldata(
-            address(lending),
-            1,
-            abi.encodeWithSelector(
-                lending.withdraw.selector, address(timelock), 100
-            )
-        );
-
         /// cannot withdraw funds to the safe
         vm.expectRevert("CalldataList: Calldata does not match expected value");
         timelock.executeWhitelisted(
@@ -832,8 +823,8 @@ contract TimelockUnitTest is Test {
             calldataDepositChecks[0].endIndex, 36, "startIndex should be 16"
         );
         assertEq(
-            calldataDepositChecks[0].data,
-            abi.encodePacked(address(timelock)),
+            calldataDepositChecks[0].dataHash,
+            keccak256(abi.encodePacked(address(timelock))),
             "data should be correct"
         );
 
@@ -850,9 +841,9 @@ contract TimelockUnitTest is Test {
             calldataWithdrawChecks[0].endIndex, 36, "startIndex should be 16"
         );
         assertEq(
-            calldataWithdrawChecks[0].data,
-            abi.encodePacked(address(timelock)),
-            "data should be correct"
+            calldataWithdrawChecks[0].dataHash,
+            keccak256(abi.encodePacked(address(timelock))),
+            "data hash should match"
         );
 
         return address(lending);
@@ -969,8 +960,8 @@ contract TimelockUnitTest is Test {
         assertEq(calldataChecks[0].startIndex, 16, "startIndex should be 16");
         assertEq(calldataChecks[0].endIndex, 36, "startIndex should be 16");
         assertEq(
-            calldataChecks[0].data,
-            abi.encodePacked(address(timelock)),
+            calldataChecks[0].dataHash,
+            keccak256(abi.encodePacked(address(timelock))),
             "data should be correct"
         );
 
