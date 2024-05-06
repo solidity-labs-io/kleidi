@@ -594,7 +594,7 @@ contract SystemIntegrationTest is Test {
 
         /// warp to current timestamp to prevent math underflow
         /// with cached timestamp in the future which doesn't work
-        vm.warp(startTimestamp); 
+        vm.warp(startTimestamp);
 
         address[] memory targets = new address[](2);
         targets[0] = address(ethenaUsd);
