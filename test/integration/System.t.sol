@@ -21,7 +21,12 @@ import {Enum} from "@safe/common/Enum.sol";
 import {Timelock} from "src/Timelock.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
-import {IMorphoBase, MarketParams} from "src/interface/IMorpho.sol";
+import {
+    IMorpho,
+    Position,
+    IMorphoBase,
+    MarketParams
+} from "src/interface/IMorpho.sol";
 
 interface call3 {
     struct Call3 {
@@ -251,12 +256,16 @@ contract SystemIntegrationTest is Test {
     ///
     ///
     function testInitializeContract() public {
-        address[] memory calls = new address[](3);
-        calls[0] = address(restricted);
-        calls[1] = address(safe);
-        calls[2] = address(safe);
+        call3.Call3[] memory calls3 = new call3.Call3[](3);
 
-        bytes[] memory calldatas = new bytes[](3);
+        calls3[0].target = address(restricted);
+        calls3[0].allowFailure = false;
+
+        calls3[1].target = address(safe);
+        calls3[1].allowFailure = false;
+
+        calls3[2].target = address(safe);
+        calls3[2].allowFailure = false;
 
         {
             uint8[] memory allowedDays = new uint8[](5);
@@ -275,7 +284,7 @@ contract SystemIntegrationTest is Test {
             ranges[3] = TimeRestricted.TimeRange(10, 14);
             ranges[4] = TimeRestricted.TimeRange(11, 13);
 
-            calldatas[0] = abi.encodeWithSelector(
+            calls3[0].callData = abi.encodeWithSelector(
                 restricted.initializeConfiguration.selector,
                 address(timelock),
                 ranges,
@@ -283,27 +292,13 @@ contract SystemIntegrationTest is Test {
             );
         }
 
-        calldatas[1] = abi.encodeWithSelector(
+        calls3[1].callData = abi.encodeWithSelector(
             GuardManager.setGuard.selector, address(restricted)
         );
 
-        calldatas[2] = abi.encodeWithSelector(
+        calls3[2].callData = abi.encodeWithSelector(
             ModuleManager.enableModule.selector, address(timelock)
         );
-
-        call3.Call3[] memory calls3 = new call3.Call3[](3);
-
-        calls3[0].target = calls[0];
-        calls3[0].allowFailure = false;
-        calls3[0].callData = calldatas[0];
-
-        calls3[1].target = calls[1];
-        calls3[1].allowFailure = false;
-        calls3[1].callData = calldatas[1];
-
-        calls3[2].target = calls[2];
-        calls3[2].allowFailure = false;
-        calls3[2].callData = calldatas[2];
 
         bytes memory safeData =
             abi.encodeWithSelector(call3.aggregate3.selector, calls3);
@@ -321,18 +316,7 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures;
-        {
-            (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(pk1, transactionHash);
-            (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(pk2, transactionHash);
-            (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(pk3, transactionHash);
-
-            bytes memory sig1 = abi.encodePacked(r1, s1, v1);
-            bytes memory sig2 = abi.encodePacked(r2, s2, v2);
-            bytes memory sig3 = abi.encodePacked(r3, s3, v3);
-
-            collatedSignatures = abi.encodePacked(sig1, sig2, sig3);
-        }
+        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
 
         safe.checkNSignatures(transactionHash, safeData, collatedSignatures, 3);
 
@@ -439,8 +423,8 @@ contract SystemIntegrationTest is Test {
             uint16[] memory startIndexes = new uint16[](8);
             /// morpho blue supply
             startIndexes[0] = 4;
-            startIndexes[1] = 4 + 32 * 7 + 12;
             /// only grab last twenty bytes of the 7th argument
+            startIndexes[1] = 4 + 32 * 7 + 12;
             /// ethena usd approve morpho
             startIndexes[2] = 16;
             /// only check last twenty bytes of the 1st argument
@@ -457,11 +441,11 @@ contract SystemIntegrationTest is Test {
 
             uint16[] memory endIndexes = new uint16[](8);
             /// morpho blue supply
-            endIndexes[0] = 4 + 32 * 5;
-            endIndexes[1] = 4 + 32 * 7 + 32;
+            endIndexes[0] = startIndexes[0] + 32 * 5;
             /// last twenty bytes represents who supplying on behalf of
+            endIndexes[1] = startIndexes[1] + 20;
             /// ethena usd approve morpho
-            endIndexes[2] = 36;
+            endIndexes[2] = startIndexes[2] + 20;
             /// last twenty bytes represents who is approved to spend the tokens
             /// morpho borrow
             endIndexes[3] = startIndexes[3] + 20;
@@ -551,18 +535,7 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures;
-        {
-            (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(pk1, transactionHash);
-            (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(pk2, transactionHash);
-            (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(pk3, transactionHash);
-
-            bytes memory sig1 = abi.encodePacked(r1, s1, v1);
-            bytes memory sig2 = abi.encodePacked(r2, s2, v2);
-            bytes memory sig3 = abi.encodePacked(r3, s3, v3);
-
-            collatedSignatures = abi.encodePacked(sig1, sig2, sig3);
-        }
+        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
 
         safe.checkNSignatures(
             transactionHash, innerCalldatas, collatedSignatures, 3
@@ -604,10 +577,13 @@ contract SystemIntegrationTest is Test {
 
         bytes[] memory calldatas = new bytes[](2);
 
-        deal(ethenaUsd, address(timelock), 100);
+        uint256 supplyAmount = 100000;
 
-        calldatas[0] =
-            abi.encodeWithSelector(IERC20.approve.selector, morphoBlue, 100);
+        deal(ethenaUsd, address(timelock), supplyAmount);
+
+        calldatas[0] = abi.encodeWithSelector(
+            IERC20.approve.selector, morphoBlue, supplyAmount
+        );
 
         calldatas[1] = abi.encodeWithSelector(
             IMorphoBase.supplyCollateral.selector,
@@ -616,8 +592,8 @@ contract SystemIntegrationTest is Test {
             oracle,
             irm,
             lltv,
-            100,
-            /// supply 100 wei of eUSD
+            supplyAmount,
+            /// supply supplyAmount of eUSD
             address(timelock),
             ""
         );
@@ -628,5 +604,48 @@ contract SystemIntegrationTest is Test {
 
         vm.prank(owners[0]);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+
+        Position memory position =
+            IMorpho(morphoBlue).position(marketId, address(timelock));
+
+        assertEq(position.supplyShares, 0, "incorrect supply shares");
+        assertEq(position.borrowShares, 0, "incorrect borrow shares");
+        assertEq(position.collateral, supplyAmount, "incorrect collateral");
+    }
+
+    /// ----------------- HELPERS -----------------
+
+    /// @notice The length of the data used to compute the id of a market.
+    /// @dev The length is 5 * 32 because `MarketParams` has 5 variables of 32 bytes each.
+    uint256 internal constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
+
+    /// @notice Returns the id of the market `marketParams`.
+    function id(MarketParams memory marketParams)
+        internal
+        pure
+        returns (bytes32 marketParamsId)
+    {
+        assembly ("memory-safe") {
+            marketParamsId :=
+                keccak256(marketParams, MARKET_PARAMS_BYTES_LENGTH)
+        }
+    }
+
+    function signTxAllOwners(bytes32 transactionHash)
+        public
+        pure
+        returns (bytes memory)
+    {
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(pk1, transactionHash);
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(pk2, transactionHash);
+        (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(pk3, transactionHash);
+
+        bytes memory sig1 = abi.encodePacked(r1, s1, v1);
+        bytes memory sig2 = abi.encodePacked(r2, s2, v2);
+        bytes memory sig3 = abi.encodePacked(r3, s3, v3);
+
+        return abi.encodePacked(sig1, sig2, sig3);
     }
 }
