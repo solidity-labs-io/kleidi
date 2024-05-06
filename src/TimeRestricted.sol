@@ -245,7 +245,7 @@ contract TimeRestricted is BaseGuard {
     /// Stores the current modules and owners in transient storage
     /// If these change, then the transaction is reverted.
     function checkTransaction(
-        address,
+        address to,
         uint256,
         bytes memory,
         Enum.Operation operationType,
@@ -257,6 +257,7 @@ contract TimeRestricted is BaseGuard {
         bytes memory,
         address
     ) external {
+        require(to != msg.sender, "TimeRestricted: no self calls");
         /// if delegate calls are allowed, owners or modules could be added
         /// or removed outside of the expected flow, and the only way to reason
         /// about this is to disallow delegate calls as we cannot prove unknown
