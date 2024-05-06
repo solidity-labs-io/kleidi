@@ -634,7 +634,7 @@ contract SystemIntegrationTest is Test {
     }
 
     function signTxAllOwners(bytes32 transactionHash)
-        public
+        private
         pure
         returns (bytes memory)
     {
