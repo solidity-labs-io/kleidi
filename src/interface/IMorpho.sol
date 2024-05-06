@@ -363,7 +363,7 @@ interface IMorpho is IMorphoBase {
     /// @notice The state of the position of `user` on the market corresponding to `id`.
     /// @dev Warning: For `feeRecipient`, `p.supplyShares` does not contain the accrued shares since the last interest
     /// accrual.
-    function position(Id id, address user)
+    function position(bytes32 id, address user)
         external
         view
         returns (Position memory p);
