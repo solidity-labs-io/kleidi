@@ -16,8 +16,9 @@ import {Timelock} from "src/Timelock.sol";
 import {MockSafe} from "test/mock/MockSafe.sol";
 import {MockLending} from "test/mock/MockLending.sol";
 import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
+import {CallHelper} from "test/utils/CallHelper.t.sol";
 
-contract TimelockUnitTest is Test {
+contract TimelockUnitTest is CallHelper {
     /// @notice reference to the Timelock contract
     Timelock private timelock;
 
@@ -50,38 +51,6 @@ contract TimelockUnitTest is Test {
 
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
-
-    /// @notice Emitted when a call is scheduled as part of operation `id`.
-    /// @param id unique identifier for the operation
-    /// @param index index of the call within the operation, non zero if not first call in a batch
-    /// @param target the address of the contract to call
-    /// @param value the amount of native asset to send with the call
-    /// @param data the calldata to send with the call
-    /// @param salt the salt to be used in the operation
-    /// @param delay the delay before the operation becomes valid
-    event CallScheduled(
-        bytes32 indexed id,
-        uint256 indexed index,
-        address target,
-        uint256 value,
-        bytes data,
-        bytes32 salt,
-        uint256 delay
-    );
-
-    /// @notice Emitted when a call is performed as part of operation `id`.
-    /// @param id unique identifier for the operation
-    /// @param index index of the call within the operation, non zero if not first call in a batch
-    /// @param target the address of the contract called
-    /// @param value the amount of native asset sent with the call
-    /// @param data the calldata sent with the call
-    event CallExecuted(
-        bytes32 indexed id,
-        uint256 indexed index,
-        address target,
-        uint256 value,
-        bytes data
-    );
 
     function setUp() public {
         // at least start at unix timestamp of 1m so that block timestamp isn't 0
@@ -170,12 +139,13 @@ contract TimelockUnitTest is Test {
 
     function testScheduleProposalSafeSucceeds() public returns (bytes32) {
         _schedule({
-            caller: address(safe),
-            target: address(timelock),
-            value:  0,
-            data:   abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            salt:   bytes32(0),
-            delay:  MINIMUM_DELAY
+            caller:   address(safe),
+            timelock: address(timelock),
+            target:   address(timelock),
+            value:    0,
+            data:     abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            salt:     bytes32(0),
+            delay:    MINIMUM_DELAY
         });
 
         bytes32 id = timelock.hashOperation(
@@ -224,6 +194,7 @@ contract TimelockUnitTest is Test {
 
         _scheduleBatch({
             caller:   address(safe),
+            timelock: address(timelock),
             targets:  targets,
             values:   values,
             payloads: datas,
@@ -267,6 +238,7 @@ contract TimelockUnitTest is Test {
 
         _executeBatch({
             caller:   address(this),
+            timelock: address(timelock),
             targets:  targets,
             values:   values,
             payloads: datas,
@@ -545,12 +517,13 @@ contract TimelockUnitTest is Test {
         // Prepare the scheduling parameters
         // Call schedule() first time
         _schedule({
-            caller: address(safe),
-            target: address(timelock),
-            value:  0,
-            data:   abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            salt:   bytes32(0),
-            delay:  MINIMUM_DELAY
+            caller:   address(safe),
+            timelock: address(timelock),
+            target:   address(timelock),
+            value:    0,
+            data:     abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            salt:     bytes32(0),
+            delay:    MINIMUM_DELAY
         });
         // Expect revert on second call with same parameters
         vm.prank(address(safe));
@@ -655,11 +628,12 @@ contract TimelockUnitTest is Test {
 
         // Execute the call as anyone, should succeed
         _execute({
-            caller:  address(this),
-            target:  address(timelock),
-            value:   0,
-            payload: abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            salt:    bytes32(0)
+            caller:   address(this),
+            timelock: address(timelock),
+            target:   address(timelock),
+            value:    0,
+            payload:  abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            salt:     bytes32(0)
         });
 
         assertEq(
@@ -685,6 +659,7 @@ contract TimelockUnitTest is Test {
         // Prepare and schedule a call
         _schedule({
             caller: address(safe),
+            timelock: address(timelock),
             target: address(timelock),
             value:  0,
             data:   abi.encodeWithSelector(timelock.updateExpirationPeriod.selector, newExpirationPeriod),
@@ -697,11 +672,12 @@ contract TimelockUnitTest is Test {
 
         // Execute the call as anyone, should succeed
         _execute({
-            caller:  address(this),
-            target:  address(timelock),
-            value:   0,
-            payload: abi.encodeWithSelector(timelock.updateExpirationPeriod.selector, newExpirationPeriod),
-            salt:    bytes32(0)
+            caller:   address(this),
+            timelock: address(timelock),
+            target:   address(timelock),
+            value:    0,
+            payload:  abi.encodeWithSelector(timelock.updateExpirationPeriod.selector, newExpirationPeriod),
+            salt:     bytes32(0)
         });
 
         bytes32 id = timelock.hashOperation(
@@ -778,6 +754,7 @@ contract TimelockUnitTest is Test {
 
         _scheduleBatch({
             caller:   address(safe),
+            timelock: address(timelock),
             targets:  targets,
             values:   values,
             payloads: datas,
@@ -810,6 +787,7 @@ contract TimelockUnitTest is Test {
 
         _executeBatch({
             caller:   address(this),
+            timelock: address(timelock),
             targets:  targets,
             values:   values,
             payloads: datas,
@@ -822,17 +800,19 @@ contract TimelockUnitTest is Test {
         safe.setOwners(safeSigner);
 
         _executeWhiteListed({
-            caller:  address(this),
-            target:  address(lending),
-            value:   0,
-            payload: abi.encodeWithSelector(lending.deposit.selector, address(timelock), 100)
+            caller:   address(this),
+            timelock: address(timelock),
+            target:   address(lending),
+            value:    0,
+            payload:  abi.encodeWithSelector(lending.deposit.selector, address(timelock), 100)
         });
 
         _executeWhiteListed({
-            caller:  address(this),
-            target:  address(lending),
-            value:   0,
-            payload: abi.encodeWithSelector(lending.withdraw.selector, address(timelock), 100)
+            caller:   address(this),
+            timelock: address(timelock),
+            target:   address(lending),
+            value:    0,
+            payload:  abi.encodeWithSelector(lending.withdraw.selector, address(timelock), 100)
         });
 
         vm.expectRevert("CalldataList: Value exceeds maximum");
@@ -934,6 +914,7 @@ contract TimelockUnitTest is Test {
 
         _scheduleBatch({
             caller:   address(safe),
+            timelock: address(timelock),
             targets:  targets,
             values:   values,
             payloads: datas,
@@ -966,6 +947,7 @@ contract TimelockUnitTest is Test {
 
         _executeBatch({
             caller:   address(this),
+            timelock: address(timelock),
             targets:  targets,
             values:   values,
             payloads: datas,
@@ -991,6 +973,7 @@ contract TimelockUnitTest is Test {
 
         _executeWhitelistedBatch({
             caller:   address(this),
+            timelock: address(timelock),
             targets:  lendingAddresses,
             values:   new uint256[](2),
             payloads: lendingPayloads
@@ -1168,12 +1151,13 @@ contract TimelockUnitTest is Test {
         MockReentrancyExecutor executor = new MockReentrancyExecutor();
 
         _schedule({
-            caller: address(safe),
-            target: address(executor),
-            value:  0,
-            data:   "",
-            salt:   bytes32(0),
-            delay:  MINIMUM_DELAY
+            caller:   address(safe),
+            timelock: address(timelock),
+            target:   address(executor),
+            value:    0,
+            data:     "",
+            salt:     bytes32(0),
+            delay:    MINIMUM_DELAY
         });
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -1197,6 +1181,7 @@ contract TimelockUnitTest is Test {
 
         _scheduleBatch({
             caller:   address(safe),
+            timelock: address(timelock),
             targets:  targets,
             values:   values,
             payloads: datas,
@@ -1212,12 +1197,13 @@ contract TimelockUnitTest is Test {
 
     function testCallBubblesUpRevert() public {
         _schedule({
-            caller: address(safe),
-            target: address(timelock),
-            value:  0,
-            data:   abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY - 1),
-            salt:   bytes32(0),
-            delay:  MINIMUM_DELAY
+            caller:   address(safe),
+            timelock: address(timelock),
+            target:   address(timelock),
+            value:    0,
+            data:     abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY - 1),
+            salt:     bytes32(0),
+            delay:    MINIMUM_DELAY
         });
 
         bytes32 id = timelock.hashOperation(
@@ -1270,111 +1256,5 @@ contract TimelockUnitTest is Test {
         vm.deal(address(this), 1);
         (bool success,) = address(timelock).call{value: 1}("");
         assertTrue(success, "payable call failed");
-    }
-
-
-    // Helper functions to perform timelock actions with event checks
-
-    function _schedule(
-        address caller,
-        address target,
-        uint256 value,
-        bytes memory data,
-        bytes32 salt,
-        uint256 delay
-    ) internal {
-        bytes32 id = timelock.hashOperation(target, value, data, salt);
-        vm.expectEmit(true, true, true, true, address(timelock));
-        emit CallScheduled(id, 0, target, value, data, salt, delay);
-        vm.prank(caller);
-        timelock.schedule(target, value, data, salt, delay);
-    }
-
-    function _scheduleBatch(
-        address caller,
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory payloads,
-        bytes32 salt,
-        uint256 delay
-    ) internal {
-        bytes32 id = timelock.hashOperationBatch(targets, values, payloads, salt);
-        for (uint256 i = 0; i < targets.length; ++i) {
-            emit CallScheduled(
-                id, i, targets[i], values[i], payloads[i], salt, delay
-            );
-        }
-        vm.prank(caller);
-        timelock.scheduleBatch(targets, values, payloads, salt, delay);
-    }
-
-    function _execute(
-        address caller,
-        address target,
-        uint256 value,
-        bytes memory payload,
-        bytes32 salt
-    ) internal {
-        bytes32 id = timelock.hashOperation(target, value, payload, salt);
-        vm.expectEmit(true, true, true, true, address(timelock));
-        emit CallExecuted(id, 0, target, value, payload);
-
-        vm.prank(caller);
-        timelock.execute(
-            target,
-            value,
-            payload,
-            salt
-        );
-    }
-
-    function _executeBatch(
-        address caller,
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory payloads,
-        bytes32 salt
-    ) internal {
-        bytes32 id = timelock.hashOperationBatch(targets, values, payloads, salt);
-        for (uint256 i = 0; i < targets.length; ++i) {
-            vm.expectEmit(true, true, true, true, address(timelock));
-            emit CallExecuted(id, i, targets[i], values[i], payloads[i]);
-        }
-
-        vm.prank(caller);
-        timelock.executeBatch(
-            targets,
-            values,
-            payloads,
-            salt
-        );
-    }
-
-    function _executeWhiteListed(
-        address caller,
-        address target,
-        uint256 value,
-        bytes memory payload
-    ) internal {
-        vm.expectEmit(true, true, true, true, address(timelock));
-        emit CallExecuted(bytes32(0), 0, target, value, payload);
-
-        vm.prank(caller);
-        timelock.executeWhitelisted(target, value, payload);
-    }
-
-    function _executeWhitelistedBatch(
-        address caller,
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory payloads
-    ) internal {
-        for (uint256 i = 0; i < targets.length; ++i) {
-            vm.expectEmit(true, true, true, true, address(timelock));
-            emit CallExecuted(bytes32(0), i, targets[i], values[i], payloads[i]);
-        }
-
-        vm.prank(caller);
-        timelock.executeWhitelistedBatch(targets, values, payloads);
     }
 }

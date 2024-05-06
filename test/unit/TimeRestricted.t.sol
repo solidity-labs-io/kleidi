@@ -3,12 +3,13 @@ pragma solidity ^0.8.13;
 
 import {Enum} from "@safe/common/Enum.sol";
 
-import {Test, console} from "forge-std/Test.sol";
+import {console} from "forge-std/Test.sol";
 
 import {TimeRestricted} from "src/TimeRestricted.sol";
 import {MockTimeRestricted} from "test/mock/MockTimeRestricted.sol";
+import {CallHelper} from "test/utils/CallHelper.t.sol";
 
-contract TimeRestrictedUnitTest is Test {
+contract TimeRestrictedUnitTest is CallHelper {
     TimeRestricted public restricted;
     address public timelock;
 
@@ -26,44 +27,6 @@ contract TimeRestrictedUnitTest is Test {
     /// keccak256("fallback_manager.handler.address")
     uint256 private constant FALLBACK_HANDLER_STORAGE_SLOT =
         0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
-
-    /// @notice Emitted when a time range is added to the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to modify transactions allow time
-    /// @param startHour start hour of the allowed time range
-    /// @param endHour end hour of the allowed time range
-    event TimeRangeAdded(
-        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
-    );
-
-    /// @notice Emitted when a time range is updated for the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to modify transactions allow time
-    /// @param oldStartHour old start hour of the allowed time range
-    /// @param newStartHour new start hour of the allowed time range
-    /// @param oldEndHour old end hour of the allowed time range
-    /// @param newEndHour new end hour of the allowed time range
-    event TimeRangeUpdated(
-        address indexed safe,
-        uint8 dayOfWeek,
-        uint8 oldStartHour,
-        uint8 newStartHour,
-        uint8 oldEndHour,
-        uint8 newEndHour
-    );
-
-    /// @notice Emitted when a time range is removed from the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to remove
-    /// @param startHour previous start hour of the allowed time range
-    /// @param endHour previous end hour of the allowed time range
-    event TimeRangeDeleted(
-        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
-    );
-
-    /// @notice Emitted when the guard is removed from a safe
-    /// @param safe address of the safe
-    event GuardDisabled(address indexed safe);
 
     function setUp() public {
         restricted = new TimeRestricted();
@@ -1118,88 +1081,5 @@ contract TimeRestrictedUnitTest is Test {
             }
         }
         return result;
-    }
-
-    // Helper functions to perform timeRestricted actions with event checks
-
-    function _initializeConfiguration(
-        address caller,
-        address timeRestricted,
-        address timelock,
-        TimeRestricted.TimeRange[] memory timeRanges,
-        uint8[] memory allowedDays
-    ) internal {
-        for (uint256 i = 0; i < timeRanges.length; i++) {
-            vm.expectEmit(true, true, true, true, address(timeRestricted));
-            emit TimeRangeAdded(caller, allowedDays[i], timeRanges[i].startHour, timeRanges[i].endHour);
-        }
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).initializeConfiguration(timelock, timeRanges, allowedDays);
-    }
-
-    function _addTimeRange(
-        address caller,
-        address timeRestricted,
-        address safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
-    ) internal {
-        vm.expectEmit(true, true, true, true, address(timeRestricted));
-        emit TimeRangeAdded(safe, dayOfWeek, startHour, endHour);
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).addTimeRange(safe, dayOfWeek, startHour, endHour);
-    }
-
-    function _editTimeRange(
-        address caller,
-        address timeRestricted,
-        address safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
-    ) internal {
-        (uint8 oldStartHour, uint8 oldEndHour) = TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
-        vm.expectEmit(true, true, true, true, address(timeRestricted));
-        emit TimeRangeUpdated(
-            safe,
-            dayOfWeek,
-            oldStartHour,
-            startHour,
-            oldEndHour,
-            endHour
-        );
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).editTimeRange(safe, dayOfWeek, startHour, endHour);
-    }
-
-    function _removeAllowedDay(
-        address caller,
-        address timeRestricted,
-        address safe,
-        uint8 dayOfWeek
-    ) internal {
-        (uint8 oldStartHour, uint8 oldEndHour) = TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
-        vm.expectEmit(true, true, true, true, address(timeRestricted));
-        emit TimeRangeDeleted(
-            safe, dayOfWeek, oldStartHour, oldEndHour
-        );
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).removeAllowedDay(safe, dayOfWeek);
-    }
-
-    function _disableGaurd(
-        address caller,
-        address timeRestricted,
-        address safe
-    ) internal {
-        vm.expectEmit(true, true, true, true, address(timeRestricted));
-        emit GuardDisabled(safe);
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).disableGuard(safe);
     }
 }
