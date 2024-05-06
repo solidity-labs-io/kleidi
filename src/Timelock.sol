@@ -446,7 +446,7 @@ contract Timelock is
     ) external payable onlySafeOwner {
         /// first ensure calldata to target is whitelisted,
         /// and that parameters are not malicious
-        checkCalldata(target, value, payload);
+        checkCalldata(target, payload);
         _execute(target, value, payload);
 
         emit CallExecuted(bytes32(0), 0, target, value, payload);
@@ -474,7 +474,7 @@ contract Timelock is
 
             /// first ensure calldata to target is whitelisted,
             /// and that parameters are not malicious
-            checkCalldata(target, value, payload);
+            checkCalldata(target, payload);
             _execute(target, value, payload);
 
             emit CallExecuted(bytes32(0), i, target, value, payload);
