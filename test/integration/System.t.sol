@@ -141,7 +141,6 @@ contract SystemIntegrationTest is Test {
 
     function setUp() public {
         startTimestamp = block.timestamp;
-        // at least start at unix timestamp of 1m so that block timestamp isn't 0
 
         restricted = new TimeRestricted();
 
