@@ -17,4 +17,4 @@ jobs:
         uses: ./.github/actions
 
       - name: Unit Test Contracts
-        run: time forge test -vvv
+        run: time forge test --mc UnitTest -vvv

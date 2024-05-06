@@ -15,9 +15,9 @@ library BytesHelper {
             functionSignature := mload(add(toSlice, 0x20))
         }
     }
+
     /// @notice function to grab the first 32 bytes of returned memory
     /// @param toSlice the calldata payload
-
     function getFirstWord(bytes memory toSlice)
         public
         pure

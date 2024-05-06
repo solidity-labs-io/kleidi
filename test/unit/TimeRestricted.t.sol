@@ -512,6 +512,23 @@ contract TimeRestrictedUnitTest is Test {
         );
     }
 
+    function testTransactionToSelfFails() public {
+        vm.expectRevert("TimeRestricted: no self calls");
+        restricted.checkTransaction(
+            address(this),
+            0,
+            "",
+            Enum.Operation.DelegateCall,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+    }
+
     function testCheckOwnersFailsRemoved() public {
         testEnableSafe();
 
