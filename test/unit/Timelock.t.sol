@@ -139,13 +139,15 @@ contract TimelockUnitTest is CallHelper {
 
     function testScheduleProposalSafeSucceeds() public returns (bytes32) {
         _schedule({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            target:   address(timelock),
-            value:    0,
-            data:     abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            target: address(timelock),
+            value: 0,
+            data: abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         bytes32 id = timelock.hashOperation(
@@ -193,13 +195,13 @@ contract TimelockUnitTest is CallHelper {
             abi.encodeWithSelector(timelock.updateDelay.selector, newDelay);
 
         _scheduleBatch({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            targets:  targets,
-            values:   values,
+            targets: targets,
+            values: values,
             payloads: datas,
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         bytes32 id =
@@ -237,12 +239,12 @@ contract TimelockUnitTest is CallHelper {
         vm.warp(block.timestamp + MINIMUM_DELAY);
 
         _executeBatch({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            targets:  targets,
-            values:   values,
+            targets: targets,
+            values: values,
             payloads: datas,
-            salt:     bytes32(0)
+            salt: bytes32(0)
         });
 
         assertTrue(timelock.isOperationDone(id), "operation should be done");
@@ -517,13 +519,15 @@ contract TimelockUnitTest is CallHelper {
         // Prepare the scheduling parameters
         // Call schedule() first time
         _schedule({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            target:   address(timelock),
-            value:    0,
-            data:     abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            target: address(timelock),
+            value: 0,
+            data: abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
         // Expect revert on second call with same parameters
         vm.prank(address(safe));
@@ -628,12 +632,14 @@ contract TimelockUnitTest is CallHelper {
 
         // Execute the call as anyone, should succeed
         _execute({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            target:   address(timelock),
-            value:    0,
-            payload:  abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            salt:     bytes32(0)
+            target: address(timelock),
+            value: 0,
+            payload: abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
+            salt: bytes32(0)
         });
 
         assertEq(
@@ -661,10 +667,12 @@ contract TimelockUnitTest is CallHelper {
             caller: address(safe),
             timelock: address(timelock),
             target: address(timelock),
-            value:  0,
-            data:   abi.encodeWithSelector(timelock.updateExpirationPeriod.selector, newExpirationPeriod),
-            salt:   bytes32(0),
-            delay:  MINIMUM_DELAY
+            value: 0,
+            data: abi.encodeWithSelector(
+                timelock.updateExpirationPeriod.selector, newExpirationPeriod
+            ),
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         // Simulate time passing
@@ -672,12 +680,14 @@ contract TimelockUnitTest is CallHelper {
 
         // Execute the call as anyone, should succeed
         _execute({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            target:   address(timelock),
-            value:    0,
-            payload:  abi.encodeWithSelector(timelock.updateExpirationPeriod.selector, newExpirationPeriod),
-            salt:     bytes32(0)
+            target: address(timelock),
+            value: 0,
+            payload: abi.encodeWithSelector(
+                timelock.updateExpirationPeriod.selector, newExpirationPeriod
+            ),
+            salt: bytes32(0)
         });
 
         bytes32 id = timelock.hashOperation(
@@ -753,13 +763,13 @@ contract TimelockUnitTest is CallHelper {
         );
 
         _scheduleBatch({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            targets:  targets,
-            values:   values,
+            targets: targets,
+            values: values,
             payloads: datas,
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         bytes32 id =
@@ -786,12 +796,12 @@ contract TimelockUnitTest is CallHelper {
         vm.warp(block.timestamp + MINIMUM_DELAY);
 
         _executeBatch({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            targets:  targets,
-            values:   values,
+            targets: targets,
+            values: values,
             payloads: datas,
-            salt:     bytes32(0)
+            salt: bytes32(0)
         });
 
         address[] memory safeSigner = new address[](1);
@@ -800,19 +810,23 @@ contract TimelockUnitTest is CallHelper {
         safe.setOwners(safeSigner);
 
         _executeWhiteListed({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            target:   address(lending),
-            value:    0,
-            payload:  abi.encodeWithSelector(lending.deposit.selector, address(timelock), 100)
+            target: address(lending),
+            value: 0,
+            payload: abi.encodeWithSelector(
+                lending.deposit.selector, address(timelock), 100
+            )
         });
 
         _executeWhiteListed({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            target:   address(lending),
-            value:    0,
-            payload:  abi.encodeWithSelector(lending.withdraw.selector, address(timelock), 100)
+            target: address(lending),
+            value: 0,
+            payload: abi.encodeWithSelector(
+                lending.withdraw.selector, address(timelock), 100
+            )
         });
 
         vm.expectRevert("CalldataList: Value exceeds maximum");
@@ -913,13 +927,13 @@ contract TimelockUnitTest is CallHelper {
         );
 
         _scheduleBatch({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            targets:  targets,
-            values:   values,
+            targets: targets,
+            values: values,
             payloads: datas,
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         bytes32 id =
@@ -946,12 +960,12 @@ contract TimelockUnitTest is CallHelper {
         vm.warp(block.timestamp + MINIMUM_DELAY);
 
         _executeBatch({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            targets:  targets,
-            values:   values,
+            targets: targets,
+            values: values,
             payloads: datas,
-            salt:     bytes32(0)
+            salt: bytes32(0)
         });
 
         address[] memory safeSigner = new address[](1);
@@ -972,10 +986,10 @@ contract TimelockUnitTest is CallHelper {
         );
 
         _executeWhitelistedBatch({
-            caller:   address(this),
+            caller: address(this),
             timelock: address(timelock),
-            targets:  lendingAddresses,
-            values:   new uint256[](2),
+            targets: lendingAddresses,
+            values: new uint256[](2),
             payloads: lendingPayloads
         });
 
@@ -1151,13 +1165,13 @@ contract TimelockUnitTest is CallHelper {
         MockReentrancyExecutor executor = new MockReentrancyExecutor();
 
         _schedule({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            target:   address(executor),
-            value:    0,
-            data:     "",
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            target: address(executor),
+            value: 0,
+            data: "",
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -1180,13 +1194,13 @@ contract TimelockUnitTest is CallHelper {
         datas[0] = "";
 
         _scheduleBatch({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            targets:  targets,
-            values:   values,
+            targets: targets,
+            values: values,
             payloads: datas,
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -1197,13 +1211,15 @@ contract TimelockUnitTest is CallHelper {
 
     function testCallBubblesUpRevert() public {
         _schedule({
-            caller:   address(safe),
+            caller: address(safe),
             timelock: address(timelock),
-            target:   address(timelock),
-            value:    0,
-            data:     abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY - 1),
-            salt:     bytes32(0),
-            delay:    MINIMUM_DELAY
+            target: address(timelock),
+            value: 0,
+            data: abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY - 1
+            ),
+            salt: bytes32(0),
+            delay: MINIMUM_DELAY
         });
 
         bytes32 id = timelock.hashOperation(

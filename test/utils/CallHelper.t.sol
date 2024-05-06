@@ -7,8 +7,9 @@ import {TimeRestricted} from "src/TimeRestricted.sol";
 import {Timelock} from "src/Timelock.sol";
 
 contract CallHelper is Test {
-
-    /** TimeRestricted events **/
+    /**
+     * TimeRestricted events *
+     */
 
     /// @notice Emitted when a time range is added to the allowed days
     /// @param safe address of the safe
@@ -48,7 +49,9 @@ contract CallHelper is Test {
     /// @param safe address of the safe
     event GuardDisabled(address indexed safe);
 
-    /** Timelock events **/
+    /**
+     * Timelock events *
+     */
 
     /// @notice Emitted when a call is scheduled as part of operation `id`.
     /// @param id unique identifier for the operation
@@ -82,8 +85,9 @@ contract CallHelper is Test {
         bytes data
     );
 
-    /** TimeRestricted helper functions to check emitted events **/
-
+    /**
+     * TimeRestricted helper functions to check emitted events *
+     */
     function _initializeConfiguration(
         address caller,
         address timeRestricted,
@@ -93,11 +97,18 @@ contract CallHelper is Test {
     ) internal {
         for (uint256 i = 0; i < timeRanges.length; i++) {
             vm.expectEmit(true, true, true, true, timeRestricted);
-            emit TimeRangeAdded(caller, allowedDays[i], timeRanges[i].startHour, timeRanges[i].endHour);
+            emit TimeRangeAdded(
+                caller,
+                allowedDays[i],
+                timeRanges[i].startHour,
+                timeRanges[i].endHour
+            );
         }
-        
+
         vm.prank(caller);
-        TimeRestricted(timeRestricted).initializeConfiguration(timelock, timeRanges, allowedDays);
+        TimeRestricted(timeRestricted).initializeConfiguration(
+            timelock, timeRanges, allowedDays
+        );
     }
 
     function _addTimeRange(
@@ -112,7 +123,9 @@ contract CallHelper is Test {
         emit TimeRangeAdded(safe, dayOfWeek, startHour, endHour);
 
         vm.prank(caller);
-        TimeRestricted(timeRestricted).addTimeRange(safe, dayOfWeek, startHour, endHour);
+        TimeRestricted(timeRestricted).addTimeRange(
+            safe, dayOfWeek, startHour, endHour
+        );
     }
 
     function _editTimeRange(
@@ -123,19 +136,17 @@ contract CallHelper is Test {
         uint8 startHour,
         uint8 endHour
     ) internal {
-        (uint8 oldStartHour, uint8 oldEndHour) = TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
+        (uint8 oldStartHour, uint8 oldEndHour) =
+            TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
         vm.expectEmit(true, true, true, true, timeRestricted);
         emit TimeRangeUpdated(
-            safe,
-            dayOfWeek,
-            oldStartHour,
-            startHour,
-            oldEndHour,
-            endHour
+            safe, dayOfWeek, oldStartHour, startHour, oldEndHour, endHour
         );
 
         vm.prank(caller);
-        TimeRestricted(timeRestricted).editTimeRange(safe, dayOfWeek, startHour, endHour);
+        TimeRestricted(timeRestricted).editTimeRange(
+            safe, dayOfWeek, startHour, endHour
+        );
     }
 
     function _removeAllowedDay(
@@ -144,21 +155,18 @@ contract CallHelper is Test {
         address safe,
         uint8 dayOfWeek
     ) internal {
-        (uint8 oldStartHour, uint8 oldEndHour) = TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
+        (uint8 oldStartHour, uint8 oldEndHour) =
+            TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
         vm.expectEmit(true, true, true, true, timeRestricted);
-        emit TimeRangeDeleted(
-            safe, dayOfWeek, oldStartHour, oldEndHour
-        );
+        emit TimeRangeDeleted(safe, dayOfWeek, oldStartHour, oldEndHour);
 
         vm.prank(caller);
         TimeRestricted(timeRestricted).removeAllowedDay(safe, dayOfWeek);
     }
 
-    function _disableGaurd(
-        address caller,
-        address timeRestricted,
-        address safe
-    ) internal {
+    function _disableGaurd(address caller, address timeRestricted, address safe)
+        internal
+    {
         vm.expectEmit(true, true, true, true, timeRestricted);
         emit GuardDisabled(safe);
 
@@ -166,8 +174,9 @@ contract CallHelper is Test {
         TimeRestricted(timeRestricted).disableGuard(safe);
     }
 
-    /** Timelock helper functions to check emitted events **/
-    
+    /**
+     * Timelock helper functions to check emitted events *
+     */
     function _schedule(
         address caller,
         address timelock,
@@ -177,7 +186,8 @@ contract CallHelper is Test {
         bytes32 salt,
         uint256 delay
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperation(target, value, data, salt);
+        bytes32 id =
+            Timelock(payable(timelock)).hashOperation(target, value, data, salt);
         vm.expectEmit(true, true, true, true, timelock);
         emit CallScheduled(id, 0, target, value, data, salt, delay);
 
@@ -194,7 +204,9 @@ contract CallHelper is Test {
         bytes32 salt,
         uint256 delay
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperationBatch(targets, values, payloads, salt);
+        bytes32 id = Timelock(payable(timelock)).hashOperationBatch(
+            targets, values, payloads, salt
+        );
         vm.expectEmit(true, true, true, true, timelock);
         for (uint256 i = 0; i < targets.length; ++i) {
             emit CallScheduled(
@@ -203,7 +215,9 @@ contract CallHelper is Test {
         }
 
         vm.prank(caller);
-        Timelock(payable(timelock)).scheduleBatch(targets, values, payloads, salt, delay);
+        Timelock(payable(timelock)).scheduleBatch(
+            targets, values, payloads, salt, delay
+        );
     }
 
     function _execute(
@@ -214,17 +228,14 @@ contract CallHelper is Test {
         bytes memory payload,
         bytes32 salt
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperation(target, value, payload, salt);
+        bytes32 id = Timelock(payable(timelock)).hashOperation(
+            target, value, payload, salt
+        );
         vm.expectEmit(true, true, true, true, timelock);
         emit CallExecuted(id, 0, target, value, payload);
 
         vm.prank(caller);
-        Timelock(payable(timelock)).execute(
-            target,
-            value,
-            payload,
-            salt
-        );
+        Timelock(payable(timelock)).execute(target, value, payload, salt);
     }
 
     function _executeBatch(
@@ -235,7 +246,9 @@ contract CallHelper is Test {
         bytes[] memory payloads,
         bytes32 salt
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperationBatch(targets, values, payloads, salt);
+        bytes32 id = Timelock(payable(timelock)).hashOperationBatch(
+            targets, values, payloads, salt
+        );
         for (uint256 i = 0; i < targets.length; ++i) {
             vm.expectEmit(true, true, true, true, timelock);
             emit CallExecuted(id, i, targets[i], values[i], payloads[i]);
@@ -243,10 +256,7 @@ contract CallHelper is Test {
 
         vm.prank(caller);
         Timelock(payable(timelock)).executeBatch(
-            targets,
-            values,
-            payloads,
-            salt
+            targets, values, payloads, salt
         );
     }
 
@@ -277,6 +287,8 @@ contract CallHelper is Test {
         }
 
         vm.prank(caller);
-        Timelock(payable(timelock)).executeWhitelistedBatch(targets, values, payloads);
+        Timelock(payable(timelock)).executeWhitelistedBatch(
+            targets, values, payloads
+        );
     }
 }
