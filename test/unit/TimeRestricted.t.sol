@@ -214,6 +214,11 @@ contract TimeRestrictedUnitTest is CallHelper {
             restricted.transactionAllowed(address(this), 10000),
             "transaction should be allowed"
         );
+        assertEq(
+            restricted.safeDaysEnabled(address(this)).length,
+            0,
+            "safe not enabled, allowed days should be zero"
+        );
     }
 
     function testTransactionsAlwaysAllowedEnabled(uint256 timestamp)
@@ -299,7 +304,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
         vm.prank(timelock);
-        vm.expectRevert("day already allowed");
+        vm.expectRevert("TimeRestricted: day already allowed");
         restricted.addTimeRange(address(this), 1, 0, 1);
     }
 
@@ -576,23 +581,6 @@ contract TimeRestrictedUnitTest is CallHelper {
     function testTransactionDelegateCallFails() public {
         vm.expectRevert("TimeRestricted: delegate call disallowed");
         restricted.checkTransaction(
-            address(0),
-            0,
-            "",
-            Enum.Operation.DelegateCall,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(9)),
-            "",
-            address(0)
-        );
-    }
-
-    function testTransactionToSelfFails() public {
-        vm.expectRevert("TimeRestricted: no self calls");
-        restricted.checkTransaction(
             address(this),
             0,
             "",
@@ -607,7 +595,41 @@ contract TimeRestrictedUnitTest is CallHelper {
         );
     }
 
-    function testCheckAfterExecutionNoOpFailure() public {
+    function testTransactionToSelfFailsValue() public {
+        vm.expectRevert("TimeRestricted: no self calls");
+        restricted.checkTransaction(
+            address(this),
+            1,
+            "",
+            Enum.Operation.DelegateCall,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+    }
+
+    function testTransactionToSelfFailsData() public {
+        vm.expectRevert("TimeRestricted: no self calls");
+        restricted.checkTransaction(
+            address(this),
+            0,
+            hex"FF",
+            Enum.Operation.DelegateCall,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+    }
+
+    function testCheckAfterExecutionNoOpFailure() public view {
         restricted.checkAfterExecution(bytes32(0), false);
     }
 
