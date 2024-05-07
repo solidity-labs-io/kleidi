@@ -381,7 +381,7 @@ contract TimeRestricted is BaseGuard {
         assert(numDaysEnabled(safe) != 0);
 
         emit TimeRangeDeleted(
-            msg.sender, dayOfWeek, oldTime.startHour, oldTime.endHour
+            safe, dayOfWeek, oldTime.startHour, oldTime.endHour
         );
     }
 

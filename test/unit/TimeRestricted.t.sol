@@ -3,11 +3,12 @@ pragma solidity ^0.8.13;
 
 import {Enum} from "@safe/common/Enum.sol";
 
-import {Test, console} from "forge-std/Test.sol";
+import {console} from "forge-std/Test.sol";
 
+import {CallHelper} from "test/utils/CallHelper.t.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
 
-contract TimeRestrictedUnitTest is Test {
+contract TimeRestrictedUnitTest is CallHelper {
     TimeRestricted public restricted;
     address public timelock;
 
@@ -49,7 +50,13 @@ contract TimeRestrictedUnitTest is Test {
         uint8[] memory allowedDays = new uint8[](1);
         allowedDays[0] = 3;
 
-        restricted.initializeConfiguration(timelock, ranges, allowedDays);
+        _initializeConfiguration({
+            caller: address(this),
+            timeRestricted: address(restricted),
+            timelock: timelock,
+            timeRanges: ranges,
+            allowedDays: allowedDays
+        });
 
         assertEq(
             restricted.numDaysEnabled(address(this)),
@@ -223,8 +230,15 @@ contract TimeRestrictedUnitTest is Test {
     function testEnableSafeValidDaysHoursSuccess() public {
         testEnableSafe();
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
+
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
         (uint8 startHour, uint8 endHour) =
@@ -274,8 +288,14 @@ contract TimeRestrictedUnitTest is Test {
     function testEnableAlreadyEnabledDaySucceeds() public {
         testEnableSafe();
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
         vm.prank(timelock);
@@ -286,12 +306,24 @@ contract TimeRestrictedUnitTest is Test {
     function testEditTimeRangeExistingDaySucceeds() public {
         testEnableSafe();
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
-        vm.prank(timelock);
-        restricted.editTimeRange(address(this), 1, 1, 2);
+        _editTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 1,
+            endHour: 2
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
         (uint8 startHour, uint8 endHour) =
@@ -344,16 +376,33 @@ contract TimeRestrictedUnitTest is Test {
     function testRemoveAllowedDay() public {
         testEnableSafe();
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 2,
+            startHour: 0,
+            endHour: 1
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
         vm.prank(timelock);
-        restricted.addTimeRange(address(this), 2, 0, 1);
-        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
-
-        vm.prank(timelock);
-        restricted.removeAllowedDay(address(this), 1);
+        _removeAllowedDay({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1
+        });
 
         {
             (uint8 startHour, uint8 endHour) =
@@ -403,8 +452,14 @@ contract TimeRestrictedUnitTest is Test {
     function testCannotRemoveFinalDay() public {
         testEnableSafe();
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
         assertEq(
             restricted.numDaysEnabled(address(this)),
@@ -412,8 +467,12 @@ contract TimeRestrictedUnitTest is Test {
             "incorrect days, should be 2"
         );
 
-        vm.prank(timelock);
-        restricted.removeAllowedDay(address(this), 1);
+        _removeAllowedDay({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1
+        });
 
         assertEq(
             restricted.numDaysEnabled(address(this)),
@@ -437,12 +496,22 @@ contract TimeRestrictedUnitTest is Test {
     function testDisableGuardSucceeds() public {
         testEnableSafe();
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
-        vm.prank(timelock);
-        restricted.disableGuard(address(this));
+        _disableGaurd({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this)
+        });
+
         assertFalse(restricted.safeEnabled(address(this)), "safe not disabled");
 
         (uint8 startHour, uint8 endHour) =
@@ -455,8 +524,14 @@ contract TimeRestrictedUnitTest is Test {
     function testCheckTransaction() public {
         testEnableSafe();
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
         assertTrue(
             restricted.transactionAllowed(address(this), 1712537758),
@@ -532,7 +607,104 @@ contract TimeRestrictedUnitTest is Test {
         );
     }
 
-    function testCheckAfterExecutionNoOpFailure() public view {
+    function testCheckOwnersFailsRemoved() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+        owners = new address[](0);
+
+        vm.expectRevert("TimeRestricted: owners length changed");
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckOwnersFailsSwap() public {
+        testEnableSafe();
+
+        address guard = address(restricted);
+        // for checkAfterExecution guard check
+        assembly {
+            sstore(GUARD_STORAGE_SLOT, guard)
+        }
+
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
+        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
+
+        assertTrue(
+            restricted.transactionAllowed(address(this), 1712537758),
+            "transaction should be allowed"
+        );
+
+        vm.warp(1712537758);
+
+        owners = new address[](1);
+        owners[0] = address(100000000);
+
+        restricted.checkTransaction(
+            address(0),
+            0,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(9)),
+            "",
+            address(0)
+        );
+        owners = new address[](1);
+        owners[0] = address(100000001);
+
+        vm.expectRevert("TimeRestricted: value mismatch");
+        restricted.checkAfterExecution(bytes32(0), true);
+    }
+
+    function testCheckAfterExecutionNoOpFailure() public {
         restricted.checkAfterExecution(bytes32(0), false);
     }
 
@@ -545,8 +717,14 @@ contract TimeRestrictedUnitTest is Test {
             sstore(GUARD_STORAGE_SLOT, guard)
         }
 
-        vm.prank(timelock);
-        restricted.addTimeRange(address(this), 1, 0, 1);
+        _addTimeRange({
+            caller: timelock,
+            timeRestricted: address(restricted),
+            safe: address(this),
+            dayOfWeek: 1,
+            startHour: 0,
+            endHour: 1
+        });
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
         assertTrue(
