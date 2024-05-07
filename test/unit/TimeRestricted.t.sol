@@ -256,12 +256,12 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         /// 0 is an invalid day of the week
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 0, 0, 1);
 
         /// 8 is an invalid day of the week
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 8, 0, 1);
     }
@@ -270,17 +270,17 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         /// 24 is an invalid hour
-        vm.expectRevert("invalid end hour");
+        vm.expectRevert("TimeRestricted: invalid end hour");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 1, 1, 24);
 
         /// 24 is an invalid hour
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 1, 2, 1);
 
         /// hours are the same, invalid
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 1, 2, 2);
     }
@@ -337,7 +337,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("day not allowed");
+        vm.expectRevert("TimeRestricted: day not allowed");
         restricted.editTimeRange(address(this), 1, 1, 23);
     }
 
@@ -345,7 +345,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid end hour");
+        vm.expectRevert("TimeRestricted: invalid end hour");
         restricted.editTimeRange(address(this), 1, 1, 24);
     }
 
@@ -353,11 +353,11 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         restricted.editTimeRange(address(this), 1, 23, 23);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         restricted.editTimeRange(address(this), 1, 23, 22);
     }
 
@@ -365,11 +365,11 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.editTimeRange(address(this), 8, 22, 23);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.editTimeRange(address(this), 0, 22, 23);
     }
 
@@ -425,19 +425,19 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 0);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 8);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 9);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 255);
     }
 
@@ -445,7 +445,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("day not allowed");
+        vm.expectRevert("TimeRestricted: day not allowed");
         restricted.removeAllowedDay(address(this), 1);
     }
 
@@ -485,7 +485,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         assertEq(activeDay, 3, "incorrect active day, should be Wednesday");
 
         vm.prank(timelock);
-        vm.expectRevert("day not allowed");
+        vm.expectRevert("TimeRestricted: day not allowed");
         restricted.removeAllowedDay(address(this), 1);
 
         vm.prank(timelock);
