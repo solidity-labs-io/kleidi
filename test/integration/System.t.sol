@@ -772,10 +772,132 @@ contract SystemIntegrationTest is Test {
 
     function testEnableModuleFails() public {
         testInitializeContract();
+
+        bytes memory calldatas = abi.encodeWithSelector(
+            ModuleManager.enableModule.selector, address(1111111111)
+        );
+
+        bytes32 transactionHash = safe.getTransactionHash(
+            address(safe),
+            0,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+
+        vm.warp(1714565295);
+
+        /// warp forward to allowed time
+
+        vm.expectRevert("TimeRestricted: no self calls");
+        safe.execTransaction(
+            address(safe),
+            0,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
     }
 
     function testRemoveModuleFails() public {
         testInitializeContract();
+
+        /// remove timelock as a module
+        bytes memory calldatas = abi.encodeWithSelector(
+            ModuleManager.disableModule.selector, address(timelock)
+        );
+
+        bytes32 transactionHash = safe.getTransactionHash(
+            address(safe),
+            0,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+
+        /// warp forward to allowed time
+        vm.warp(1714565295);
+
+        /// fails because call to self + calldata not zero length
+        vm.expectRevert("TimeRestricted: no self calls");
+        safe.execTransaction(
+            address(safe),
+            0,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+    }
+
+    function testOnchainCancellationSucceeds() public {
+        testInitializeContract();
+
+        bytes memory calldatas = "";
+        uint256 value = 0;
+        uint256 startingNonce = safe.nonce();
+
+        bytes32 transactionHash = safe.getTransactionHash(
+            address(safe),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            startingNonce
+        );
+
+        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+
+        /// warp forward to allowed time
+        vm.warp(1714565295);
+
+        /// call to self succeeds because calldata length is zero
+        /// and value is 0
+        safe.execTransaction(
+            address(safe),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        assertEq(
+            safe.nonce(),
+            startingNonce + 1,
+            "incorrect nonce, did not cancel original transaction"
+        );
     }
 
     function testExecuteWhitelistedCalldataSucceedsSupplyCollateral() public {
