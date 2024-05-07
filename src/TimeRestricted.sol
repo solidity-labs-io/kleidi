@@ -173,6 +173,8 @@ contract TimeRestricted is BaseGuard {
     /// @notice returns whether or not the safe has this guard enabled
     /// if no days are set, even if this contract is set as a guard,
     /// all actions are allowed.
+    /// @param safe to check if the guard is enabled
+    /// returns true if one or more days are allowed
     function safeEnabled(address safe) public view returns (bool) {
         for (uint256 i = 1; i <= MAX_DAYS; i++) {
             if (dayTimeRanges[safe][uint8(i)].endHour != 0) {
@@ -336,13 +338,13 @@ contract TimeRestricted is BaseGuard {
         uint8 startHour,
         uint8 endHour
     ) external onlyTimelock(safe) {
-        require(endHour <= 23, "invalid end hour");
-        require(startHour < endHour, "invalid time range");
-        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
+        require(endHour <= 23, "TimeRestricted: invalid end hour");
+        require(startHour < endHour, "TimeRestricted: invalid time range");
+        require(dayOfWeek >= 1 && dayOfWeek <= 7, "TimeRestricted: invalid day of week");
 
         TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
 
-        require(oldTime.endHour != 0, "day not allowed");
+        require(oldTime.endHour != 0, "TimeRestricted: day not allowed");
 
         TimeRange storage currentTime = dayTimeRanges[safe][dayOfWeek];
         currentTime.startHour = startHour;
@@ -367,11 +369,11 @@ contract TimeRestricted is BaseGuard {
         external
         onlyTimelock(safe)
     {
-        require(dayOfWeek >= 1 && dayOfWeek <= MAX_DAYS, "invalid day of week");
+        require(dayOfWeek >= 1 && dayOfWeek <= MAX_DAYS, "TimeRestricted: invalid day of week");
 
         TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
 
-        require(oldTime.endHour != 0, "day not allowed");
+        require(oldTime.endHour != 0, "TimeRestricted: day not allowed");
 
         delete dayTimeRanges[safe][dayOfWeek];
 
@@ -421,10 +423,10 @@ contract TimeRestricted is BaseGuard {
     ) private {
         TimeRange storage time = dayTimeRanges[safe][dayOfWeek];
 
-        require(dayOfWeek >= 1 && dayOfWeek <= 7, "invalid day of week");
+        require(dayOfWeek >= 1 && dayOfWeek <= 7, "TimeRestricted: invalid day of week");
         require(time.endHour == 0, "day already allowed");
-        require(endHour <= 23, "invalid end hour");
-        require(startHour < endHour, "invalid time range");
+        require(endHour <= 23, "TimeRestricted: invalid end hour");
+        require(startHour < endHour, "TimeRestricted: invalid time range");
 
         time.startHour = startHour;
         time.endHour = endHour;
