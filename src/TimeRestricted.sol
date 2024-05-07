@@ -38,6 +38,9 @@ import {BytesHelper} from "src/BytesHelper.sol";
 /// The implementation contract can still be upgraded through the timelock
 /// using module calls back into the safe with a delegatecall.
 
+/// Refund receiver and gas params are not checked because the Safe itself
+/// does not hold funds or tokens.
+
 contract TimeRestricted is BaseGuard {
     using BytesHelper for bytes;
     using BokkyPooBahsDateTimeLibrary for uint256;
@@ -264,8 +267,8 @@ contract TimeRestricted is BaseGuard {
     /// all allowed days have the same allowed hours.
     function checkTransaction(
         address to,
-        uint256,
-        bytes memory,
+        uint256 value,
+        bytes memory data,
         Enum.Operation operationType,
         uint256,
         uint256,
@@ -275,7 +278,11 @@ contract TimeRestricted is BaseGuard {
         bytes memory,
         address
     ) external view {
-        require(to != msg.sender, "TimeRestricted: no self calls");
+        if (to == msg.sender) {
+            require(
+                data.length == 0 && value == 0, "TimeRestricted: no self calls"
+            );
+        }
         /// if delegate calls are allowed, owners or modules could be added
         /// or removed outside of the expected flow, and the only way to reason
         /// about this is to disallow delegate calls as we cannot prove unknown
@@ -340,7 +347,10 @@ contract TimeRestricted is BaseGuard {
     ) external onlyTimelock(safe) {
         require(endHour <= 23, "TimeRestricted: invalid end hour");
         require(startHour < endHour, "TimeRestricted: invalid time range");
-        require(dayOfWeek >= 1 && dayOfWeek <= 7, "TimeRestricted: invalid day of week");
+        require(
+            dayOfWeek >= 1 && dayOfWeek <= 7,
+            "TimeRestricted: invalid day of week"
+        );
 
         TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
 
@@ -369,7 +379,10 @@ contract TimeRestricted is BaseGuard {
         external
         onlyTimelock(safe)
     {
-        require(dayOfWeek >= 1 && dayOfWeek <= MAX_DAYS, "TimeRestricted: invalid day of week");
+        require(
+            dayOfWeek >= 1 && dayOfWeek <= MAX_DAYS,
+            "TimeRestricted: invalid day of week"
+        );
 
         TimeRange memory oldTime = dayTimeRanges[safe][dayOfWeek];
 
@@ -423,8 +436,11 @@ contract TimeRestricted is BaseGuard {
     ) private {
         TimeRange storage time = dayTimeRanges[safe][dayOfWeek];
 
-        require(dayOfWeek >= 1 && dayOfWeek <= 7, "TimeRestricted: invalid day of week");
-        require(time.endHour == 0, "day already allowed");
+        require(
+            dayOfWeek >= 1 && dayOfWeek <= 7,
+            "TimeRestricted: invalid day of week"
+        );
+        require(time.endHour == 0, "TimeRestricted: day already allowed");
         require(endHour <= 23, "TimeRestricted: invalid end hour");
         require(startHour < endHour, "TimeRestricted: invalid time range");
 
