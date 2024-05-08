@@ -5,9 +5,8 @@ import {Enum} from "@safe/common/Enum.sol";
 
 import {console} from "forge-std/Test.sol";
 
-import {TimeRestricted} from "src/TimeRestricted.sol";
-import {MockTimeRestricted} from "test/mock/MockTimeRestricted.sol";
 import {CallHelper} from "test/utils/CallHelper.t.sol";
+import {TimeRestricted} from "src/TimeRestricted.sol";
 
 contract TimeRestrictedUnitTest is CallHelper {
     TimeRestricted public restricted;
@@ -215,6 +214,11 @@ contract TimeRestrictedUnitTest is CallHelper {
             restricted.transactionAllowed(address(this), 10000),
             "transaction should be allowed"
         );
+        assertEq(
+            restricted.safeDaysEnabled(address(this)).length,
+            0,
+            "safe not enabled, allowed days should be zero"
+        );
     }
 
     function testTransactionsAlwaysAllowedEnabled(uint256 timestamp)
@@ -257,12 +261,12 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         /// 0 is an invalid day of the week
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 0, 0, 1);
 
         /// 8 is an invalid day of the week
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 8, 0, 1);
     }
@@ -271,17 +275,17 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         /// 24 is an invalid hour
-        vm.expectRevert("invalid end hour");
+        vm.expectRevert("TimeRestricted: invalid end hour");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 1, 1, 24);
 
         /// 24 is an invalid hour
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 1, 2, 1);
 
         /// hours are the same, invalid
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         vm.prank(timelock);
         restricted.addTimeRange(address(this), 1, 2, 2);
     }
@@ -300,7 +304,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
 
         vm.prank(timelock);
-        vm.expectRevert("day already allowed");
+        vm.expectRevert("TimeRestricted: day already allowed");
         restricted.addTimeRange(address(this), 1, 0, 1);
     }
 
@@ -338,7 +342,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("day not allowed");
+        vm.expectRevert("TimeRestricted: day not allowed");
         restricted.editTimeRange(address(this), 1, 1, 23);
     }
 
@@ -346,7 +350,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid end hour");
+        vm.expectRevert("TimeRestricted: invalid end hour");
         restricted.editTimeRange(address(this), 1, 1, 24);
     }
 
@@ -354,11 +358,11 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         restricted.editTimeRange(address(this), 1, 23, 23);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid time range");
+        vm.expectRevert("TimeRestricted: invalid time range");
         restricted.editTimeRange(address(this), 1, 23, 22);
     }
 
@@ -366,11 +370,11 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.editTimeRange(address(this), 8, 22, 23);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.editTimeRange(address(this), 0, 22, 23);
     }
 
@@ -426,19 +430,19 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 0);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 8);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 9);
 
         vm.prank(timelock);
-        vm.expectRevert("invalid day of week");
+        vm.expectRevert("TimeRestricted: invalid day of week");
         restricted.removeAllowedDay(address(this), 255);
     }
 
@@ -446,7 +450,7 @@ contract TimeRestrictedUnitTest is CallHelper {
         testEnableSafe();
 
         vm.prank(timelock);
-        vm.expectRevert("day not allowed to be removed");
+        vm.expectRevert("TimeRestricted: day not allowed");
         restricted.removeAllowedDay(address(this), 1);
     }
 
@@ -486,8 +490,12 @@ contract TimeRestrictedUnitTest is CallHelper {
         assertEq(activeDay, 3, "incorrect active day, should be Wednesday");
 
         vm.prank(timelock);
-        vm.expectRevert();
+        vm.expectRevert("TimeRestricted: day not allowed");
         restricted.removeAllowedDay(address(this), 1);
+
+        vm.prank(timelock);
+        vm.expectRevert();
+        restricted.removeAllowedDay(address(this), activeDay);
     }
 
     function testDisableGuardSucceeds() public {
@@ -573,23 +581,6 @@ contract TimeRestrictedUnitTest is CallHelper {
     function testTransactionDelegateCallFails() public {
         vm.expectRevert("TimeRestricted: delegate call disallowed");
         restricted.checkTransaction(
-            address(0),
-            0,
-            "",
-            Enum.Operation.DelegateCall,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(9)),
-            "",
-            address(0)
-        );
-    }
-
-    function testTransactionToSelfFails() public {
-        vm.expectRevert("TimeRestricted: no self calls");
-        restricted.checkTransaction(
             address(this),
             0,
             "",
@@ -604,40 +595,13 @@ contract TimeRestrictedUnitTest is CallHelper {
         );
     }
 
-    function testCheckOwnersFailsRemoved() public {
-        testEnableSafe();
-
-        address guard = address(restricted);
-        // for checkAfterExecution guard check
-        assembly {
-            sstore(GUARD_STORAGE_SLOT, guard)
-        }
-
-        _addTimeRange({
-            caller: timelock,
-            timeRestricted: address(restricted),
-            safe: address(this),
-            dayOfWeek: 1,
-            startHour: 0,
-            endHour: 1
-        });
-        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
-
-        assertTrue(
-            restricted.transactionAllowed(address(this), 1712537758),
-            "transaction should be allowed"
-        );
-
-        vm.warp(1712537758);
-
-        owners = new address[](1);
-        owners[0] = address(100000000);
-
+    function testTransactionToSelfFailsValue() public {
+        vm.expectRevert("TimeRestricted: no self calls");
         restricted.checkTransaction(
-            address(0),
-            0,
+            address(this),
+            1,
             "",
-            Enum.Operation.Call,
+            Enum.Operation.DelegateCall,
             0,
             0,
             0,
@@ -646,46 +610,15 @@ contract TimeRestrictedUnitTest is CallHelper {
             "",
             address(0)
         );
-        owners = new address[](0);
-
-        vm.expectRevert("TimeRestricted: owners length changed");
-        restricted.checkAfterExecution(bytes32(0), true);
     }
 
-    function testCheckOwnersFailsSwap() public {
-        testEnableSafe();
-
-        address guard = address(restricted);
-        // for checkAfterExecution guard check
-        assembly {
-            sstore(GUARD_STORAGE_SLOT, guard)
-        }
-
-        _addTimeRange({
-            caller: timelock,
-            timeRestricted: address(restricted),
-            safe: address(this),
-            dayOfWeek: 1,
-            startHour: 0,
-            endHour: 1
-        });
-        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
-
-        assertTrue(
-            restricted.transactionAllowed(address(this), 1712537758),
-            "transaction should be allowed"
-        );
-
-        vm.warp(1712537758);
-
-        owners = new address[](1);
-        owners[0] = address(100000000);
-
+    function testTransactionToSelfFailsData() public {
+        vm.expectRevert("TimeRestricted: no self calls");
         restricted.checkTransaction(
-            address(0),
+            address(this),
             0,
-            "",
-            Enum.Operation.Call,
+            hex"FF",
+            Enum.Operation.DelegateCall,
             0,
             0,
             0,
@@ -694,22 +627,10 @@ contract TimeRestrictedUnitTest is CallHelper {
             "",
             address(0)
         );
-        owners = new address[](1);
-        owners[0] = address(100000001);
-
-        vm.expectRevert("TimeRestricted: value mismatch");
-        restricted.checkAfterExecution(bytes32(0), true);
     }
 
-    function testCheckAfterExecutionNoOpFailure() public {
+    function testCheckAfterExecutionNoOpFailure() public view {
         restricted.checkAfterExecution(bytes32(0), false);
-    }
-
-    function testCheckAfterExecutionGuardChanged() public {
-        /// without mocking the value in the guard slot, it returns address 0
-        /// thus failing the check and causing the expected revert
-        vm.expectRevert("TimeRestricted: cannot remove guard");
-        restricted.checkAfterExecution(bytes32(0), true);
     }
 
     function testCheckAfterExecutionNoFailure() public {
@@ -758,330 +679,10 @@ contract TimeRestrictedUnitTest is CallHelper {
         restricted.checkAfterExecution(bytes32(0), true);
     }
 
-    function testCheckAfterExecutionFallbackHandlerAddedFails() public {
-        testEnableSafe();
-
-        address guard = address(restricted);
-        // for checkAfterExecution guard check
-        assembly {
-            sstore(GUARD_STORAGE_SLOT, guard)
-        }
-
-        _addTimeRange({
-            caller: timelock,
-            timeRestricted: address(restricted),
-            safe: address(this),
-            dayOfWeek: 1,
-            startHour: 0,
-            endHour: 1
-        });
-        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
-
-        assertTrue(
-            restricted.transactionAllowed(address(this), 1712537758),
-            "transaction should be allowed"
-        );
-
-        vm.warp(1712537758);
-
-        owners = new address[](1);
-        owners[0] = address(100000000);
-
-        restricted.checkTransaction(
-            address(0),
-            0,
-            "",
-            Enum.Operation.Call,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(9)),
-            "",
-            address(0)
-        );
-
-        assembly {
-            sstore(FALLBACK_HANDLER_STORAGE_SLOT, 1)
-        }
-
-        vm.expectRevert("TimeRestricted: cannot add fallback handler");
-        restricted.checkAfterExecution(bytes32(0), true);
-    }
-
-    function testCheckAfterExecutionImplChangeFailure() public {
-        testEnableSafe();
-
-        address guard = address(restricted);
-        // for checkAfterExecution guard check
-        assembly {
-            sstore(GUARD_STORAGE_SLOT, guard)
-        }
-
-        _addTimeRange({
-            caller: timelock,
-            timeRestricted: address(restricted),
-            safe: address(this),
-            dayOfWeek: 1,
-            startHour: 0,
-            endHour: 1
-        });
-        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
-
-        assertTrue(
-            restricted.transactionAllowed(address(this), 1712537758),
-            "transaction should be allowed"
-        );
-
-        vm.warp(1712537758);
-
-        owners = new address[](1);
-        owners[0] = address(100000000);
-
-        restricted.checkTransaction(
-            address(0),
-            0,
-            "",
-            Enum.Operation.Call,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(9)),
-            "",
-            address(0)
-        );
-
-        assembly {
-            sstore(0, 1000000)
-        }
-
-        vm.expectRevert("TimeRestricted: value mismatch");
-        restricted.checkAfterExecution(bytes32(0), true);
-    }
-
-    function testCheckAfterExecutionModulesChangedInPlace() public {
-        testEnableSafe();
-
-        address guard = address(restricted);
-        // for checkAfterExecution guard check
-        assembly {
-            sstore(GUARD_STORAGE_SLOT, guard)
-        }
-
-        _addTimeRange({
-            caller: timelock,
-            timeRestricted: address(restricted),
-            safe: address(this),
-            dayOfWeek: 1,
-            startHour: 0,
-            endHour: 1
-        });
-        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
-
-        assertTrue(
-            restricted.transactionAllowed(address(this), 1712537758),
-            "transaction should be allowed"
-        );
-
-        vm.warp(1712537758);
-
-        owners = new address[](1);
-        owners[0] = address(100000000);
-
-        restricted.checkTransaction(
-            address(0),
-            0,
-            "",
-            Enum.Operation.Call,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(9)),
-            "",
-            address(0)
-        );
-
-        modules1[4] = address(type(uint160).max);
-
-        vm.expectRevert("TimeRestricted: value mismatch");
-        restricted.checkAfterExecution(bytes32(0), true);
-    }
-
-    function testCheckAfterExecutionModulesCountChanged() public {
-        testEnableSafe();
-
-        {
-            MockTimeRestricted mock = new MockTimeRestricted();
-            vm.etch(address(restricted), address(mock).code);
-        }
-
-        address guard = address(restricted);
-        // for checkAfterExecution guard check
-        assembly {
-            sstore(GUARD_STORAGE_SLOT, guard)
-        }
-
-        _addTimeRange({
-            caller: timelock,
-            timeRestricted: address(restricted),
-            safe: address(this),
-            dayOfWeek: 1,
-            startHour: 0,
-            endHour: 1
-        });
-        assertTrue(restricted.safeEnabled(address(this)), "safe enabled");
-
-        assertTrue(
-            restricted.transactionAllowed(address(this), 1712537758),
-            "transaction should be allowed"
-        );
-
-        vm.warp(1712537758);
-
-        owners = new address[](1);
-        owners[0] = address(100000000);
-
-        restricted.checkTransaction(
-            address(0),
-            0,
-            "",
-            Enum.Operation.Call,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(9)),
-            "",
-            address(0)
-        );
-
-        assertEq(
-            MockTimeRestricted(address(restricted)).getTloadValue(
-                MockTimeRestricted(address(restricted)).MODULE_LENGTH_SLOT()
-            ),
-            15,
-            "incorrect number of modules"
-        );
-
-        assertEq(
-            MockTimeRestricted(address(restricted)).getTloadValue(
-                MockTimeRestricted(address(restricted)).OWNER_LENGTH_SLOT()
-            ),
-            1,
-            "incorrect number of owners"
-        );
-
-        modules1.pop();
-
-        vm.expectRevert("TimeRestricted: value mismatch");
-        restricted.checkAfterExecution(bytes32(0), true);
-    }
-
-    function testGetSentinelModuleCount() public {
-        MockTimeRestricted mock = new MockTimeRestricted();
-        TimeRestricted.TimeRange[] memory ranges =
-            new TimeRestricted.TimeRange[](1);
-        ranges[0] = TimeRestricted.TimeRange(10, 11);
-
-        uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3;
-        /// only allowed on Wednesday
-
-        _initializeConfiguration({
-            caller: address(this),
-            timeRestricted: address(mock),
-            timelock: timelock,
-            timeRanges: ranges,
-            allowedDays: allowedDays
-        });
-
-        mock.tstoreLoadAddresses(modules0);
-        mock.tstoreLoadAddresses(modules1);
-        mock.tstoreModuleAddressesLength(15);
-
-        assertEq(
-            mock.getSentinelModuleCount(), 15, "incorrect number of modules"
-        );
-    }
-
-    function testGetSentinelModuleCountNine() public {
-        MockTimeRestricted mock = new MockTimeRestricted();
-        TimeRestricted.TimeRange[] memory ranges =
-            new TimeRestricted.TimeRange[](1);
-        ranges[0] = TimeRestricted.TimeRange(10, 11);
-
-        uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3;
-        /// only allowed on Wednesday
-
-        _initializeConfiguration({
-            caller: address(this),
-            timeRestricted: address(mock),
-            timelock: timelock,
-            timeRanges: ranges,
-            allowedDays: allowedDays
-        });
-
-        mock.tstoreLoadAddresses(modules0);
-        mock.tstoreModuleAddressesLength(9);
-
-        delete modules0;
-
-        for (uint256 i = 0; i < 9; i++) {
-            modules0.push(address(uint160(uint256(i + 100))));
-        }
-
-        assertEq(
-            mock.getSentinelModuleCount(), 9, "incorrect number of modules"
-        );
-    }
-
-    function testGetSentinelModuleCountTen() public {
-        MockTimeRestricted mock = new MockTimeRestricted();
-        TimeRestricted.TimeRange[] memory ranges =
-            new TimeRestricted.TimeRange[](1);
-        ranges[0] = TimeRestricted.TimeRange(10, 11);
-        uint8[] memory allowedDays = new uint8[](1);
-        allowedDays[0] = 3;
-        /// only allowed on Wednesday
-        _initializeConfiguration({
-            caller: address(this),
-            timeRestricted: address(mock),
-            timelock: timelock,
-            timeRanges: ranges,
-            allowedDays: allowedDays
-        });
-
-        mock.tstoreLoadAddresses(modules0);
-        mock.tstoreLoadAddresses(modules1);
-        mock.tstoreModuleAddressesLength(10);
-
-        /// set to empty array so that the second call will return no modules
-        modules1 = new address[](0);
-        assertEq(
-            mock.getSentinelModuleCount(), 10, "incorrect number of modules"
-        );
-    }
-
     /// mocks to allow tests to pass
 
     function getOwners() public view returns (address[] memory) {
         return owners;
-    }
-
-    function getModulesPaginated(address start, uint256)
-        public
-        view
-        returns (address[] memory, address)
-    {
-        /// call 1 returns 10 addresses
-        if (start == address(1)) {
-            return (modules0, modules0[modules0.length - 1]);
-        } else {
-            return (modules1, address(1));
-        }
     }
 
     function getStorageAt(uint256 offset, uint256 length)

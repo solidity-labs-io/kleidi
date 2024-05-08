@@ -68,10 +68,4 @@ library BytesHelper {
     ) public pure returns (bytes32) {
         return keccak256(sliceBytes(toSlice, start, end));
     }
-
-    /// @notice function to get the hash of a byte string
-    /// returns the hash, for use in calldata checks, prettifies syntax
-    function getBytesHash(bytes memory toHash) public pure returns (bytes32) {
-        return keccak256(toHash);
-    }
 }
