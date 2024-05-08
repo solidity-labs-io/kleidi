@@ -8,7 +8,7 @@ import {RecoverySpell} from "@src/RecoverySpell.sol";
 contract RecoveryFactory {
     event RecoverySpellCreated(address indexed recoverySpell);
 
-    /// @notice create a new RecoverySpell contract
+    /// @notice create a new RecoverySpell contract using CREATE2
     /// @param salt the salt used to create the contract
     /// @param owners the owners of the contract
     /// @param safe to recover with the spell
@@ -21,11 +21,9 @@ contract RecoveryFactory {
         uint256 threshold,
         uint256 delay
     ) external returns (RecoverySpell recovery) {
-        address predictedAddress =
-            calculateAddress(salt, owners, safe, threshold, delay);
+        _paramChecks(owners, threshold, delay);
 
         recovery = new RecoverySpell{salt: salt}(owners, safe, threshold, delay);
-        require(address(recovery) == predictedAddress);
 
         emit RecoverySpellCreated(address(recovery));
     }
@@ -43,15 +41,7 @@ contract RecoveryFactory {
         uint256 threshold,
         uint256 delay
     ) public view returns (address predictedAddress) {
-        require(
-            threshold <= owners.length,
-            "RecoverySpell: Threshold must be lte number of owners"
-        );
-        require(threshold != 0, "RecoverySpell: Threshold must be gt 0");
-        require(
-            delay >= 1 days && delay <= 20 days,
-            "RecoverySpell: Delay must be between 1 and 20 days"
-        );
+        _paramChecks(owners, threshold, delay);
 
         predictedAddress = address(
             uint160(
@@ -71,6 +61,25 @@ contract RecoveryFactory {
                     )
                 )
             )
+        );
+    }
+
+    /// @param owners the owners of the contract
+    /// @param threshold of owners required to execute transactions
+    /// @param delay time required before the recovery transaction can be executed
+    function _paramChecks(
+        address[] memory owners,
+        uint256 threshold,
+        uint256 delay
+    ) private pure {
+        require(
+            threshold <= owners.length,
+            "RecoverySpell: Threshold must be lte number of owners"
+        );
+        require(threshold != 0, "RecoverySpell: Threshold must be gt 0");
+        require(
+            delay >= 1 days && delay <= 20 days,
+            "RecoverySpell: Delay must be between 1 and 20 days"
         );
     }
 }
