@@ -30,31 +30,10 @@ import {
     MarketParams
 } from "src/interface/IMorpho.sol";
 
-interface call3 {
-    struct Call3 {
-        // Target contract to call.
-        address target;
-        // If false, the entire call will revert if the call fails.
-        bool allowFailure;
-        // Data to call on the target contract.
-        bytes callData;
-    }
+import {IMulticall3} from "@interface/IMulticall3.sol";
 
-    struct Result {
-        // True if the call succeeded, false otherwise.
-        bool success;
-        // Return data if the call succeeded, or revert data if the call reverted.
-        bytes returnData;
-    }
-
-    /// @notice Aggregate calls, ensuring each returns success if required
-    /// @param calls An array of Call3 structs
-    /// @return returnData An array of Result structs
-    function aggregate3(Call3[] calldata calls)
-        external
-        payable
-        returns (Result[] memory returnData);
-}
+import {RecoverySpell} from "src/RecoverySpell.sol";
+import {RecoveryFactory} from "src/RecoveryFactory.sol";
 
 contract SystemIntegrationTest is Test {
     using BytesHelper for bytes;
@@ -67,6 +46,9 @@ contract SystemIntegrationTest is Test {
 
     /// @notice reference to the TimeRestricted contract
     TimeRestricted public restricted;
+
+    /// @notice reference to the RecoveryFactory contract
+    RecoveryFactory public recoveryFactory;
 
     /// @notice empty for now, will change once tests progress
     address[] public contractAddresses;
@@ -90,7 +72,7 @@ contract SystemIntegrationTest is Test {
     uint128 public constant PAUSE_DURATION = 10 days;
 
     /// @notice minimum delay for a timelocked transaction in seconds
-    uint256 public constant MINIMUM_DELAY = 1 days;
+    uint256 public constant MINIMUM_DELAY = 2 days;
 
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
@@ -137,18 +119,41 @@ contract SystemIntegrationTest is Test {
     uint256 private constant GUARD_STORAGE_SLOT =
         0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8;
 
+    /// @notice current owners
     address[] public owners;
+
+    /// @notice 5 backup owners for the safe
+    address[] public recoveryOwners;
+
+    /// @notice backup threshold
+    uint256 public constant recoveryThreshold = 3;
+
+    /// @notice recovery delay time
+    uint256 public constant recoveryDelay = 1 days;
+
+    /// @notice salt for the recovery spell
+    bytes32 public recoverySalt =
+        0x00000000000000001234567890abcdef00000000000000001234567890abcdef;
+
+    address public recoverySpellAddress;
 
     uint256 public startTimestamp;
 
     function setUp() public {
         startTimestamp = block.timestamp;
 
-        restricted = new TimeRestricted();
-
         owners.push(vm.addr(pk1));
         owners.push(vm.addr(pk2));
         owners.push(vm.addr(pk3));
+
+        recoveryOwners.push(address(10));
+        recoveryOwners.push(address(11));
+        recoveryOwners.push(address(12));
+        recoveryOwners.push(address(13));
+        recoveryOwners.push(address(14));
+
+        restricted = new TimeRestricted();
+        recoveryFactory = new RecoveryFactory();
 
         bytes memory initdata = abi.encodeWithSignature(
             "setup(address[],uint256,address,bytes,address,address,uint256,address)",
@@ -164,6 +169,14 @@ contract SystemIntegrationTest is Test {
 
         safe = SafeL2(
             payable(address(factory.createProxyWithNonce(logic, initdata, 0)))
+        );
+
+        recoverySpellAddress = recoveryFactory.calculateAddress(
+            recoverySalt,
+            recoveryOwners,
+            address(safe),
+            recoveryThreshold,
+            recoveryDelay
         );
 
         // Assume the necessary parameters for the constructor
@@ -257,7 +270,7 @@ contract SystemIntegrationTest is Test {
     ///
     ///
     function testInitializeContract() public {
-        call3.Call3[] memory calls3 = new call3.Call3[](3);
+        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](4);
 
         calls3[0].target = address(restricted);
         calls3[0].allowFailure = false;
@@ -267,6 +280,9 @@ contract SystemIntegrationTest is Test {
 
         calls3[2].target = address(safe);
         calls3[2].allowFailure = false;
+
+        calls3[3].target = address(safe);
+        calls3[3].allowFailure = false;
 
         {
             uint8[] memory allowedDays = new uint8[](5);
@@ -301,8 +317,12 @@ contract SystemIntegrationTest is Test {
             ModuleManager.enableModule.selector, address(timelock)
         );
 
+        calls3[3].callData = abi.encodeWithSelector(
+            ModuleManager.enableModule.selector, recoverySpellAddress
+        );
+
         bytes memory safeData =
-            abi.encodeWithSelector(call3.aggregate3.selector, calls3);
+            abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3);
 
         bytes32 transactionHash = safe.getTransactionHash(
             multicall,
@@ -342,6 +362,10 @@ contract SystemIntegrationTest is Test {
         assertEq(guard, address(restricted), "guard is not restricted");
         assertTrue(
             safe.isModuleEnabled(address(timelock)), "timelock not a module"
+        );
+        assertTrue(
+            safe.isModuleEnabled(recoverySpellAddress),
+            "recovery spell not a module"
         );
 
         assertEq(
@@ -951,6 +975,61 @@ contract SystemIntegrationTest is Test {
         assertEq(position.supplyShares, 0, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
+    }
+
+    function testRecoverySpellRotatesAllSigners() public {
+        testInitializeContract();
+
+        RecoverySpell recovery = recoveryFactory.createRecoverySpell(
+            recoverySalt,
+            recoveryOwners,
+            address(safe),
+            recoveryThreshold,
+            recoveryDelay
+        );
+
+        assertEq(
+            recoverySpellAddress,
+            address(recovery),
+            "recovery spell address incorrect"
+        );
+        assertTrue(
+            address(recovery).code.length != 0, "recovery spell not created"
+        );
+
+        vm.prank(recoveryOwners[0]);
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "recovery not initiated"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay);
+
+        recovery.executeRecovery(address(1));
+
+        assertFalse(
+            safe.isModuleEnabled(recoverySpellAddress),
+            "recovery spell should be removed after execution"
+        );
+
+        for (uint256 i = 0; i < owners.length; i++) {
+            assertFalse(
+                safe.isOwner(owners[i]),
+                "owner should be removed after recovery"
+            );
+        }
+
+        for (uint256 i = 0; i < recoveryOwners.length; i++) {
+            assertTrue(
+                safe.isOwner(recoveryOwners[i]),
+                "recovery owner should be an owner"
+            );
+        }
+
+        assertEq(safe.getThreshold(), recoveryThreshold, "threshold incorrect");
     }
 
     /// ----------------- HELPERS -----------------
