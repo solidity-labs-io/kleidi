@@ -74,7 +74,7 @@ contract Timelock is
     uint256 internal constant _DONE_TIMESTAMP = uint256(1);
 
     /// @notice minimum delay for timelocked operations
-    uint256 public constant MIN_DELAY = 1 days;
+    uint256 public constant MIN_DELAY = 2 days;
 
     /// @notice maximum delay for timelocked operations
     uint256 public constant MAX_DELAY = 30 days;
