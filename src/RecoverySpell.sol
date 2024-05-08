@@ -92,7 +92,15 @@ contract RecoverySpell {
     /// @notice execute the recovery process, can only be called
     /// after the recovery delay has passed, and the recovery
     /// has been initiated. Callable by any address
-    /// @param previousModule the address of the previous recovery module
+    /// @param previousModule the address of the previous module
+    /// if the previous module is incorrect, this function will fail
+    ///
+    /// this function executes actions in the following order:
+    ///   1). remove all but final existing owner, set owner threshold to 1
+    ///   2). swap final existing owner for the first new owner
+    ///   3). add the remaining new owners to the safe
+    ///   4). set the safe's threshold to the new threshold
+    ///   5). remove the recovery module from the safe
     function executeRecovery(address previousModule) external {
         /// checks
         require(
@@ -155,18 +163,8 @@ contract RecoverySpell {
             calls3[i].target = address(safe);
         }
 
-        /// @notice
-        /// if the previous module is incorrect, this function will fail
-
-        ///
         /// interactions
-        ///
-        /// execute all actions in the following order:
-        ///   1). remove all but final existing owner, set owner threshold to 1
-        ///   2). swap final existing owner for the first new owner
-        ///   3). add the remaining new owners to the safe
-        ///   4). set the safe's threshold to the new threshold
-        ///   5). remove the recovery module from the safe
+
         require(
             safe.execTransactionFromModule(
                 multicall3,
