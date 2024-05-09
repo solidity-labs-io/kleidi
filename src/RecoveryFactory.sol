@@ -5,6 +5,11 @@ import {RecoverySpell} from "@src/RecoverySpell.sol";
 /// @notice factory contract to create new RecoverySpell contracts
 /// Contract addresses can be determined in advance with different
 /// parameters, salts and parameters.
+/// Edge cases:
+///    If the safe address has no bytecode, or is incorrectly
+///    specified, then the dark spell address will be calculated
+///    correctly, but it will not actually map to the corresponding
+///    contract.
 contract RecoveryFactory {
     event RecoverySpellCreated(address indexed recoverySpell);
 
@@ -77,9 +82,15 @@ contract RecoveryFactory {
             "RecoverySpell: Threshold must be lte number of owners"
         );
         require(threshold != 0, "RecoverySpell: Threshold must be gt 0");
-        require(
-            delay >= 1 days && delay <= 20 days,
-            "RecoverySpell: Delay must be between 1 and 20 days"
-        );
+        require(delay <= 20 days, "RecoverySpell: Delay must be lte 20 days");
+
+        /// do not allow array of owners that contains duplicates
+        for (uint256 i = 0; i < owners.length; i++) {
+            for (uint256 j = i + 1; j < owners.length; j++) {
+                require(
+                    owners[i] != owners[j], "RecoverySpell: Duplicate owner"
+                );
+            }
+        }
     }
 }
