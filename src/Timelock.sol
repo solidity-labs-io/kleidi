@@ -35,9 +35,11 @@ import {ConfigurablePauseGuardian} from
 /// given this contract may withdraw from DeFi protocols, or unwrap WETH,
 /// thus increasing the native balance.
 
+/// => means implies
 /// @notice protocol invariants:
-/// - there must always be at least 1 proposer
 /// - there should be no whitelisted calldata checks for the timelock itself
+/// this ensures there is no way to instantly make modifications to the
+/// timelock.
 /// - only safe can propose non-whitelisted calldatas
 /// - only safe owners can execute whitelisted calldatas
 /// - whitelisted calldata can be executed at any time, even outside of the
@@ -49,8 +51,6 @@ import {ConfigurablePauseGuardian} from
 /// - getAllProposals length gt 0 => contract is not paused
 /// - contract is paused => getAllProposals length is 0
 /// - getAllProposal length eq 0 does not => contract is paused
-/// this ensures there is no way to instantly make modifications to the
-/// whitelisted timelock calldata.
 
 ///  @dev Contract module which acts as a timelocked controller. When set as the
 /// owner of an `Ownable` smart contract, it enforces a timelock on all
@@ -354,6 +354,19 @@ contract Timelock is
                 );
             }
         }
+    }
+
+    /// TODO test this function
+    /// @notice cancel a timelocked operation
+    /// cannot cancel an already executed operation.
+    /// @param id the identifier of the operation to cancel
+    function cancel(bytes32 id) external onlySafe {
+        require(
+            isOperation(id) && _liveProposals.remove(id),
+            "Timelock: operation does not exist"
+        );
+        delete timestamps[id];
+        emit Cancelled(id);
     }
 
     /// @notice cancel all outstanding pending and non executed operations
