@@ -1012,6 +1012,21 @@ contract TimelockUnitTest is CallHelper {
         );
     }
 
+    function testCancelProposalNonSafeOwnerFails() public {
+        vm.expectRevert("Timelock: caller is not the safe owner");
+        timelock.cancel(bytes32(0));
+    }
+
+    function testCancelActiveProposalSafeSucceeds() public {
+        bytes32 id = testScheduleProposalSafeSucceeds();
+        
+        vm.prank(address(safe));
+        timelock.cancel(id);
+
+        assertFalse(timelock.isOperation(id), "operation should no longer be present");
+        assertEq(timelock.getAllProposals().length, 0, "no proposals should be present");
+    }
+
     function testExecuteWhitelistedBatchArityMismatchFails() public {
         address[] memory safeSigner = new address[](1);
         safeSigner[0] = address(this);
