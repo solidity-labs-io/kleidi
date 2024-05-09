@@ -124,6 +124,7 @@ contract RecoverySpell {
     ///   5). remove the recovery module from the safe
     function executeRecovery(address previousModule) external {
         /// checks
+        /// fails if recovery already executed due to math overflow
         require(
             recoveryInitiated != 0
                 && block.timestamp >= recoveryInitiated + delay,
