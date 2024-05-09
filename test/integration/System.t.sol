@@ -977,7 +977,10 @@ contract SystemIntegrationTest is Test {
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
     }
 
-    function testRecoverySpellRotatesAllSigners() public returns (RecoverySpell recovery) {
+    function testRecoverySpellRotatesAllSigners()
+        public
+        returns (RecoverySpell recovery)
+    {
         testInitializeContract();
 
         recovery = recoveryFactory.createRecoverySpell(
