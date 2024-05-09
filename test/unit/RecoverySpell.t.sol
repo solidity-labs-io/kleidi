@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, stdError} from "forge-std/Test.sol";
 
 import {MockSafe} from "test/mock/MockSafe.sol";
 import {RecoverySpell} from "@src/RecoverySpell.sol";
@@ -357,6 +357,13 @@ contract RecoverySpellUnitTest is Test {
 
         vm.expectRevert("RecoverySpell: Recovery already initiated");
         recovery.initiateRecovery();
+    }
+
+    function testExecuteRecoveryFailsPostRecoverySuccess() public {
+        RecoverySpell recovery = testRecoverySucceeds();
+
+        vm.expectRevert(stdError.arithmeticError);
+        recovery.executeRecovery(address(1));
     }
 
     function testRecoveryFailsMulticall() public {
