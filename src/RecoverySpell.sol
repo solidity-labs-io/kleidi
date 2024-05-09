@@ -10,8 +10,23 @@ import {OwnerManager} from "@safe/base/OwnerManager.sol";
 import {ModuleManager} from "@safe/base/ModuleManager.sol";
 
 contract RecoverySpell {
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
+    /// ------------------ STORAGE VARIABLES ------------------
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
+
     /// @notice the new owners of the contract once the spell is cast
     address[] public owners;
+
+    /// @notice the time the recovery was initiated
+    uint256 public recoveryInitiated;
+
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
+    /// ---------------------- IMMUTABLES ---------------------
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
 
     /// @notice the address to recover
     Safe public immutable safe;
@@ -22,8 +37,11 @@ contract RecoverySpell {
     /// @notice the time required before the recovery transaction can be executed
     uint256 public immutable delay;
 
-    /// @notice the time the recovery was initiated
-    uint256 public recoveryInitiated;
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
+    /// ---------------------- CONSTANTS ----------------------
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
 
     /// @notice address of the multicall3 contract
     address public constant multicall3 =
@@ -31,6 +49,12 @@ contract RecoverySpell {
 
     /// @notice the sentinel address that all linked lists start with
     address public constant SENTINEL = address(0x1);
+
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
+    /// ------------------------ EVENTS -----------------------
+    /// -------------------------------------------------------
+    /// -------------------------------------------------------
 
     /// @notice event emitted when the recovery is initiated
     event RecoveryInitiated(uint256 indexed time, address indexed caller);
@@ -51,22 +75,19 @@ contract RecoverySpell {
         uint256 _threshold,
         uint256 _delay
     ) {
-        require(
-            _threshold <= _owners.length,
-            "RecoverySpell: Threshold must be lte number of owners"
-        );
-        require(
-            _threshold != 0, "RecoverySpell: Threshold must be greater than 0"
-        );
-        require(
-            _delay >= 1 days && _delay <= 20 days,
-            "RecoverySpell: Delay must be between 1 and 20 days"
-        );
+        /// no checks on parameters as all valid recovery spells are
+        /// deployed from the factory which will not allow a recovery
+        /// spell to be created that does not have valid parameters
 
         owners = _owners;
         safe = Safe(payable(_safe));
         threshold = _threshold;
         delay = _delay;
+    }
+
+    /// @notice get the owners of the contract
+    function getOwners() external view returns (address[] memory) {
+        return owners;
     }
 
     /// @notice initiate the recovery process
@@ -98,13 +119,14 @@ contract RecoverySpell {
     /// this function executes actions in the following order:
     ///   1). remove all but final existing owner, set owner threshold to 1
     ///   2). swap final existing owner for the first new owner
-    ///   3). add the remaining new owners to the safe
-    ///   4). set the safe's threshold to the new threshold
+    ///   3). add the remaining new owners to the safe, with the
+    ///   last owner being added updating the threshold to the new value
     ///   5). remove the recovery module from the safe
     function executeRecovery(address previousModule) external {
         /// checks
         require(
-            block.timestamp >= recoveryInitiated + delay,
+            recoveryInitiated != 0
+                && block.timestamp >= recoveryInitiated + delay,
             "RecoverySpell: Recovery not ready"
         );
 
@@ -113,7 +135,7 @@ contract RecoverySpell {
         uint256 existingOwnersLength = existingOwners.length;
 
         IMulticall3.Call3[] memory calls3 =
-            new IMulticall3.Call3[](newOwners.length + existingOwnersLength + 2);
+            new IMulticall3.Call3[](newOwners.length + existingOwnersLength + 1);
 
         /// effects
         /// now impossible to call initiate recovery as owners array is empty
@@ -144,14 +166,18 @@ contract RecoverySpell {
             newOwners[0]
         );
 
-        for (uint256 i = 1; i < newOwners.length; i++) {
+        /// only cover indexes 1 through newOwners.length - 1
+        for (uint256 i = 1; i < newOwners.length - 1; i++) {
             calls3[index++].callData = abi.encodeWithSelector(
                 OwnerManager.addOwnerWithThreshold.selector, newOwners[i], 1
             );
         }
 
+        /// add new owner with the updated threshold
         calls3[index++].callData = abi.encodeWithSelector(
-            OwnerManager.changeThreshold.selector, threshold
+            OwnerManager.addOwnerWithThreshold.selector,
+            newOwners[newOwners.length - 1],
+            threshold
         );
 
         calls3[index].callData = abi.encodeWithSelector(
@@ -172,7 +198,7 @@ contract RecoverySpell {
                 abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3),
                 Enum.Operation.DelegateCall
             ),
-            "RecoverySpell: Remove recovery module failed"
+            "RecoverySpell: Recovery failed"
         );
 
         emit SafeRecovered(block.timestamp);
