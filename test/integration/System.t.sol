@@ -17,7 +17,7 @@ import {GuardManager} from "@safe/base/GuardManager.sol";
 import {OwnerManager} from "@safe/base/OwnerManager.sol";
 import {SafeL2} from "@safe/SafeL2.sol";
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test, console, stdError} from "forge-std/Test.sol";
 
 import {Enum} from "@safe/common/Enum.sol";
 import {Timelock} from "src/Timelock.sol";
@@ -977,10 +977,10 @@ contract SystemIntegrationTest is Test {
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
     }
 
-    function testRecoverySpellRotatesAllSigners() public {
+    function testRecoverySpellRotatesAllSigners() public returns (RecoverySpell recovery) {
         testInitializeContract();
 
-        RecoverySpell recovery = recoveryFactory.createRecoverySpell(
+        recovery = recoveryFactory.createRecoverySpell(
             recoverySalt,
             recoveryOwners,
             address(safe),
@@ -1029,7 +1029,28 @@ contract SystemIntegrationTest is Test {
             );
         }
 
+        assertEq(recovery.getOwners().length, 0, "owners should be empty");
+        assertEq(
+            recovery.recoveryInitiated(),
+            type(uint256).max,
+            "recovery initiated should be uint max"
+        );
+
         assertEq(safe.getThreshold(), recoveryThreshold, "threshold incorrect");
+    }
+
+    function testInitiateRecoveryPostRecoveryFails() public {
+        RecoverySpell recovery = testRecoverySpellRotatesAllSigners();
+
+        vm.expectRevert("RecoverySpell: Recovery already initiated");
+        recovery.initiateRecovery();
+    }
+
+    function testExecuteRecoveryPostRecoveryFails() public {
+        RecoverySpell recovery = testRecoverySpellRotatesAllSigners();
+
+        vm.expectRevert(stdError.arithmeticError);
+        recovery.executeRecovery(address(1));
     }
 
     /// ----------------- HELPERS -----------------
