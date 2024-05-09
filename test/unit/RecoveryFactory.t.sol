@@ -55,6 +55,78 @@ contract RecoveryFactoryUnitTest is Test {
         );
     }
 
+    function testDeploymentInvariants(
+        bytes32 salt,
+        uint8 ownerLength,
+        address safe,
+        uint256 threshold,
+        uint256 delay
+    ) public {
+        ownerLength = uint8(_bound(ownerLength, 1, 10));
+
+        address[] memory owners = new address[](ownerLength);
+        for (uint8 i = 0; i < ownerLength; i++) {
+            owners[i] = address(uint160(i));
+        }
+
+        RecoverySpell spell =
+            _trySpellCreation(salt, owners, safe, threshold, delay);
+
+        /// owner length must be greater than or equal to threshold
+        /// threshold must be greater than or equal to 1
+        /// delay must be lte 20 days
+        /// the above conditions being true implies the spell should not be zero
+        if (ownerLength >= threshold && threshold >= 1 && delay <= 20 days) {
+            assertNotEq(address(spell), address(0), "spell should not be zero");
+        }
+
+        /// if deployment fails, nothing to check
+        if (address(spell) != address(0)) {
+            assertTrue(
+                spell.getOwners().length >= spell.threshold(),
+                "threshold invariant 1 violated"
+            );
+            assertTrue(spell.threshold() >= 1, "threshold invariant 2 violated");
+            assertTrue(spell.delay() <= 20 days, "delay invariant violated");
+
+            address[] memory spellOwners = spell.getOwners();
+
+            for (uint8 i = 0; i < ownerLength; i++) {
+                assertEq(
+                    spellOwners[i],
+                    owners[i],
+                    "owner equality invariant violated"
+                );
+            }
+
+            for (uint8 i = 0; i < ownerLength; i++) {
+                for (uint8 j = i + 1; j < ownerLength; j++) {
+                    assertNotEq(
+                        owners[i],
+                        owners[j],
+                        "duplicate owner invariant violated"
+                    );
+                }
+            }
+        }
+    }
+
+    function _trySpellCreation(
+        bytes32 salt,
+        address[] memory owners,
+        address safe,
+        uint256 threshold,
+        uint256 delay
+    ) private returns (RecoverySpell) {
+        try recoveryFactory.createRecoverySpell(
+            salt, owners, safe, threshold, delay
+        ) returns (RecoverySpell spell) {
+            return spell;
+        } catch Error(string memory) {
+            return RecoverySpell(address(0));
+        }
+    }
+
     function testViewFunctionFailsThresholdGtOwners() public {
         vm.expectRevert("RecoverySpell: Threshold must be lte number of owners");
         recoveryFactory.calculateAddress(
