@@ -36,8 +36,7 @@ contract ConfigurablePauseGuardian {
     /// @param oldPauseGuardian old pause guardian
     /// @param newPauseGuardian new pause guardian
     event PauseGuardianUpdated(
-        address indexed oldPauseGuardian,
-        address indexed newPauseGuardian
+        address indexed oldPauseGuardian, address indexed newPauseGuardian
     );
 
     /// @notice event emitted when pause start time is updated
@@ -48,8 +47,7 @@ contract ConfigurablePauseGuardian {
     /// @param oldPauseDuration old pause duration
     /// @param newPauseDuration new pause duration
     event PauseDurationUpdated(
-        uint256 oldPauseDuration,
-        uint256 newPauseDuration
+        uint256 oldPauseDuration, uint256 newPauseDuration
     );
 
     /// @dev Emitted when the pause is triggered by `account`.
@@ -76,10 +74,9 @@ contract ConfigurablePauseGuardian {
     /// if pauseStartTime is 0, contract is not paused
     /// if pauseStartTime is not 0, contract could be paused in the pauseDuration window
     function paused() public view returns (bool) {
-        return
-            pauseStartTime == 0
-                ? false
-                : block.timestamp <= pauseStartTime + pauseDuration;
+        return pauseStartTime == 0
+            ? false
+            : block.timestamp <= pauseStartTime + pauseDuration;
     }
 
     /// ------------- PAUSE FUNCTION -------------
@@ -111,8 +108,8 @@ contract ConfigurablePauseGuardian {
     /// @param newPauseDuration new pause duration
     function _updatePauseDuration(uint128 newPauseDuration) internal {
         require(
-            newPauseDuration >= MIN_PAUSE_DURATION &&
-                newPauseDuration <= MAX_PAUSE_DURATION,
+            newPauseDuration >= MIN_PAUSE_DURATION
+                && newPauseDuration <= MAX_PAUSE_DURATION,
             "ConfigurablePause: pause duration out of bounds"
         );
         uint256 oldPauseDuration = pauseDuration;
