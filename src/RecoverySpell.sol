@@ -1,7 +1,9 @@
 pragma solidity 0.8.25;
 
-import {Safe} from "@safe/Safe.sol";
+import {EIP712} from
+    "@openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import {Enum} from "@safe/common/Enum.sol";
+import {Safe} from "@safe/Safe.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -9,7 +11,12 @@ import {IMulticall3} from "@interface/IMulticall3.sol";
 import {OwnerManager} from "@safe/base/OwnerManager.sol";
 import {ModuleManager} from "@safe/base/ModuleManager.sol";
 
-contract RecoverySpell {
+/// @notice if two recovery spells with exactly the same parameters are
+/// deployed for the same safe, the domain separator will not be the same
+/// because the address of the recovery spell contract is different.
+/// This is important as it prevents signature re-use across different
+/// recovery spells and chains for the same safe.
+contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     /// -------------------------------------------------------
     /// -------------------------------------------------------
     /// ------------------ STORAGE VARIABLES ------------------
@@ -17,9 +24,15 @@ contract RecoverySpell {
     /// -------------------------------------------------------
 
     /// @notice the new owners of the contract once the spell is cast
+    /// @dev starts off with non zero array if created by factory
+    /// and then is deleted after recovery execution
     address[] public owners;
 
     /// @notice the time the recovery was initiated
+    /// @dev value can only go from 0 to non zero when owner calls
+    /// goes from block.timestamp (always lt type(uint32).max)
+    /// to type(uint256).max
+    /// value can only ever increase
     uint256 public recoveryInitiated;
 
     /// -------------------------------------------------------
@@ -32,9 +45,22 @@ contract RecoverySpell {
     Safe public immutable safe;
 
     /// @notice the threshold of owners required to execute transactions
+    /// after the recovery is executed
+    /// threshold must be lte the number of owners
     uint256 public immutable threshold;
 
-    /// @notice the time required before the recovery transaction can be executed
+    /// @notice the number of new owner signatures required to execute the
+    /// recovery process. This is to prevent a single owner from initiating
+    /// the recovery process without the consent of the other owners
+    uint256 public immutable recoveryThreshold;
+
+    /// TODO add recoveryThreshold variable to the contract which is the
+    /// number of new owner signatures required to initiate the recovery
+    /// process. This is to prevent a single owner from initiating the
+    /// recovery process without the consent of the other owners.
+
+    /// @notice the time delay required before the recovery transaction
+    /// can be executed
     uint256 public immutable delay;
 
     /// -------------------------------------------------------
@@ -43,12 +69,24 @@ contract RecoverySpell {
     /// -------------------------------------------------------
     /// -------------------------------------------------------
 
-    /// @notice address of the multicall3 contract
-    address public constant multicall3 =
+    /// TODO DUPLICATED address, move into library
+
+    /// @notice address of the MULTICALL3 contract
+    address public constant MULTICALL3 =
         0xcA11bde05977b3631167028862bE2a173976CA11;
 
     /// @notice the sentinel address that all linked lists start with
     address public constant SENTINEL = address(0x1);
+
+    /// @notice the recovery type hash for the EIP712 domain separator
+    bytes32 public constant RECOVERY_TYPEHASH = keccak256(
+        "Recovery(address safe,uint256 newSafeThreshold,uint256 newRecoveryThreshold,uint256 delay)"
+    );
+
+    /// @notice example of how the domain separator is constructed
+    /// bytes32 private constant TYPE_HASH =
+    /// keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    ///            name="Recovery Spell", version="0.1.0", chainId=1, verifyingContract=address(this)
 
     /// -------------------------------------------------------
     /// -------------------------------------------------------
@@ -57,22 +95,29 @@ contract RecoverySpell {
     /// -------------------------------------------------------
 
     /// @notice event emitted when the recovery is initiated
+    /// @param time the time the recovery was initiated
+    /// @param caller the address that initiated the recovery
     event RecoveryInitiated(uint256 indexed time, address indexed caller);
 
     /// @notice event emitted when the recovery is executed
+    /// @param time the time the recovery was executed
     event SafeRecovered(uint256 indexed time);
 
     /// @notice it is of critical importance that the delay is shorter
     /// than the timelock delay so that a recovery action can be executed
-    /// before the timelock delay expires if need be
+    /// before the timelock delay expires if need be. There is no way to enforce
+    /// this in the contract, so it is up to the deployer to ensure that the
+    /// delay is shorter than the timelock delay
     /// @param _owners the new owners of the contract if recovery is executed
     /// @param _safe the address to recover
-    /// @param _threshold number of owners required to execute transactions
+    /// @param _safeThreshold number of owners required to execute transactions on the safe
+    /// @param _recoveryThreshold number of signers required to execute recovery transaction
     /// @param _delay time required before the recovery transaction can be executed
     constructor(
         address[] memory _owners,
         address _safe,
-        uint256 _threshold,
+        uint256 _safeThreshold,
+        uint256 _recoveryThreshold,
         uint256 _delay
     ) {
         /// no checks on parameters as all valid recovery spells are
@@ -81,7 +126,8 @@ contract RecoverySpell {
 
         owners = _owners;
         safe = Safe(payable(_safe));
-        threshold = _threshold;
+        threshold = _safeThreshold;
+        recoveryThreshold = _recoveryThreshold;
         delay = _delay;
     }
 
@@ -90,25 +136,48 @@ contract RecoverySpell {
         return owners;
     }
 
+    /// TODO test to make sure two separate recovery spells for the same safe
+    /// do not have the same domain separator. This is important as the domain
+    /// can prevent replay attacks on the recovery process.
+
+    /// @notice get the digest for the EIP712 domain separator
+    /// @return the digest for the EIP712 domain separator
+    function getDigest() public view returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                _domainSeparatorV4(),
+                keccak256(
+                    abi.encode(
+                        RECOVERY_TYPEHASH,
+                        safe,
+                        threshold,
+                        recoveryThreshold,
+                        delay
+                    )
+                )
+            )
+        );
+    }
+
     /// @notice initiate the recovery process
-    /// can only be called by a new safe owner
+    /// can only be called by a new safe owner when the recovery has not been
+    /// initiated or executed yet
+    /// if there are no owners, recovery can never be initiated
     function initiateRecovery() external {
         require(
             recoveryInitiated == 0, "RecoverySpell: Recovery already initiated"
         );
 
-        bool ownerFound;
-        for (uint256 i = 0; i < owners.length; i++) {
-            if (owners[i] == msg.sender) {
-                ownerFound = true;
-                break;
-            }
-        }
-        require(ownerFound, "RecoverySpell: Sender is not an owner");
         recoveryInitiated = block.timestamp;
 
         emit RecoveryInitiated(block.timestamp, msg.sender);
     }
+
+    /// TODO pass array of new owner signatures to this function
+    /// if the recovery threshold is non zero, require that many
+    /// signatures from different users before allowing the recovery
+    /// to be initiated.
 
     /// @notice execute the recovery process, can only be called
     /// after the recovery delay has passed, and the recovery
@@ -121,22 +190,113 @@ contract RecoverySpell {
     ///   2). swap final existing owner for the first new owner
     ///   3). add the remaining new owners to the safe, with the
     ///   last owner being added updating the threshold to the new value
-    ///   5). remove the recovery module from the safe
-    function executeRecovery(address previousModule) external {
+    ///   4). remove the recovery module from the safe
+    function executeRecovery(
+        address previousModule,
+        uint8[] calldata v,
+        bytes32[] calldata r,
+        bytes32[] calldata s
+    ) external {
         /// checks
+
+        /// only call this function if recovery threshold is non-zero
+        require(recoveryThreshold != 0, "RecoverySpell: No signatures needed");
+
         /// fails if recovery already executed due to math overflow
+        /// even if delay is 0, uint256.max + 1 will always revert
         require(
             recoveryInitiated != 0
-                && block.timestamp >= recoveryInitiated + delay,
+                && block.timestamp >= recoveryInitiated + delay + 1,
             "RecoverySpell: Recovery not ready"
         );
+        require(
+            v.length == r.length && r.length == s.length,
+            "RecoverySpell: Invalid signature parameters"
+        );
+        /// if there are not enough signers, even if all signatures are
+        /// valid and not duplicated, there is no possibility of this being
+        /// enough to execute the recovery.
+        require(
+            recoveryThreshold <= v.length,
+            "RecoverySpell: Not enough signatures"
+        );
 
+        for (uint256 i = 0; i < owners.length; i++) {
+            address owner = owners[i];
+            assembly ("memory-safe") {
+                tstore(owner, 1)
+            }
+        }
+
+        /// duplication and validity checks
+        /// ensure the signatures are
+        /// 1. valid signatures
+        /// 2. unique signers
+        /// 3. recovery owners about to be added to the safe
+
+        /// check if an address that provided a signature is an owner
+        /// in storage, then remove that address from used addresses
+        /// to prevent the same owner passing multiple signatures.
+
+        bytes32 digest = getDigest();
+        for (uint256 i = 0; i < v.length; i++) {
+            address recoveredAddress = ecrecover(digest, v[i], r[i], s[i]);
+            require(
+                recoveredAddress != address(0),
+                "RecoverySpell: Invalid signature"
+            );
+
+            bool valid;
+            assembly ("memory-safe") {
+                valid := tload(recoveredAddress)
+                if eq(valid, 1) { tstore(recoveredAddress, 0) }
+            }
+
+            /// if the address of the signer was not in storage, the value will
+            /// be 0 and the require will fail.
+            /// if the address of the signer duplicated signatures, the value
+            /// will be 0 on the second retrieval and the require will fail.
+            require(valid, "RecoverySpell: Duplicate signature");
+        }
+
+        _executeRecovery(previousModule);
+    }
+
+    /// @notice execute the recovery process, can only be called
+    /// after the recovery delay has passed, and the recovery
+    /// has been initiated. Callable by any address
+    /// @dev can only be called if the recovery threshold is 0,
+    /// otherwise executeRecovery must be called with signatures
+    /// @param previousModule the address of the previous module
+    /// if the previous module is incorrect, this function will fail
+    ///
+    /// this function executes actions in the following order:
+    ///   1). remove all but final existing owner, set owner threshold to 1
+    ///   2). swap final existing owner for the first new owner
+    ///   3). add the remaining new owners to the safe, with the
+    ///   last owner being added updating the threshold to the new value
+    ///   4). remove the recovery module from the safe
+    function executeRecovery(address previousModule) external {
+        require(recoveryThreshold == 0, "RecoverySpell: Signatures required");
+        /// fails if recovery already executed due to math overflow
+        /// even if delay is 0, uint256.max + 1 will always revert
+        require(
+            recoveryInitiated != 0
+                && block.timestamp >= recoveryInitiated + delay + 1,
+            "RecoverySpell: Recovery not ready"
+        );
+        _executeRecovery(previousModule);
+    }
+
+    function _executeRecovery(address previousModule) private {
         address[] memory newOwners = owners;
         address[] memory existingOwners = safe.getOwners();
         uint256 existingOwnersLength = existingOwners.length;
 
         IMulticall3.Call3[] memory calls3 =
             new IMulticall3.Call3[](newOwners.length + existingOwnersLength + 1);
+
+        uint256 index = 0;
 
         /// effects
         /// now impossible to call initiate recovery as owners array is empty
@@ -147,8 +307,7 @@ contract RecoverySpell {
         /// require check will always revert with a math overflow error
         recoveryInitiated = type(uint256).max;
 
-        /// index for the call3 array
-        uint256 index = 0;
+        /// build interactions
 
         /// remove all existing owners except the last one
         for (uint256 i = 0; i < existingOwnersLength - 1; i++) {
@@ -194,7 +353,7 @@ contract RecoverySpell {
 
         require(
             safe.execTransactionFromModule(
-                multicall3,
+                MULTICALL3,
                 0,
                 abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3),
                 Enum.Operation.DelegateCall
