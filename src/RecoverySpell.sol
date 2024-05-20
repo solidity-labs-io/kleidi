@@ -159,11 +159,6 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         emit RecoveryInitiated(block.timestamp, msg.sender);
     }
 
-    /// TODO pass array of new owner signatures to this function
-    /// if the recovery threshold is non zero, require that many
-    /// signatures from different users before allowing the recovery
-    /// to be initiated.
-
     /// @notice execute the recovery process, can only be called
     /// after the recovery delay has passed, and the recovery
     /// has been initiated. Callable by any address
