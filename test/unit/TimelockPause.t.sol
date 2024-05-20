@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import "test/utils/TimelockFixture.sol";
+import "test/utils/TimelockUnitFixture.sol";
 
-contract TimelockPauseUnitTest is TimelockFixture {
+contract TimelockPauseUnitTest is TimelockUnitFixture {
     function testSetup() public view {
         assertEq(timelock.pauseGuardian(), guardian, "guardian incorrectly set");
         assertEq(
