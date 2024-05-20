@@ -15,14 +15,9 @@ import {FallbackManager} from "@safe/base/FallbackManager.sol";
 import {ModuleManager} from "@safe/base/ModuleManager.sol";
 import {GuardManager} from "@safe/base/GuardManager.sol";
 import {OwnerManager} from "@safe/base/OwnerManager.sol";
+import {IMulticall3} from "@interface/IMulticall3.sol";
 import {SafeL2} from "@safe/SafeL2.sol";
-
-import {Test, console, stdError} from "forge-std/Test.sol";
-
 import {Enum} from "@safe/common/Enum.sol";
-import {Timelock} from "src/Timelock.sol";
-import {BytesHelper} from "src/BytesHelper.sol";
-import {TimeRestricted} from "src/TimeRestricted.sol";
 import {
     IMorpho,
     Position,
@@ -30,9 +25,12 @@ import {
     MarketParams
 } from "src/interface/IMorpho.sol";
 
-import {IMulticall3} from "@interface/IMulticall3.sol";
+import {Test, console, stdError} from "forge-std/Test.sol";
 
+import {Timelock} from "src/Timelock.sol";
+import {BytesHelper} from "src/BytesHelper.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
+import {TimeRestricted} from "src/TimeRestricted.sol";
 import {RecoveryFactory} from "src/RecoveryFactory.sol";
 
 contract SystemIntegrationTest is Test {
@@ -139,6 +137,9 @@ contract SystemIntegrationTest is Test {
 
     uint256 public startTimestamp;
 
+    /// no owners need to sign to recover the safe
+    uint256 public constant RECOVERY_THRESHOLD_OWNERS = 0;
+
     function setUp() public {
         startTimestamp = block.timestamp;
 
@@ -176,6 +177,7 @@ contract SystemIntegrationTest is Test {
             recoveryOwners,
             address(safe),
             recoveryThreshold,
+            RECOVERY_THRESHOLD_OWNERS,
             recoveryDelay
         );
 
@@ -337,7 +339,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(transactionHash, safeData, collatedSignatures, 3);
 
@@ -560,7 +563,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(
             transactionHash, innerCalldatas, collatedSignatures, 3
@@ -607,7 +611,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -649,7 +654,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -691,7 +697,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -732,7 +739,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -773,7 +781,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -814,7 +823,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -856,7 +866,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
         vm.warp(1714565295);
@@ -897,7 +908,8 @@ contract SystemIntegrationTest is Test {
             startingNonce
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
         vm.warp(1714565295);
@@ -988,6 +1000,7 @@ contract SystemIntegrationTest is Test {
             recoveryOwners,
             address(safe),
             recoveryThreshold,
+            RECOVERY_THRESHOLD_OWNERS,
             recoveryDelay
         );
 
@@ -1009,7 +1022,7 @@ contract SystemIntegrationTest is Test {
             "recovery not initiated"
         );
 
-        vm.warp(block.timestamp + recoveryDelay);
+        vm.warp(block.timestamp + recoveryDelay + 1);
 
         recovery.executeRecovery(address(1));
 
@@ -1056,15 +1069,11 @@ contract SystemIntegrationTest is Test {
         recovery.executeRecovery(address(1));
     }
 
-    /// ----------------- HELPERS -----------------
-
-    /// @notice The length of the data used to compute the id of a market.
-    /// @dev The length is 5 * 32 because `MarketParams` has 5 variables of 32 bytes each.
-    uint256 internal constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
+    uint256 constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
 
     /// @notice Returns the id of the market `marketParams`.
     function id(MarketParams memory marketParams)
-        internal
+        private
         pure
         returns (bytes32 marketParamsId)
     {
@@ -1074,18 +1083,30 @@ contract SystemIntegrationTest is Test {
         }
     }
 
-    function signTxAllOwners(bytes32 transactionHash)
-        private
-        pure
-        returns (bytes memory)
-    {
-        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(pk1, transactionHash);
-        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(pk2, transactionHash);
-        (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(pk3, transactionHash);
+    function signTxAllOwners(
+        bytes32 transactionHash,
+        uint256 _pk1,
+        uint256 _pk2,
+        uint256 _pk3
+    ) private pure returns (bytes memory) {
+        bytes memory sig1;
+        bytes memory sig2;
+        bytes memory sig3;
 
-        bytes memory sig1 = abi.encodePacked(r1, s1, v1);
-        bytes memory sig2 = abi.encodePacked(r2, s2, v2);
-        bytes memory sig3 = abi.encodePacked(r3, s3, v3);
+        /// prevent stack too deep errors by immediately popping v, r, s values
+        /// off of the stack and store their data in memory
+        {
+            (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(_pk1, transactionHash);
+            sig1 = abi.encodePacked(r1, s1, v1);
+        }
+        {
+            (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(_pk2, transactionHash);
+            sig2 = abi.encodePacked(r2, s2, v2);
+        }
+        {
+            (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(_pk3, transactionHash);
+            sig3 = abi.encodePacked(r3, s3, v3);
+        }
 
         return abi.encodePacked(sig1, sig2, sig3);
     }
