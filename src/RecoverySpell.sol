@@ -73,11 +73,6 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         "Recovery(address safe,uint256 newSafeThreshold,uint256 newRecoveryThreshold,uint256 delay)"
     );
 
-    /// @notice example of how the domain separator is constructed
-    /// bytes32 private constant TYPE_HASH =
-    /// keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-    ///            name="Recovery Spell", version="0.1.0", chainId=1, verifyingContract=address(this)
-
     /// -------------------------------------------------------
     /// -------------------------------------------------------
     /// ------------------------ EVENTS -----------------------
