@@ -25,7 +25,7 @@ import {
     MarketParams
 } from "src/interface/IMorpho.sol";
 
-import {Test, console, stdError} from "forge-std/Test.sol";
+import {Test, stdError} from "forge-std/Test.sol";
 
 import {Timelock} from "src/Timelock.sol";
 import {SigHelper} from "test/utils/SigHelper.sol";
@@ -33,6 +33,8 @@ import {BytesHelper} from "src/BytesHelper.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
 import {RecoveryFactory} from "src/RecoveryFactory.sol";
+import {MULTICALL3 as multicall} from "test/utils/Addresses.sol";
+import "test/utils/Addresses.sol";
 
 contract SystemIntegrationFixture is Test, SigHelper {
     using BytesHelper for bytes;
@@ -89,27 +91,6 @@ contract SystemIntegrationFixture is Test, SigHelper {
     SafeProxyFactory public constant factory =
         SafeProxyFactory(0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2);
 
-    /// @notice address of the logic contract
-    address public logic = 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
-
-    /// @notice address of the multicall contract
-    address public multicall = 0xcA11bde05977b3631167028862bE2a173976CA11;
-
-    /// @notice address of the morphoBlue contract
-    address public morphoBlue = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
-
-    /// @notice address of the ethena token contract
-    address public ethenaUsd = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3;
-
-    /// @notice address of the dai token contract
-    address public constant dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-
-    /// @notice address of the irm contract
-    address public constant irm = 0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC;
-
-    /// @notice address of the oracle contract
-    address public constant oracle = 0xaE4750d0813B5E37A51f7629beedd72AF1f9cA35;
-
     /// @notice liquidation loan to value ratio
     uint256 public constant lltv = 915000000000000000;
 
@@ -120,6 +101,9 @@ contract SystemIntegrationFixture is Test, SigHelper {
 
     /// @notice current owners
     address[] public owners;
+
+    /// @notice 5 backup owners for the safe
+    uint256[] public recoveryPrivateKeys;
 
     /// @notice 5 backup owners for the safe
     address[] public recoveryOwners;
@@ -143,6 +127,10 @@ contract SystemIntegrationFixture is Test, SigHelper {
 
     uint256 constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
 
+    /// @notice event emitted when the recovery is executed
+    /// @param time the time the recovery was executed
+    event SafeRecovered(uint256 indexed time);
+
     function setUp() public {
         startTimestamp = block.timestamp;
 
@@ -150,11 +138,15 @@ contract SystemIntegrationFixture is Test, SigHelper {
         owners.push(vm.addr(pk2));
         owners.push(vm.addr(pk3));
 
-        recoveryOwners.push(address(10));
-        recoveryOwners.push(address(11));
-        recoveryOwners.push(address(12));
-        recoveryOwners.push(address(13));
-        recoveryOwners.push(address(14));
+        recoveryPrivateKeys.push(10);
+        recoveryPrivateKeys.push(11);
+        recoveryPrivateKeys.push(12);
+        recoveryPrivateKeys.push(13);
+        recoveryPrivateKeys.push(14);
+
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
+        }
 
         restricted = new TimeRestricted();
         recoveryFactory = new RecoveryFactory();
