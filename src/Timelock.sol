@@ -15,13 +15,13 @@ import {EnumerableSet} from
 import {Safe} from "@safe/Safe.sol";
 
 import {CalldataList} from "src/CalldataList.sol";
-import {ConfigurablePauseGuardian} from
-    "src/guardian/ConfigurablePauseGuardian.sol";
+import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 
 /// @notice known issues:
-/// - a malicious canceler can cancel proposals indefinitely,
-// effectively locking funds forever.
-/// - a dark spell could bypass all time checked restrictions
+/// - a malicious pauser can cancel all in flight proposals,
+/// for the pause duration, effectively locking funds for
+/// this period.
+/// - a recovery spell could bypass all time checked restrictions
 /// on proposing actions to the timelock.
 /// - incorrectly formed whitelisted calldata can allow safe
 /// owners the ability to steal funds. E.g. whitelist a calldata
@@ -40,6 +40,7 @@ import {ConfigurablePauseGuardian} from
 /// - there should be no whitelisted calldata checks for the timelock itself
 /// this ensures there is no way to instantly make modifications to the
 /// timelock.
+/// - all parameter changes must pass through the timelock proposing to itself
 /// - only safe can propose non-whitelisted calldatas
 /// - only safe owners can execute whitelisted calldatas
 /// - whitelisted calldata can be executed at any time, even outside of the
@@ -52,15 +53,15 @@ import {ConfigurablePauseGuardian} from
 /// - contract is paused => getAllProposals length is 0
 /// - getAllProposal length eq 0 does not => contract is paused
 
-///  @dev Contract module which acts as a timelocked controller. When set as the
-/// owner of an `Ownable` smart contract, it enforces a timelock on all
+///  @dev Contract module which acts as a timelocked controller. When set as
+/// the owner of an `Ownable` smart contract, it enforces a timelock on all
 /// `onlyOwner` maintenance operations. This gives time for users of the
 /// controlled contract to exit before a potentially dangerous maintenance
 /// operation is applied.
 ///
-/// By default, this contract is self administered, meaning administration tasks
-/// have to go through the timelock process. The gnosis safe can propose
-/// timelocked operations.
+/// By default, this contract is self administered, meaning administration
+/// tasks have to go through the timelock process. The gnosis safe can
+/// propose timelocked operations.
 contract Timelock is
     ConfigurablePauseGuardian,
     IERC1155Receiver,
@@ -69,6 +70,12 @@ contract Timelock is
     ERC165
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+
+    /// ---------------------------------------------------------
+    /// ---------------------------------------------------------
+    /// ---------------- CONSTANTS / IMMUTABLES -----------------
+    /// ---------------------------------------------------------
+    /// ---------------------------------------------------------
 
     /// @notice timestamp indicating that an operation is done
     uint256 internal constant _DONE_TIMESTAMP = uint256(1);
@@ -82,6 +89,12 @@ contract Timelock is
     /// @notice the safe address that governs this timelock
     address public immutable safe;
 
+    /// ---------------------------------------------------------
+    /// ---------------------------------------------------------
+    /// ------------------- STORAGE VARIABLES -------------------
+    /// ---------------------------------------------------------
+    /// ---------------------------------------------------------
+
     /// @notice minimum delay for all timelock proposals
     uint256 public minDelay;
 
@@ -94,6 +107,46 @@ contract Timelock is
 
     /// @notice mapping of proposal id to execution time
     mapping(bytes32 proposalId => uint256 executionTime) public timestamps;
+
+    /// minDelay >= MIN_DELAY && minDelay <= MAX_DELAY
+
+    /// 1. proposed and not ready for execution
+    ///    - propose
+
+    ///    liveProposals adds id
+    ///    timestamps maps the time the proposal will be ready to execute
+    ///     - if you have just proposed, timestamps map should be gt 1
+    ///     if proposalId in _liveProposals => timestamps[proposalId] >= MIN_DELAY
+
+    /// 2. proposed and ready for execution
+    ///    - propose
+    ///    - wait
+
+    /// 3. proposed and executed
+    ///    - propose
+    ///    - execute
+
+    ///    liveProposals removes id
+    ///    timestamps map should be 1
+    ///     timestamps[proposalId] == 1 => id not in _liveProposals
+
+    /// 3. proposed and not executable
+    ///    - propose
+    ///    - wait too long
+    ///    - proposal cannot be executed as it has expired
+
+    /// 4. proposed and canceled
+    ///    - pause
+    ///    - cancel
+
+    ///    liveProposals removes id
+    ///    timestamps map should be 0
+
+    /// ---------------------------------------------------------
+    /// ---------------------------------------------------------
+    /// ------------------------ EVENTS -------------------------
+    /// ---------------------------------------------------------
+    /// ---------------------------------------------------------
 
     /// @notice Emitted when a call is scheduled as part of operation `id`.
     /// @param id unique identifier for the operation
@@ -128,13 +181,23 @@ contract Timelock is
     );
 
     /// @notice Emitted when operation `id` is cancelled.
+    /// @param id unique identifier for the canceled operation
     event Cancelled(bytes32 indexed id);
 
     /// @notice Emitted when the minimum delay for future operations is modified.
+    /// @param oldDuration old minimum delay
+    /// @param newDuration new minimum delay
     event MinDelayChange(uint256 oldDuration, uint256 newDuration);
 
     /// @notice Emitted when the expiration period is modified
+    /// @param oldPeriod old expiration period
+    /// @param newPeriod new expiration period
     event ExpirationPeriodChange(uint256 oldPeriod, uint256 newPeriod);
+
+    /// @notice Emitted when native currency is received
+    /// @param sender the address that sent the native currency
+    /// @param value the amount of native currency received
+    event NativeTokensReceived(address indexed sender, uint256 value);
 
     /// @notice Initializes the contract with the following parameters:
     /// @param _safe safe contract that owns this timelock
@@ -263,6 +326,16 @@ contract Timelock is
         return getTimestamp(id) == _DONE_TIMESTAMP;
     }
 
+    /// @dev Returns whether an operation is expired
+    function isOperationExpired(bytes32 id) public view returns (bool) {
+        /// if operation is done
+        uint256 timestamp = getTimestamp(id);
+        /// if timestamp is 0, the operation is not scheduled, therefore it is expired
+        return timestamp == 0
+            ? true
+            : block.timestamp > timestamp + expirationPeriod;
+    }
+
     /// @dev Returns the timestamp at which an operation becomes ready (0 for
     /// unset operations, 1 for done operations).
     function getTimestamp(bytes32 id) public view returns (uint256) {
@@ -356,38 +429,6 @@ contract Timelock is
         }
     }
 
-    /// TODO test this function
-    /// @notice cancel a timelocked operation
-    /// cannot cancel an already executed operation.
-    /// @param id the identifier of the operation to cancel
-    function cancel(bytes32 id) external onlySafe {
-        require(
-            isOperation(id) && _liveProposals.remove(id),
-            "Timelock: operation does not exist"
-        );
-        delete timestamps[id];
-        emit Cancelled(id);
-    }
-
-    /// @notice cancel all outstanding pending and non executed operations
-    /// pauses the contract, revokes the guardian
-    function pause() public override {
-        /// check that msg.sender is the pause guardian, pause the contract
-        super.pause();
-
-        /// kick the pause guardian
-        pauseGuardian = address(0);
-
-        while (_liveProposals.values().length > 0) {
-            bytes32 id = _liveProposals.at(0);
-
-            delete timestamps[id];
-            _liveProposals.remove(id);
-
-            emit Cancelled(id);
-        }
-    }
-
     /// @dev Execute a ready operation containing a single transaction.
     /// Requirements:
     ///  - the operation has not expired.
@@ -446,6 +487,47 @@ contract Timelock is
         }
         _afterCall(id);
     }
+
+    /// @notice cancel a timelocked operation
+    /// cannot cancel an already executed operation.
+    /// @param id the identifier of the operation to cancel
+    function cancel(bytes32 id) external onlySafe {
+        require(
+            isOperation(id) && _liveProposals.remove(id),
+            "Timelock: operation does not exist"
+        );
+
+        delete timestamps[id];
+        emit Cancelled(id);
+    }
+
+    /// ----------------------------------------------------------
+    /// ----------------------------------------------------------
+    /// ----------------- GUARDIAN ONLY FUNCTION -----------------
+    /// ----------------------------------------------------------
+    /// ----------------------------------------------------------
+
+    /// @notice cancel all outstanding pending and non executed operations
+    /// pauses the contract, revokes the guardian
+    function pause() public override {
+        /// check that msg.sender is the pause guardian, pause the contract
+        super.pause();
+
+        while (_liveProposals.values().length > 0) {
+            bytes32 id = _liveProposals.at(0);
+
+            delete timestamps[id];
+            _liveProposals.remove(id);
+
+            emit Cancelled(id);
+        }
+    }
+
+    /// ----------------------------------------------------------
+    /// ----------------------------------------------------------
+    /// ------------------ SAFE OWNER FUNCTIONS ------------------
+    /// ----------------------------------------------------------
+    /// ----------------------------------------------------------
 
     /// @notice any safe owner can call this function and execute
     /// a call to whitelisted contracts with whitelisted calldatas
@@ -599,6 +681,17 @@ contract Timelock is
         expirationPeriod = newPeriod;
     }
 
+    /// @notice update the pause period for timelocked actions
+    /// @dev can only be between 1 day and 30 days
+    /// @param newPauseDuration the new pause duartion
+    function updatePauseDuration(uint128 newPauseDuration)
+        external
+        onlyTimelock
+    {
+        /// min and max checks are done in the internal function
+        _updatePauseDuration(newPauseDuration);
+    }
+
     /// ---------------------------------------------------------------
     /// ---------------------------------------------------------------
     /// ------------------ Private Helper Functions -------------------
@@ -658,9 +751,7 @@ contract Timelock is
         return this.onERC721Received.selector;
     }
 
-    /**
-     * @dev See {IERC1155Receiver-onERC1155Received}.
-     */
+    /// @dev See {IERC1155Receiver-onERC1155Received}.
     function onERC1155Received(address, address, uint256, uint256, bytes memory)
         external
         pure
@@ -670,9 +761,7 @@ contract Timelock is
         return this.onERC1155Received.selector;
     }
 
-    /**
-     * @dev See {IERC1155Receiver-onERC1155BatchReceived}.
-     */
+    /// @dev See {IERC1155Receiver-onERC1155BatchReceived}.
     function onERC1155BatchReceived(
         address,
         address,
@@ -698,6 +787,9 @@ contract Timelock is
         /// We implement this for completeness, doesn't really have any value
     }
 
-    /// @dev Contract might receive/hold ETH as part of the maintenance process.
-    receive() external payable {}
+    /// @dev Contract can receive/hold ETH, emit an event when this happens for
+    /// offchain tracking
+    receive() external payable {
+        emit NativeTokensReceived(msg.sender, msg.value);
+    }
 }
