@@ -34,6 +34,22 @@ contract RecoverySpellUnitTest is Test {
         safe.setOwners(recoveryOwners);
     }
 
+    function testDomainSeparatorDifferentTwoContracts() public {
+        RecoverySpell recovery1 = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 4, recoveryDelay
+        );
+
+        RecoverySpell recovery2 = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 4, recoveryDelay
+        );
+
+        assertNotEq(
+            recovery1.getDigest(),
+            recovery2.getDigest(),
+            "Domain separator should be different"
+        );
+    }
+
     /// recovery tests
 
     function testInitiateRecoverySucceedsOwner()
