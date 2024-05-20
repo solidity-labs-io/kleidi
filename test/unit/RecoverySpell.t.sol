@@ -5,12 +5,14 @@ import {Test, stdError} from "forge-std/Test.sol";
 
 import {MockSafe} from "test/mock/MockSafe.sol";
 import {RecoverySpell} from "@src/RecoverySpell.sol";
-import {RecoveryFactory} from "@src/RecoveryFactory.sol";
 
 contract RecoverySpellUnitTest is Test {
-    RecoveryFactory recoveryFactory;
     uint256 public recoveryDelay = 1 days;
     MockSafe safe;
+
+    uint256[] public recoveryPrivateKeys;
+
+    address[] public recoveryOwners;
 
     /// @notice event emitted when the recovery is executed
     event SafeRecovered(uint256 indexed time);
@@ -18,264 +20,18 @@ contract RecoverySpellUnitTest is Test {
     function setUp() public {
         vm.warp(1000);
 
-        address[] memory owners = new address[](5);
-        owners[0] = address(0x1);
-        owners[1] = address(0x2);
-        owners[2] = address(0x3);
-        owners[3] = address(0x4);
-        owners[4] = address(0x5);
+        recoveryPrivateKeys.push(10);
+        recoveryPrivateKeys.push(20);
+        recoveryPrivateKeys.push(30);
+        recoveryPrivateKeys.push(40);
+        recoveryPrivateKeys.push(50);
 
-        safe = new MockSafe();
-        safe.setOwners(owners);
-        recoveryFactory = new RecoveryFactory();
-    }
-
-    function testDeployTwiceSameParamsFails(
-        bytes32 salt,
-        uint8 ownerLength,
-        address safeAddress,
-        uint256 threshold,
-        uint256 delay
-    ) public {
-        ownerLength = uint8(_bound(ownerLength, 1, 10));
-        threshold = _bound(threshold, 1, ownerLength);
-        delay = _bound(delay, 1 days, 20 days);
-
-        address[] memory owners = new address[](ownerLength);
-        for (uint8 i = 0; i < ownerLength; i++) {
-            owners[i] = address(uint160(i));
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
         }
 
-        RecoverySpell recovery1 = recoveryFactory.createRecoverySpell(
-            salt, owners, safeAddress, threshold, delay
-        );
-
-        vm.expectRevert();
-        RecoverySpell recovery2 = recoveryFactory.createRecoverySpell(
-            salt, owners, safeAddress, threshold, delay
-        );
-
-        assertEq(
-            address(
-                recoveryFactory.calculateAddress(
-                    salt, owners, safeAddress, threshold, delay
-                )
-            ),
-            address(recovery1),
-            "RecoverySpell addresses should be the same"
-        );
-
-        assertEq(
-            address(0),
-            address(recovery2),
-            "RecoverySpell addresses should be the same"
-        );
-    }
-
-    function testViewFunctionFailsThresholdGtOwners() public {
-        vm.expectRevert("RecoverySpell: Threshold must be lte number of owners");
-        recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), address(0), 2, 1
-        );
-    }
-
-    function testViewFunctionFailsThresholdEqZero() public {
-        vm.expectRevert("RecoverySpell: Threshold must be gt 0");
-        recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), address(0), 0, 1
-        );
-    }
-
-    function testViewFunctionFailsDaysOutOfBand() public {
-        vm.expectRevert("RecoverySpell: Delay must be lte 20 days");
-        recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), address(0), 1, 20 days + 1
-        );
-    }
-
-    function testCreateFunctionFailsThresholdGtOwners() public {
-        vm.expectRevert("RecoverySpell: Threshold must be lte number of owners");
-        recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), address(0), 2, 1
-        );
-    }
-
-    function testCreateFunctionFailsThresholdEqZero() public {
-        vm.expectRevert("RecoverySpell: Threshold must be gt 0");
-        recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), address(0), 0, 1
-        );
-    }
-
-    function testCreateFunctionFailsDaysOutOfBand() public {
-        vm.expectRevert("RecoverySpell: Delay must be lte 20 days");
-        recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), address(0), 1, 20 days + 1
-        );
-    }
-
-    function testParamSubstitutionSaltChangesAddress() public view {
-        bytes32 salt = bytes32(uint256(1));
-
-        address[] memory owners = new address[](3);
-        owners[0] = address(0x1);
-        owners[1] = address(0x2);
-        owners[2] = address(0x3);
-
-        address safeAddress = address(0x3);
-        uint256 threshold = 2;
-        uint256 delay = 2 days;
-
-        address firstAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay
-            )
-        );
-        address secondAddress = address(
-            recoveryFactory.calculateAddress(
-                bytes32(0), owners, safeAddress, threshold, delay
-            )
-        );
-
-        assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
-        );
-    }
-
-    function testParamSubstitutionOwnerChangesAddress() public view {
-        bytes32 salt = bytes32(uint256(1));
-
-        address[] memory owners = new address[](3);
-        owners[0] = address(0x1);
-        owners[1] = address(0x2);
-        owners[2] = address(0x3);
-
-        address safeAddress = address(0x3);
-        uint256 threshold = 2;
-        uint256 delay = 2 days;
-
-        address firstAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay
-            )
-        );
-
-        owners[2] = address(0x4);
-        address secondAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay
-            )
-        );
-
-        assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
-        );
-    }
-
-    function testParamSubstitutionSafeChangesAddress() public view {
-        bytes32 salt = bytes32(uint256(1));
-
-        address[] memory owners = new address[](3);
-        owners[0] = address(0x1);
-        owners[1] = address(0x2);
-        owners[2] = address(0x3);
-
-        address safeAddress = address(0x3);
-        uint256 threshold = 2;
-        uint256 delay = 2 days;
-
-        address firstAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay
-            )
-        );
-        address secondAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, address(0x4), threshold, delay
-            )
-        );
-
-        assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
-        );
-    }
-
-    function testParamSubstitutionThresholdChangesAddress() public view {
-        bytes32 salt = bytes32(uint256(1));
-
-        address[] memory owners = new address[](3);
-        owners[0] = address(0x1);
-        owners[1] = address(0x2);
-        owners[2] = address(0x3);
-
-        address safeAddress = address(0x3);
-        uint256 threshold = 2;
-        uint256 delay = 2 days;
-
-        address firstAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay
-            )
-        );
-        address secondAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold + 1, delay
-            )
-        );
-        address thirdAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold - 1, delay
-            )
-        );
-
-        assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
-        );
-        assertNotEq(
-            secondAddress, thirdAddress, "addresses should not be the same"
-        );
-        assertNotEq(
-            firstAddress, thirdAddress, "addresses should not be the same"
-        );
-    }
-
-    function testParamSubstitutionDelayChangesAddress() public view {
-        bytes32 salt = bytes32(uint256(1));
-
-        address[] memory owners = new address[](3);
-        owners[0] = address(0x1);
-        owners[1] = address(0x2);
-        owners[2] = address(0x3);
-
-        address safeAddress = address(0x3);
-        uint256 threshold = 2;
-        uint256 delay = 2 days;
-
-        address firstAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay
-            )
-        );
-        address secondAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay + 1
-            )
-        );
-        address thirdAddress = address(
-            recoveryFactory.calculateAddress(
-                salt, owners, safeAddress, threshold, delay - 1
-            )
-        );
-
-        assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
-        );
-        assertNotEq(
-            secondAddress, thirdAddress, "addresses should not be the same"
-        );
-        assertNotEq(
-            firstAddress, thirdAddress, "addresses should not be the same"
-        );
+        safe = new MockSafe();
+        safe.setOwners(recoveryOwners);
     }
 
     /// recovery tests
@@ -290,7 +46,7 @@ contract RecoverySpellUnitTest is Test {
         owners[2] = address(0x3);
         owners[3] = address(0x4);
 
-        recovery = new RecoverySpell(owners, address(safe), 2, recoveryDelay);
+        recovery = new RecoverySpell(owners, address(safe), 2, 0, recoveryDelay);
 
         vm.prank(owners[0]);
         recovery.initiateRecovery();
@@ -309,17 +65,9 @@ contract RecoverySpellUnitTest is Test {
         recovery.initiateRecovery();
     }
 
-    function testInitiateRecoveryFailsNotOwner() public {
-        RecoverySpell recovery =
-            new RecoverySpell(new address[](3), address(safe), 1, 4 days);
-
-        vm.expectRevert("RecoverySpell: Sender is not an owner");
-        recovery.initiateRecovery();
-    }
-
     function testExecuteRecoveryFailsNotInitiated() public {
         RecoverySpell recovery =
-            new RecoverySpell(new address[](0), address(safe), 0, 1);
+            new RecoverySpell(new address[](1), address(safe), 0, 0, 1);
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
         recovery.executeRecovery(address(1));
@@ -332,6 +80,20 @@ contract RecoverySpellUnitTest is Test {
         recovery.executeRecovery(address(1));
     }
 
+    function testRecoveryFailsNotPassedDelaySignatures() public {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 4, recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        vm.expectRevert("RecoverySpell: Recovery not ready");
+        recovery.executeRecovery(
+            address(1), new uint8[](1), new bytes32[](1), new bytes32[](1)
+        );
+    }
+
+    /// TODO test with recovery signatures
     function testRecoverySucceeds() public returns (RecoverySpell recovery) {
         recovery = testInitiateRecoverySucceedsOwner();
 
@@ -352,6 +114,132 @@ contract RecoverySpellUnitTest is Test {
         );
     }
 
+    function testRecoverySucceedsMultipleSignatures() public {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 4, recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "Recovery initiated time not stored"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+        bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+        uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+        bytes32 digest = recovery.getDigest();
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+        }
+
+        safe.setExecTransactionModuleSuccess(true);
+
+        vm.expectEmit(true, true, true, true, address(recovery));
+        emit SafeRecovered(block.timestamp);
+
+        recovery.executeRecovery(address(1), v, r, s);
+
+        assertEq(recovery.getOwners().length, 0, "Owners not removed");
+        assertEq(
+            recovery.recoveryInitiated(),
+            type(uint256).max,
+            "Recovery not reset"
+        );
+    }
+
+    function testRecoveryFailsSignaturesRequired() public {
+        /// recovery threshold is 4, so 4/5 signatures are required
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 5, 4, recoveryDelay
+        );
+
+        vm.expectRevert("RecoverySpell: Signatures required");
+        recovery.executeRecovery(address(1));
+    }
+
+    function testRecoveryFailsDuplicateSignature() public {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 4, recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "Recovery initiated time not stored"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+        bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+        uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+        bytes32 digest = recovery.getDigest();
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+        }
+
+        /// final signature duplicate
+        v[v.length - 1] = v[v.length - 2];
+        r[r.length - 1] = r[r.length - 2];
+        s[s.length - 1] = s[s.length - 2];
+
+        vm.expectRevert("RecoverySpell: Duplicate signature");
+        recovery.executeRecovery(address(1), v, r, s);
+    }
+
+    function testRecoveryFailsInvalidSignature() public {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 4, recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "Recovery initiated time not stored"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+        bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+        uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+        bytes32 digest = recovery.getDigest();
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+        }
+        /// invalid signature
+        v[v.length - 1] = v[v.length - 1] + 1;
+
+        vm.expectRevert("RecoverySpell: Invalid signature");
+        recovery.executeRecovery(address(1), v, r, s);
+
+        v[v.length - 1] = v[v.length - 1] - 1;
+        bytes32 rval = r[0];
+        r[0] = bytes32(uint256(21));
+
+        vm.expectRevert("RecoverySpell: Invalid signature");
+        recovery.executeRecovery(address(1), v, r, s);
+
+        v[v.length - 1] = v[v.length - 1] - 1;
+        r[r.length - 1] = bytes32(uint256(21));
+        r[0] = rval;
+
+        vm.expectRevert("RecoverySpell: Invalid signature");
+        recovery.executeRecovery(address(1), v, r, s);
+    }
+
     function testInitiateRecoveryFailsPostRecovery() public {
         RecoverySpell recovery = testRecoverySucceeds();
 
@@ -366,7 +254,7 @@ contract RecoverySpellUnitTest is Test {
         recovery.executeRecovery(address(1));
     }
 
-    function testRecoveryFailsMulticall() public {
+    function testRecoveryNoSignaturesFailsMulticall() public {
         RecoverySpell recovery = testInitiateRecoverySucceedsOwner();
 
         vm.warp(block.timestamp + recoveryDelay + 1);
@@ -375,5 +263,133 @@ contract RecoverySpellUnitTest is Test {
 
         vm.expectRevert("RecoverySpell: Recovery failed");
         recovery.executeRecovery(address(1));
+    }
+
+    function testRecoveryWithSignaturesFailsMulticall() public {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 4, recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "Recovery initiated time not stored"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+        bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+        uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+        bytes32 digest = recovery.getDigest();
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+        }
+
+        safe.setExecTransactionModuleSuccess(false);
+
+        vm.expectRevert("RecoverySpell: Recovery failed");
+        recovery.executeRecovery(address(1), v, r, s);
+    }
+
+    function testRecoveryNotEnoughSignaturesFails() public {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 5, recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "Recovery initiated time not stored"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length - 1);
+        bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length - 1);
+        uint8[] memory v = new uint8[](recoveryPrivateKeys.length - 1);
+
+        bytes32 digest = recovery.getDigest();
+        for (uint256 i = 0; i < recoveryPrivateKeys.length - 1; i++) {
+            (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+        }
+
+        vm.expectRevert("RecoverySpell: Not enough signatures");
+        recovery.executeRecovery(address(1), v, r, s);
+    }
+
+    function testRecoveryFailsSignatureLengthMismatch() public {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 2, 5, recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "Recovery initiated time not stored"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        {
+            bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length - 1);
+            bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length - 1);
+            uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+            bytes32 digest = recovery.getDigest();
+            for (uint256 i = 0; i < recoveryPrivateKeys.length - 1; i++) {
+                (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+            }
+
+            vm.expectRevert("RecoverySpell: Invalid signature parameters");
+            recovery.executeRecovery(address(1), v, r, s);
+        }
+
+        {
+            bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length - 1);
+            bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+            uint8[] memory v = new uint8[](recoveryPrivateKeys.length - 1);
+
+            bytes32 digest = recovery.getDigest();
+            for (uint256 i = 0; i < recoveryPrivateKeys.length - 1; i++) {
+                (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+            }
+
+            vm.expectRevert("RecoverySpell: Invalid signature parameters");
+            recovery.executeRecovery(address(1), v, r, s);
+        }
+        {
+            bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+            bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length - 1);
+            uint8[] memory v = new uint8[](recoveryPrivateKeys.length - 1);
+
+            bytes32 digest = recovery.getDigest();
+            for (uint256 i = 0; i < recoveryPrivateKeys.length - 1; i++) {
+                (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+            }
+
+            vm.expectRevert("RecoverySpell: Invalid signature parameters");
+            recovery.executeRecovery(address(1), v, r, s);
+        }
+    }
+
+    function testExecuteRecoveryWithSignaturesFailsNoSignaturesNeeded()
+        public
+    {
+        RecoverySpell recovery = new RecoverySpell(
+            recoveryOwners, address(safe), 3, 0, recoveryDelay
+        );
+
+        vm.expectRevert("RecoverySpell: No signatures needed");
+        recovery.executeRecovery(
+            address(1), new uint8[](1), new bytes32[](1), new bytes32[](1)
+        );
     }
 }
