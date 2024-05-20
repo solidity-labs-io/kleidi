@@ -472,12 +472,10 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         recovery.initiateRecovery();
     }
 
-
     function testExecuteRecoveryPostRecoveryFails() public {
         RecoverySpell recovery = testRecoverySpellRotatesAllSigners();
 
         vm.expectRevert(stdError.arithmeticError);
         recovery.executeRecovery(address(1));
     }
-
 }
