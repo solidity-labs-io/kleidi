@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import "test/utils/TimelockFixture.sol";
+import "test/utils/TimelockUnitFixture.sol";
 
-contract TimelockUnitTest is TimelockFixture {
+contract TimelockUnitTest is TimelockUnitFixture {
     function testSetup() public view {
         assertEq(timelock.safe(), address(safe), "safe incorrectly set");
         assertEq(timelock.minDelay(), MINIMUM_DELAY, "minDelay incorrectly set");
