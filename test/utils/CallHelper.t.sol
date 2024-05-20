@@ -193,6 +193,17 @@ contract CallHelper is Test {
 
         vm.prank(caller);
         Timelock(payable(timelock)).schedule(target, value, data, salt, delay);
+
+        assertEq(
+            Timelock(payable(timelock)).timestamps(id),
+            Timelock(payable(timelock)).getTimestamp(id),
+            "timestamps should be equal"
+        );
+        assertEq(
+            Timelock(payable(timelock)).timestamps(id),
+            block.timestamp + delay,
+            "timestamps should equal block timestamp"
+        );
     }
 
     function _scheduleBatch(
