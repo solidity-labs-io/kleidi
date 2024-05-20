@@ -1,78 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.25;
 
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {
-    IERC165,
-    ERC165
-} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import "test/utils/TimelockFixture.sol";
 
-import {Test, console} from "forge-std/Test.sol";
-
-import {Timelock} from "src/Timelock.sol";
-import {MockSafe} from "test/mock/MockSafe.sol";
-import {MockLending} from "test/mock/MockLending.sol";
-import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
-import {CallHelper} from "test/utils/CallHelper.t.sol";
-
-contract TimelockUnitTest is CallHelper {
-    /// @notice reference to the Timelock contract
-    Timelock private timelock;
-
-    /// @notice reference to the MockSafe contract
-    MockSafe private safe;
-
-    /// @notice empty for now, will change once tests progress
-    address[] public contractAddresses;
-
-    /// @notice empty for now, will change once tests progress
-    bytes4[] public selector;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public startIndex;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public endIndex;
-
-    /// @notice empty for now, will change once tests progress
-    bytes[] public data;
-
-    /// @notice address of the guardian that can pause and break glass in case of emergency
-    address public guardian = address(0x11111);
-
-    /// @notice duration of pause once glass is broken in seconds
-    uint128 public constant PAUSE_DURATION = 10 days;
-
-    /// @notice minimum delay for a timelocked transaction in seconds
-    uint256 public constant MINIMUM_DELAY = 2 days;
-
-    /// @notice expiration period for a timelocked transaction in seconds
-    uint256 public constant EXPIRATION_PERIOD = 5 days;
-
-    function setUp() public {
-        // at least start at unix timestamp of 1m so that block timestamp isn't 0
-        vm.warp(block.timestamp + 1_000_000);
-
-        safe = new MockSafe();
-
-        // Assume the necessary parameters for the constructor
-        timelock = new Timelock(
-            address(safe), // _safe
-            MINIMUM_DELAY, // _minDelay
-            EXPIRATION_PERIOD, // _expirationPeriod
-            guardian, // _pauser
-            PAUSE_DURATION, // _pauseDuration
-            contractAddresses, // contractAddresses
-            selector, // selector
-            startIndex, // startIndex
-            endIndex, // endIndex
-            data // data
-        );
-    }
-
+contract TimelockUnitTest is TimelockFixture {
     function testSetup() public view {
         assertEq(timelock.safe(), address(safe), "safe incorrectly set");
         assertEq(timelock.minDelay(), MINIMUM_DELAY, "minDelay incorrectly set");
@@ -137,6 +68,8 @@ contract TimelockUnitTest is CallHelper {
         );
     }
 
+    /// todo test that after a proposal is scheduled, it cannot be executed if it expires
+
     function testScheduleProposalSafeSucceeds() public returns (bytes32) {
         _schedule({
             caller: address(safe),
@@ -156,7 +89,6 @@ contract TimelockUnitTest is CallHelper {
             abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
-
         assertTrue(
             timelock.isOperationPending(id), "operation should be pending"
         );
@@ -166,6 +98,9 @@ contract TimelockUnitTest is CallHelper {
         );
         assertFalse(
             timelock.isOperationDone(id), "operation should not be done"
+        );
+        assertFalse(
+            timelock.isOperationExpired(id), "operation should not be expired"
         );
 
         assertEq(
@@ -329,66 +264,6 @@ contract TimelockUnitTest is CallHelper {
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
     }
 
-    /// Pause Tests
-    /// - test that functions revert when paused:
-    ///    - schedule
-    ///    - scheduleBatch
-    ///    - execute
-    ///    - executeBatch
-
-    function testScheduleFailsWhenPaused() public {
-        vm.prank(guardian);
-        timelock.pause();
-
-        vm.expectRevert("Pausable: paused");
-        vm.prank(address(safe));
-        timelock.schedule(
-            address(timelock),
-            0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            bytes32(0),
-            MINIMUM_DELAY
-        );
-    }
-
-    function testScheduleBatchFailsWhenPaused() public {
-        vm.prank(guardian);
-        timelock.pause();
-
-        vm.expectRevert("Pausable: paused");
-        vm.prank(address(safe));
-        timelock.scheduleBatch(
-            new address[](0),
-            new uint256[](0),
-            new bytes[](0),
-            bytes32(0),
-            MINIMUM_DELAY
-        );
-    }
-
-    function testExecuteFailsWhenPaused() public {
-        vm.prank(guardian);
-        timelock.pause();
-
-        vm.expectRevert("Pausable: paused");
-        timelock.execute(
-            address(timelock),
-            0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
-            bytes32(0)
-        );
-    }
-
-    function testExecuteBatchFailsWhenPaused() public {
-        vm.prank(guardian);
-        timelock.pause();
-
-        vm.expectRevert("Pausable: paused");
-        timelock.executeBatch(
-            new address[](0), new uint256[](0), new bytes[](0), bytes32(0)
-        );
-    }
-
     /// ACL Tests
     /// - test that only the timelock can:
     ///     - setGuardian
@@ -436,6 +311,11 @@ contract TimelockUnitTest is CallHelper {
     function testUpdateExpirationPeriodFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.updateExpirationPeriod(0);
+    }
+
+    function testUpdatePauseDurationNonTimelockFails() public {
+        vm.expectRevert("Timelock: caller is not the timelock");
+        timelock.updatePauseDuration(1);
     }
 
     function testSetGuardianSucceedsAsTimelock(address newGuardian) public {
@@ -809,6 +689,32 @@ contract TimelockUnitTest is CallHelper {
 
         safe.setOwners(safeSigner);
 
+        timelock.checkCalldata(
+            address(lending),
+            abi.encodeWithSelector(
+                lending.deposit.selector, address(timelock), 100
+            )
+        );
+        timelock.checkCalldata(
+            address(lending),
+            abi.encodeWithSelector(
+                lending.withdraw.selector, address(timelock), 100
+            )
+        );
+
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.checkCalldata(
+            address(lending),
+            abi.encodeWithSelector(
+                lending.withdraw.selector, address(this), 100
+            )
+        );
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.checkCalldata(
+            address(lending),
+            abi.encodeWithSelector(lending.deposit.selector, address(this), 100)
+        );
+
         _executeWhiteListed({
             caller: address(this),
             timelock: address(timelock),
@@ -1013,18 +919,37 @@ contract TimelockUnitTest is CallHelper {
     }
 
     function testCancelProposalNonSafeOwnerFails() public {
-        vm.expectRevert("Timelock: caller is not the safe owner");
+        vm.expectRevert("Timelock: caller is not the safe");
         timelock.cancel(bytes32(0));
     }
 
-    function testCancelActiveProposalSafeSucceeds() public {
+    function testCancelActiveProposalSafeSucceeds() public returns (bytes32) {
         bytes32 id = testScheduleProposalSafeSucceeds();
-        
+
         vm.prank(address(safe));
         timelock.cancel(id);
 
-        assertFalse(timelock.isOperation(id), "operation should no longer be present");
-        assertEq(timelock.getAllProposals().length, 0, "no proposals should be present");
+        assertFalse(
+            timelock.isOperation(id), "operation should no longer be present"
+        );
+        assertTrue(
+            timelock.isOperationExpired(id), "operation should not be expired"
+        );
+        assertEq(
+            timelock.getAllProposals().length,
+            0,
+            "no proposals should be present"
+        );
+
+        return id;
+    }
+
+    function testCancelCancelledProposalFails() public {
+        bytes32 id = testCancelActiveProposalSafeSucceeds();
+
+        vm.prank(address(safe));
+        vm.expectRevert("Timelock: operation does not exist");
+        timelock.cancel(id);
     }
 
     function testExecuteWhitelistedBatchArityMismatchFails() public {
@@ -1165,6 +1090,29 @@ contract TimelockUnitTest is CallHelper {
         );
     }
 
+    function testExecuteAfterTimelockExpiryFails() public {
+        testScheduleProposalSafeSucceeds();
+
+        vm.warp(block.timestamp + MINIMUM_DELAY + EXPIRATION_PERIOD);
+
+        vm.expectRevert("Timelock: operation is not ready");
+        timelock.execute(
+            address(timelock),
+            0,
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            bytes32(0)
+        );
+
+        vm.warp(block.timestamp + MINIMUM_DELAY + EXPIRATION_PERIOD + 1);
+        vm.expectRevert("Timelock: operation is not ready");
+        timelock.execute(
+            address(timelock),
+            0,
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            bytes32(0)
+        );
+    }
+
     /// test a timelock execution call that fails due to reentrancy check in _afterCall
 
     function testReentrantExecuteFails() public {
@@ -1278,5 +1226,9 @@ contract TimelockUnitTest is CallHelper {
         vm.deal(address(this), 1);
         (bool success,) = address(timelock).call{value: 1}("");
         assertTrue(success, "payable call failed");
+    }
+
+    function testTokensReceivedNoOp() public view {
+        timelock.tokensReceived(address(0), address(0), address(0), 0, "", "");
     }
 }
