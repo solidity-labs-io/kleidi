@@ -7,6 +7,7 @@ import {Safe} from "@safe/Safe.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
+import {MULTICALL3} from "test/utils/Addresses.sol";
 import {IMulticall3} from "@interface/IMulticall3.sol";
 import {OwnerManager} from "@safe/base/OwnerManager.sol";
 import {ModuleManager} from "@safe/base/ModuleManager.sol";
@@ -54,11 +55,6 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     /// the recovery process without the consent of the other owners
     uint256 public immutable recoveryThreshold;
 
-    /// TODO add recoveryThreshold variable to the contract which is the
-    /// number of new owner signatures required to initiate the recovery
-    /// process. This is to prevent a single owner from initiating the
-    /// recovery process without the consent of the other owners.
-
     /// @notice the time delay required before the recovery transaction
     /// can be executed
     uint256 public immutable delay;
@@ -68,12 +64,6 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     /// ---------------------- CONSTANTS ----------------------
     /// -------------------------------------------------------
     /// -------------------------------------------------------
-
-    /// TODO DUPLICATED address, move into library
-
-    /// @notice address of the MULTICALL3 contract
-    address public constant MULTICALL3 =
-        0xcA11bde05977b3631167028862bE2a173976CA11;
 
     /// @notice the sentinel address that all linked lists start with
     address public constant SENTINEL = address(0x1);
