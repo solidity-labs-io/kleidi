@@ -465,6 +465,82 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         assertEq(safe.getThreshold(), recoveryThreshold, "threshold incorrect");
     }
 
+    function testRecoverySpellRecoverFailsNotEnoughSignatures() public {
+        uint256 recoveryThresholdOwners = 2;
+        recoverySpellAddress = recoveryFactory.calculateAddress(
+            recoverySalt,
+            recoveryOwners,
+            address(safe),
+            recoveryThreshold,
+            recoveryThresholdOwners,
+            recoveryDelay
+        );
+
+        _initializeContract();
+
+        RecoverySpell recovery = recoveryFactory.createRecoverySpell(
+            recoverySalt,
+            recoveryOwners,
+            address(safe),
+            recoveryThreshold,
+            recoveryThresholdOwners,
+            recoveryDelay
+        );
+
+        recovery.initiateRecovery();
+
+        vm.warp(block.timestamp + recoveryDelay - 1);
+
+        vm.expectRevert("RecoverySpell: Recovery not ready");
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
+
+        /// now timestamp exactly at recovery delay
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("RecoverySpell: Recovery not ready");
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
+
+        /// now timestamp is exactly 1 second past recovery delay and recovery can commence
+        vm.warp(block.timestamp + 1);
+
+        vm.expectRevert("RecoverySpell: Signatures required");
+        recovery.executeRecovery(address(1));
+
+        vm.expectRevert("RecoverySpell: Not enough signatures");
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
+
+        vm.expectRevert("RecoverySpell: Invalid signature parameters");
+        recovery.executeRecovery(
+            address(1), new uint8[](1), new bytes32[](0), new bytes32[](0)
+        );
+
+        bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+        bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+        uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+        bytes32 digest = recovery.getDigest();
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+        }
+
+        /// final signature duplicate
+        v[v.length - 1] = v[v.length - 2];
+        r[r.length - 1] = r[r.length - 2];
+        s[s.length - 1] = s[s.length - 2];
+
+        vm.expectRevert("RecoverySpell: Duplicate signature");
+        recovery.executeRecovery(address(1), v, r, s);
+
+        v[0]++;
+        vm.expectRevert("RecoverySpell: Invalid signature");
+        recovery.executeRecovery(address(1), v, r, s);
+    }
+
     function testInitiateRecoveryPostRecoveryFails() public {
         RecoverySpell recovery = testRecoverySpellRotatesAllSigners();
 
