@@ -1,0 +1,26 @@
+[
+    {
+        "addr": "0x0815638276498Acf3A07880A240461472A87d673",
+        "name": "DEV_MULTISIG",
+        "chainId": 11155111,
+        "isContract": true
+    },
+    {
+        "addr": "0xabc6e2E87faC5C62f45Cd4576a9f9BC64B97070d",
+        "name": "DEPLOYER_EOA",
+        "chainId": 11155111,
+        "isContract": false
+    },
+    {
+        "addr": "0x29B28B0Ff5B6B26448F3Ac02Cd209539626D96Ab",
+        "name": "DEPLOYER_EOA",
+        "chainId": 8453,
+        "isContract": false
+    },
+    {
+        "addr": "0x29B28B0Ff5B6B26448F3Ac02Cd209539626D96Ab",
+        "name": "DEPLOYER_EOA",
+        "chainId": 1,
+        "isContract": false
+    }
+]
