@@ -21,6 +21,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "expirationPeriod incorrectly set"
         );
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
+        assertTrue(
+            timelockFactory.factoryCreated(address(timelock)),
+            "timelock incorrectly registered in factory"
+        );
     }
 
     function testSupportsInterface() public view {
