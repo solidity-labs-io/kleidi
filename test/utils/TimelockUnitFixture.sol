@@ -14,13 +14,17 @@ import {Test, console} from "forge-std/Test.sol";
 
 import {Timelock} from "src/Timelock.sol";
 import {MockSafe} from "test/mock/MockSafe.sol";
-import {MockLending} from "test/mock/MockLending.sol";
-import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
 import {CallHelper} from "test/utils/CallHelper.t.sol";
+import {MockLending} from "test/mock/MockLending.sol";
+import {TimelockFactory} from "src/TimelockFactory.sol";
+import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
 
 contract TimelockUnitFixture is CallHelper {
     /// @notice reference to the Timelock contract
     Timelock public timelock;
+
+    /// @notice timelock factory
+    TimelockFactory public timelockFactory;
 
     /// @notice reference to the MockSafe contract
     MockSafe public safe;
@@ -58,18 +62,24 @@ contract TimelockUnitFixture is CallHelper {
 
         safe = new MockSafe();
 
+        timelockFactory = new TimelockFactory();
+
         // Assume the necessary parameters for the constructor
-        timelock = new Timelock(
-            address(safe), // _safe
-            MINIMUM_DELAY, // _minDelay
-            EXPIRATION_PERIOD, // _expirationPeriod
-            guardian, // _pauser
-            PAUSE_DURATION, // _pauseDuration
-            contractAddresses, // contractAddresses
-            selector, // selector
-            startIndex, // startIndex
-            endIndex, // endIndex
-            data // data
+        timelock = Timelock(
+            payable(
+                timelockFactory.createTimelock(
+                    address(safe), // _safe
+                    MINIMUM_DELAY, // _minDelay
+                    EXPIRATION_PERIOD, // _expirationPeriod
+                    guardian, // _pauser
+                    PAUSE_DURATION, // _pauseDuration
+                    contractAddresses, // contractAddresses
+                    selector, // selector
+                    startIndex, // startIndex
+                    endIndex, // endIndex
+                    data // data
+                )
+            )
         );
     }
 }
