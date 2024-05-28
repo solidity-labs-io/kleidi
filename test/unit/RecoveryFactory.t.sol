@@ -4,15 +4,15 @@ pragma solidity 0.8.25;
 import {Test, console} from "forge-std/Test.sol";
 
 import {RecoverySpell} from "@src/RecoverySpell.sol";
-import {RecoveryFactory} from "@src/RecoveryFactory.sol";
+import {RecoverySpellFactory} from "@src/RecoverySpellFactory.sol";
 
 contract RecoveryFactoryUnitTest is Test {
-    RecoveryFactory recoveryFactory;
+    RecoverySpellFactory recoveryFactory;
     address public constant SAFE = address(0x0afe);
     bytes public constant SAFE_BYTECODE = hex"3afe";
 
     function setUp() public {
-        recoveryFactory = new RecoveryFactory();
+        recoveryFactory = new RecoverySpellFactory();
         vm.etch(SAFE, SAFE_BYTECODE);
     }
 
@@ -136,12 +136,12 @@ contract RecoveryFactoryUnitTest is Test {
     }
 
     function testSafeHasNoCodeFails() public {
-        vm.expectRevert("RecoveryFactory: Safe has no code");
+        vm.expectRevert("RecoverySpellFactory: Safe has no code");
         recoveryFactory.calculateAddress(
             bytes32(0), new address[](1), address(0), 1, 1, 1
         );
 
-        vm.expectRevert("RecoveryFactory: Safe has no code");
+        vm.expectRevert("RecoverySpellFactory: Safe has no code");
         recoveryFactory.createRecoverySpell(
             bytes32(0), new address[](1), address(0), 1, 1, 1
         );
