@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {Timelock} from "src/Timelock.sol";
+import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 
 /// @notice simple factory contract that creates timelocks for
 contract TimelockFactory {
@@ -40,6 +41,7 @@ contract TimelockFactory {
     /// @param startIndex start index of the calldata to be whitelisted
     /// @param endIndex end index of the calldata to be whitelisted
     /// @param data calldata to be whitelisted that resides between start and end index
+    /// @param salt for create2 opcode
     function createTimelock(
         address _safe,
         uint256 _minDelay,
@@ -50,10 +52,11 @@ contract TimelockFactory {
         bytes4[] memory selector,
         uint16[] memory startIndex,
         uint16[] memory endIndex,
-        bytes[] memory data
+        bytes[] memory data,
+        bytes32 salt
     ) external returns (address timelock) {
         timelock = address(
-            new Timelock(
+            new Timelock{salt: salt}(
                 _safe,
                 _minDelay,
                 _expirationPeriod,
@@ -70,5 +73,49 @@ contract TimelockFactory {
         factoryCreated[timelock] = true;
 
         emit TimelockCreated(timelock, block.timestamp, msg.sender);
+    }
+
+    /// @notice Initializes the contract with the following parameters:
+    /// @param _safe safe contract that owns this timelock
+    /// @param _minDelay initial minimum delay for operations
+    /// @param _expirationPeriod timelocked actions expiration period
+    /// @param _pauser address that can pause the contract
+    /// @param _pauseDuration duration the contract can be paused for
+    /// @param contractAddresses accounts that will have calldata whitelisted
+    /// @param selector function selectors to be whitelisted
+    /// @param startIndex start index of the calldata to be whitelisted
+    /// @param endIndex end index of the calldata to be whitelisted
+    /// @param data calldata to be whitelisted that resides between start and end index
+    /// @param salt for create2 opcode
+    function calculateAddress(
+        address _safe,
+        uint256 _minDelay,
+        uint256 _expirationPeriod,
+        address _pauser,
+        uint128 _pauseDuration,
+        address[] memory contractAddresses,
+        bytes4[] memory selector,
+        uint16[] memory startIndex,
+        uint16[] memory endIndex,
+        bytes[] memory data,
+        bytes32 salt
+    ) external view returns (address) {
+        return calculateCreate2Address(
+            address(this),
+            type(Timelock).creationCode,
+            abi.encode(
+                _safe,
+                _minDelay,
+                _expirationPeriod,
+                _pauser,
+                _pauseDuration,
+                contractAddresses,
+                selector,
+                startIndex,
+                endIndex,
+                data
+            ),
+            salt
+        );
     }
 }
