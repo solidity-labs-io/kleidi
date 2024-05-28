@@ -18,6 +18,7 @@ import {CallHelper} from "test/utils/CallHelper.t.sol";
 import {MockLending} from "test/mock/MockLending.sol";
 import {TimelockFactory} from "src/TimelockFactory.sol";
 import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
+import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 
 contract TimelockUnitFixture is CallHelper {
     /// @notice reference to the Timelock contract
@@ -56,6 +57,9 @@ contract TimelockUnitFixture is CallHelper {
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
 
+    /// @notice salt for timelock creation through the factory
+    bytes32 public constant salt = keccak256(hex"3afe");
+
     function setUp() public {
         // at least start at unix timestamp of 1m so that block timestamp isn't 0
         vm.warp(block.timestamp + 1_000_000 + EXPIRATION_PERIOD);
@@ -77,7 +81,8 @@ contract TimelockUnitFixture is CallHelper {
                     selector, // selector
                     startIndex, // startIndex
                     endIndex, // endIndex
-                    data // data
+                    data, // data
+                    salt
                 )
             )
         );
