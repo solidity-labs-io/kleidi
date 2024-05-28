@@ -354,7 +354,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testUpdateDelaySucceedsAsTimelock() public {
-        uint256 minDelay = timelock.MIN_DELAY();
+        uint256 minDelay = MIN_DELAY;
 
         vm.prank(address(timelock));
         timelock.updateDelay(minDelay);
@@ -363,7 +363,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testUpdateDelayFailsDelayTooLong() public {
-        uint256 delay = timelock.MAX_DELAY() + 1;
+        uint256 delay = MAX_DELAY + 1;
 
         vm.prank(address(timelock));
         vm.expectRevert("Timelock: delay out of bounds");
@@ -371,7 +371,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testUpdateDelayFailsDelayTooShort() public {
-        uint256 delay = timelock.MIN_DELAY() - 1;
+        uint256 delay = MIN_DELAY - 1;
 
         vm.prank(address(timelock));
         vm.expectRevert("Timelock: delay out of bounds");
@@ -379,7 +379,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testUpdateExpirationPeriodSucceedsAsTimelock() public {
-        uint256 minDelay = timelock.MIN_DELAY();
+        uint256 minDelay = MIN_DELAY;
 
         vm.prank(address(timelock));
         timelock.updateExpirationPeriod(minDelay);
@@ -392,7 +392,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testUpdateExpirationPeriodFailsAsTimelockDelayTooShort() public {
-        uint256 delay = timelock.MIN_DELAY() - 1;
+        uint256 delay = MIN_DELAY - 1;
 
         vm.prank(address(timelock));
         vm.expectRevert("Timelock: delay out of bounds");
