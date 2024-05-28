@@ -14,6 +14,7 @@ import {EnumerableSet} from
     "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Safe} from "@safe/Safe.sol";
 
+import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 import {CalldataList} from "src/CalldataList.sol";
 import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 
@@ -73,18 +74,9 @@ contract Timelock is
 
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
-    /// ---------------- CONSTANTS / IMMUTABLES -----------------
+    /// ----------------------- IMMUTABLE -----------------------
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
-
-    /// @notice timestamp indicating that an operation is done
-    uint256 internal constant _DONE_TIMESTAMP = uint256(1);
-
-    /// @notice minimum delay for timelocked operations
-    uint256 public constant MIN_DELAY = 2 days;
-
-    /// @notice maximum delay for timelocked operations
-    uint256 public constant MAX_DELAY = 30 days;
 
     /// @notice the safe address that governs this timelock
     address public immutable safe;
