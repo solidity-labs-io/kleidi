@@ -6,7 +6,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {RecoverySpell} from "@src/RecoverySpell.sol";
 import {RecoverySpellFactory} from "@src/RecoverySpellFactory.sol";
 
-contract RecoveryFactoryUnitTest is Test {
+contract RecoverySpellFactoryUnitTest is Test {
     RecoverySpellFactory recoveryFactory;
     address public constant SAFE = address(0x0afe);
     bytes public constant SAFE_BYTECODE = hex"3afe";
