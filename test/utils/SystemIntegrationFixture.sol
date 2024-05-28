@@ -32,7 +32,7 @@ import {SigHelper} from "test/utils/SigHelper.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
-import {RecoveryFactory} from "src/RecoveryFactory.sol";
+import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 import {MULTICALL3 as multicall} from "test/utils/Addresses.sol";
 import "test/utils/Addresses.sol";
 
@@ -48,8 +48,8 @@ contract SystemIntegrationFixture is Test, SigHelper {
     /// @notice reference to the TimeRestricted contract
     TimeRestricted public restricted;
 
-    /// @notice reference to the RecoveryFactory contract
-    RecoveryFactory public recoveryFactory;
+    /// @notice reference to the RecoverySpellFactory contract
+    RecoverySpellFactory public recoveryFactory;
 
     /// @notice empty for now, will change once tests progress
     address[] public contractAddresses;
@@ -149,7 +149,7 @@ contract SystemIntegrationFixture is Test, SigHelper {
         }
 
         restricted = new TimeRestricted();
-        recoveryFactory = new RecoveryFactory();
+        recoveryFactory = new RecoverySpellFactory();
 
         bytes memory initdata = abi.encodeWithSignature(
             "setup(address[],uint256,address,bytes,address,address,uint256,address)",
