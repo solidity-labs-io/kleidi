@@ -536,7 +536,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         vm.expectRevert("RecoverySpell: Duplicate signature");
         recovery.executeRecovery(address(1), v, r, s);
 
-        v[0]++;
+        v[0] += 2;
         vm.expectRevert("RecoverySpell: Invalid signature");
         recovery.executeRecovery(address(1), v, r, s);
     }
