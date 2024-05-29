@@ -279,6 +279,8 @@ contract TimeRestricted is BaseGuard {
         address
     ) external view {
         if (to == msg.sender) {
+            /// only allow self calls to effectively cancel a transaction by
+            /// using a nonce without any payload and value.
             require(
                 data.length == 0 && value == 0, "TimeRestricted: no self calls"
             );
