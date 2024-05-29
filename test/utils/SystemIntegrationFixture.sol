@@ -16,6 +16,7 @@ import {ModuleManager} from "@safe/base/ModuleManager.sol";
 import {GuardManager} from "@safe/base/GuardManager.sol";
 import {OwnerManager} from "@safe/base/OwnerManager.sol";
 import {IMulticall3} from "@interface/IMulticall3.sol";
+import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
 import {SafeL2} from "@safe/SafeL2.sol";
 import {Enum} from "@safe/common/Enum.sol";
 import {
@@ -33,11 +34,12 @@ import {BytesHelper} from "src/BytesHelper.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
-import {MULTICALL3 as multicall} from "test/utils/Addresses.sol";
-import "test/utils/Addresses.sol";
 
 contract SystemIntegrationFixture is Test, SigHelper {
     using BytesHelper for bytes;
+
+    /// @notice addresses object
+    Addresses public addresses;
 
     /// @notice reference to the Timelock contract
     Timelock public timelock;
@@ -88,8 +90,7 @@ contract SystemIntegrationFixture is Test, SigHelper {
     uint256 public constant pk3 = 3;
 
     /// @notice address of the factory contract
-    SafeProxyFactory public constant factory =
-        SafeProxyFactory(0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2);
+    SafeProxyFactory public factory;
 
     /// @notice liquidation loan to value ratio
     uint256 public constant lltv = 915000000000000000;
@@ -118,13 +119,37 @@ contract SystemIntegrationFixture is Test, SigHelper {
     bytes32 public recoverySalt =
         0x00000000000000001234567890abcdef00000000000000001234567890abcdef;
 
+    /// @notice address of the recovery spell contract
     address public recoverySpellAddress;
 
+    /// @notice address of the morpho blue contract
+    address public morphoBlue;
+
+    /// @notice logic contract for the safe
+    address public logic;
+
+    /// @notice ethena USD contract
+    address public ethenaUsd;
+
+    /// @notice DAI contract
+    address public dai;
+
+    /// @notice morpho blue irm contract
+    address public irm;
+
+    /// @notice morpho blue oracle contract
+    address public oracle;
+
+    /// @notice the multicall contract
+    address public multicall;
+
+    /// @notice time the test started
     uint256 public startTimestamp;
 
-    /// no owners need to sign to recover the safe
+    /// @notice no owners need to sign to recover the safe
     uint256 public constant RECOVERY_THRESHOLD_OWNERS = 0;
 
+    /// @notice the length of the market params in bytes
     uint256 constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
 
     /// @notice event emitted when the recovery is executed
@@ -133,6 +158,15 @@ contract SystemIntegrationFixture is Test, SigHelper {
 
     function setUp() public {
         startTimestamp = block.timestamp;
+        addresses = new Addresses("./Addresses.json");
+        factory = SafeProxyFactory(addresses.getAddress("SAFE_FACTORY"));
+        morphoBlue = addresses.getAddress("MORPHO_BLUE");
+        logic = addresses.getAddress("SAFE_LOGIC");
+        ethenaUsd = addresses.getAddress("ETHENA_USD");
+        dai = addresses.getAddress("DAI");
+        irm = addresses.getAddress("MORPHO_BLUE_IRM");
+        oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
+        multicall = addresses.getAddress("MULTICALL3");
 
         owners.push(vm.addr(pk1));
         owners.push(vm.addr(pk2));
