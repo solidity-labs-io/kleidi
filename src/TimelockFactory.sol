@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import {Timelock} from "src/Timelock.sol";
 import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 
-/// @notice simple factory contract that creates timelocks for
+/// @notice simple factory contract that creates timelocks
 contract TimelockFactory {
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
@@ -27,7 +27,7 @@ contract TimelockFactory {
     /// @param creationTime of the new timelock
     /// @param sender that called the contract to create the timelock
     event TimelockCreated(
-        address indexed timelock, uint256 indexed creationTime, address sender
+        address indexed timelock, uint256 creationTime, address sender
     );
 
     /// @notice Initializes the contract with the following parameters:
