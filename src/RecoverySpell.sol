@@ -63,7 +63,8 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     /// -------------------------------------------------------
 
     /// @notice the multicall3 contract address
-    address public constant MULTICALL3 = 0xcA11bde05977b3631167028862bE2a173976CA11;
+    address public constant MULTICALL3 =
+        0xcA11bde05977b3631167028862bE2a173976CA11;
 
     /// @notice the sentinel address that all linked lists start with
     address public constant SENTINEL = address(0x1);
