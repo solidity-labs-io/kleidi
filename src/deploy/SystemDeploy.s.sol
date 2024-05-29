@@ -4,9 +4,9 @@ import {MultisigProposal} from
     "@forge-proposal-simulator/src/proposals/MultisigProposal.sol";
 import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
 
-import {TimelockFactory} from "src/TimelockFactory.sol";
-import {TimeRestricted} from "src/TimeRestricted.sol";
 import {Timelock} from "src/Timelock.sol";
+import {TimeRestricted} from "src/TimeRestricted.sol";
+import {TimelockFactory} from "src/TimelockFactory.sol";
 
 /// @notice system deployment contract
 /// all contracts are permissionless and take no constructor params
