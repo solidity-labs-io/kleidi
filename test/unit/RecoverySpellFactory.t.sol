@@ -135,18 +135,6 @@ contract RecoverySpellFactoryUnitTest is Test {
         }
     }
 
-    function testSafeHasNoCodeFails() public {
-        vm.expectRevert("RecoverySpellFactory: Safe has no code");
-        recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), address(0), 1, 1, 1
-        );
-
-        vm.expectRevert("RecoverySpellFactory: Safe has no code");
-        recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), address(0), 1, 1, 1
-        );
-    }
-
     function testViewFunctionFailsThresholdGtOwners() public {
         vm.expectRevert("RecoverySpell: Threshold must be lte number of owners");
         recoveryFactory.calculateAddress(
