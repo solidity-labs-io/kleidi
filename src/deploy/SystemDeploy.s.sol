@@ -18,11 +18,11 @@ contract SystemDeploy is MultisigProposal {
         addresses = new Addresses("./Addresses.json");
     }
 
-    function name() public view override returns (string memory) {
+    function name() public pure override returns (string memory) {
         return "SYS_DEPLOY";
     }
 
-    function description() public view override returns (string memory) {
+    function description() public pure override returns (string memory) {
         return "Deploy TimelockFactory and TimeRestricted contracts";
     }
 
