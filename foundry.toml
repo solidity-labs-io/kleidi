@@ -6,6 +6,8 @@ libs = ["lib"]
 optimizer_runs = 1
 solc_version = "0.8.25"
 evm_version="Cancun"
+fs_permissions = [{ access = "read", path = "./"}]
+
 [fmt]
 line_length = 80
 
@@ -13,3 +15,5 @@ line_length = 80
 
 [rpc_endpoints]
 base = "https://mainnet.base.org"
+
+
