@@ -113,7 +113,7 @@ contract RecoverySpellFactory {
         uint256 threshold,
         uint256 recoveryThreshold,
         uint256 delay
-    ) private view {
+    ) private pure {
         require(
             threshold <= owners.length,
             "RecoverySpell: Threshold must be lte number of owners"
