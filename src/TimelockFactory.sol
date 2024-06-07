@@ -131,7 +131,7 @@ contract TimelockFactory {
         uint16[] memory endIndex,
         bytes[] memory data,
         bytes32 salt
-    ) external view returns (address) {
+    ) public view returns (address) {
         return calculateCreate2Address(
             address(this),
             type(Timelock).creationCode,
@@ -148,6 +148,26 @@ contract TimelockFactory {
                 data
             ),
             salt
+        );
+    }
+
+    function calculateAddress(address safe, DeploymentParams memory params)
+        external
+        view
+        returns (address)
+    {
+        return calculateAddress(
+            safe,
+            params.minDelay,
+            params.expirationPeriod,
+            params.pauser,
+            params.pauseDuration,
+            params.contractAddresses,
+            params.selector,
+            params.startIndex,
+            params.endIndex,
+            params.data,
+            params.salt
         );
     }
 }
