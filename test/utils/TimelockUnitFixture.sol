@@ -18,7 +18,12 @@ import {CallHelper} from "test/utils/CallHelper.t.sol";
 import {MockLending} from "test/mock/MockLending.sol";
 import {TimelockFactory} from "src/TimelockFactory.sol";
 import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
-import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
+import {
+    _DONE_TIMESTAMP,
+    MIN_DELAY,
+    MIN_DELAY as MINIMUM_DELAY,
+    MAX_DELAY
+} from "src/utils/Constants.sol";
 
 contract TimelockUnitFixture is CallHelper {
     /// @notice reference to the Timelock contract
@@ -50,9 +55,6 @@ contract TimelockUnitFixture is CallHelper {
 
     /// @notice duration of pause once glass is broken in seconds
     uint128 public constant PAUSE_DURATION = 10 days;
-
-    /// @notice minimum delay for a timelocked transaction in seconds
-    uint256 public constant MINIMUM_DELAY = 2 days;
 
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
