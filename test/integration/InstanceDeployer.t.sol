@@ -126,15 +126,14 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
                     "module incorrect"
                 );
             }
-
             assertEq(
                 Safe(payable(newSafe)).getOwners().length,
                 ownersLength,
                 "owner length incorrect"
             );
 
-            (address[] memory array,) = Safe(payable(newSafe))
-                .getModulesPaginated(address(1), recoverySpellLength * 2);
+            (address[] memory array,) =
+                Safe(payable(newSafe)).getModulesPaginated(address(1), 25);
 
             assertEq(
                 array.length, 1 + recoverySpellLength, "module length incorrect"
@@ -233,6 +232,8 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
     /// timelock deploy failed
 
     /// safe deploy failed
+
+    function testSafeExecTransactionFails() public {}
 
     /// safe exec transaction fails
 }
