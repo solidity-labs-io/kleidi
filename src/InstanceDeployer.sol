@@ -11,6 +11,7 @@ import {Safe} from "@safe/Safe.sol";
 
 import {Timelock} from "src/Timelock.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
+import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 
 /// @notice deploy a completely set up instance of a contract
@@ -257,20 +258,33 @@ contract InstanceDeployer {
 
                 /// We allocate memory for the return data by setting the free memory location to
                 /// current free memory location + data size + 32 bytes for data size value
-                mstore(0x40, add(ptr, 97))
 
-                /// Store the size of the signature:
+                ///         4 -> 82
+                mstore(0x40, add(ptr, 97))
+                ///         4 -> 179
+
+                /// Store the size of the signature in the first 32 bytes:
                 /// 65 (r + s + v)
                 mstore(ptr, 65)
 
-                /// Store the data
+                ///
+                ///                              Data Offsets
+                ///
+                ///                 -------------------------------------
+                ///  bytes length   |      32     |   32  |  32   |  1  |
+                ///                 -------------------------------------
+                ///      bytes      |  0-31       | 32-63 | 64-95 | 96  |
+                ///                 -------------------------------------
+                ///      data       | length = 65 |   r   |   s   |  v  |
+                ///                 -------------------------------------
+                ///
 
-                /// store r
+                /// store r at offset 32 to 64 in the allocated pointer
                 mstore(add(ptr, 0x20), r)
 
                 /// no need to store s
 
-                /// store v
+                /// store v at offset 96 to 97 in the allocated pointer
                 mstore8(add(ptr, 0x60), v)
 
                 /// Point the signature data to the correct memory location
@@ -296,6 +310,110 @@ contract InstanceDeployer {
 
         emit SystemInstanceCreated(
             address(safe), address(timelock), msg.sender, block.timestamp
+        );
+    }
+
+    /// @notice calculate address with safety checks, ensuring the address has
+    /// not already been created by the respective safe and timelock factories
+    /// @param instance configuration information
+    function calculateAddress(NewInstance memory instance)
+        external
+        view
+        returns (address timelock, address safe)
+    {
+        (timelock, safe) = calculateAddressUnsafe(instance);
+
+        require(safe.code.length == 0, "InstanceDeployer: safe already created");
+
+        /// timelock created in factory implies that it has bytecode
+        require(
+            !TimelockFactory(timelockFactory).factoryCreated(timelock),
+            "InstanceDeployer: timelock already created"
+        );
+    }
+
+    /// @notice calculate address without safety checks
+    /// WARNING: only use this if you know what you are doing and are an
+    /// advanced user.
+    /// @param instance configuration information
+    function calculateAddressUnsafe(NewInstance memory instance)
+        public
+        view
+        returns (address timelock, address safe)
+    {
+        /// important check:
+        ///   recovery spells should have no bytecode
+        for (uint256 i = 0; i < instance.recoverySpells.length; i++) {
+            require(
+                instance.recoverySpells[i].code.length == 0,
+                "InstanceDeployer: recovery spell has bytecode"
+            );
+        }
+
+        address[] memory factoryOwner = new address[](1);
+        factoryOwner[0] = address(this);
+
+        bytes memory safeInitdata = abi.encodeWithSignature(
+            "setup(address[],uint256,address,bytes,address,address,uint256,address)",
+            factoryOwner,
+            1,
+            /// no to address because there are no external actions on
+            /// initialization
+            address(0),
+            /// no data because there are no external actions on initialization
+            "",
+            /// no fallback handler allowed by TimeRestricted
+            address(0),
+            /// no payment token
+            address(0),
+            /// no payment amount
+            0,
+            /// no payment receiver because no payment amount
+            address(0)
+        );
+
+        {
+            uint256 creationSalt = uint256(
+                keccak256(
+                    abi.encode(
+                        instance.owners,
+                        instance.threshold,
+                        instance.recoverySpells,
+                        instance.timelockParams,
+                        instance.timeRanges,
+                        instance.allowedDays
+                    )
+                )
+            );
+
+            /// timelock salt is the result of the all params, so no one can
+            /// front-run creation of the timelock with the same address on other
+            /// chains
+            instance.timelockParams.salt = bytes32(creationSalt);
+
+            bytes32 salt = keccak256(
+                abi.encodePacked(keccak256(safeInitdata), creationSalt)
+            );
+
+            safe = calculateCreate2Address(
+                safeProxyFactory,
+                SafeProxyFactory(safeProxyFactory).proxyCreationCode(),
+                abi.encodePacked(uint256(uint160(safeProxyLogic))),
+                salt
+            );
+
+            require(
+                safe.code.length == 0, "InstanceDeployer: safe already created"
+            );
+        }
+
+        timelock = TimelockFactory(timelockFactory).calculateAddress(
+            safe, instance.timelockParams
+        );
+
+        require(
+            !TimelockFactory(timelockFactory).factoryCreated(timelock),
+            "InstanceDeployer: timelock already created"
         );
     }
 }
