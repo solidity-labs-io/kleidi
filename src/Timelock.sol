@@ -14,6 +14,7 @@ import {EnumerableSet} from
     "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Safe} from "@safe/Safe.sol";
 
+import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 import {CalldataList} from "src/CalldataList.sol";
 import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 
@@ -21,30 +22,34 @@ import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 /// - a malicious pauser can cancel all in flight proposals,
 /// for the pause duration, effectively locking funds for
 /// this period.
-/// - a recovery spell could bypass all time checked restrictions
-/// on proposing actions to the timelock.
+/// - a recovery spell or other gnosis safe module could bypass all time
+/// checked restrictions on proposing actions to the timelock. This is
+/// because module transactions are not checked against a guard. The
+/// current implemention of recovery spells bypass the waiting period to
+/// rotate signers.
 /// - incorrectly formed whitelisted calldata can allow safe
 /// owners the ability to steal funds. E.g. whitelist a calldata
-/// to approve a token transfer to an address the safe owner
-/// controls without checking the spender address.
+/// to approve a token transfer to an arbitrary address.
 /// - incorrect calldata can allow any safe owner to arbitrarily change
 /// date/time restrictions on the multisig guard.
 /// the owner must ensure no calldata is created that allows this.
 /// There are no checks on native asset balance enshrined into this contract
 /// because it is impossible to reason about the state of the native asset
-/// given this contract may withdraw from DeFi protocols, or unwrap WETH,
-/// thus increasing the native balance.
+/// given this contract may withdraw from DeFi protocols, or wrap or unwrap
+/// WETH, thus increasing or decreasing the native balance.
 
 /// => means implies
 /// @notice protocol invariants:
-/// - there should be no whitelisted calldata checks for the timelock itself
+/// - there should be no whitelisted calldata checks for the timelock itself.
 /// this ensures there is no way to instantly make modifications to the
 /// timelock.
 /// - all parameter changes must pass through the timelock proposing to itself
-/// - only safe can propose non-whitelisted calldatas
-/// - only safe owners can execute whitelisted calldatas
-/// - whitelisted calldata can be executed at any time, even outside of the
-/// time restricted window and while the contract is paused.
+/// - only safe can propose actions to the timelock.
+/// - only safe owners can execute whitelisted calldatas.
+/// - anyone can execute a proposal that has passed the timelock if it has not
+/// expired.
+/// - whitelisted calldata can be executed at any time the contract is not
+///  paused, even outside of the time restricted window.
 /// - pausing clears all queued timelock actions
 /// - the timelock can only be paused by the pause guardian
 /// - pausing the timelock revokes the pause guardian
@@ -53,15 +58,9 @@ import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 /// - contract is paused => getAllProposals length is 0
 /// - getAllProposal length eq 0 does not => contract is paused
 
-///  @dev Contract module which acts as a timelocked controller. When set as
-/// the owner of an `Ownable` smart contract, it enforces a timelock on all
-/// `onlyOwner` maintenance operations. This gives time for users of the
-/// controlled contract to exit before a potentially dangerous maintenance
-/// operation is applied.
-///
-/// By default, this contract is self administered, meaning administration
+/// This contract is self administered, meaning administration
 /// tasks have to go through the timelock process. The gnosis safe can
-/// propose timelocked operations.
+/// propose timelocked operations which then modify the timelock parameters.
 contract Timelock is
     ConfigurablePauseGuardian,
     IERC1155Receiver,
@@ -73,18 +72,9 @@ contract Timelock is
 
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
-    /// ---------------- CONSTANTS / IMMUTABLES -----------------
+    /// ----------------------- IMMUTABLE -----------------------
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
-
-    /// @notice timestamp indicating that an operation is done
-    uint256 internal constant _DONE_TIMESTAMP = uint256(1);
-
-    /// @notice minimum delay for timelocked operations
-    uint256 public constant MIN_DELAY = 2 days;
-
-    /// @notice maximum delay for timelocked operations
-    uint256 public constant MAX_DELAY = 30 days;
 
     /// @notice the safe address that governs this timelock
     address public immutable safe;
@@ -134,6 +124,12 @@ contract Timelock is
     ///    - propose
     ///    - wait too long
     ///    - proposal cannot be executed as it has expired
+    ///    - cleanup can remove the proposalId from the enumerable set
+    ///       - the timestamp will remain in the timestamps mapping forever
+
+    /// check if lte or lt
+    ///    if timestamps[proposalId] + expirationPeriod < block.timestamp
+    ///        => not executable => id in liveProposals
 
     /// 4. proposed and canceled
     ///    - pause
@@ -184,6 +180,10 @@ contract Timelock is
     /// @param id unique identifier for the canceled operation
     event Cancelled(bytes32 indexed id);
 
+    /// @notice Emitted when operation `id` is cleaned up.
+    /// @param id unique identifier for the cleaned operation
+    event Cleanup(bytes32 indexed id);
+
     /// @notice Emitted when the minimum delay for future operations is modified.
     /// @param oldDuration old minimum delay
     /// @param newDuration new minimum delay
@@ -232,10 +232,6 @@ contract Timelock is
         minDelay = _minDelay;
         emit MinDelayChange(0, minDelay);
 
-        require(
-            _expirationPeriod >= MIN_DELAY, "Timelock: expiry period too short"
-        );
-
         expirationPeriod = _expirationPeriod;
         emit ExpirationPeriodChange(0, _expirationPeriod);
 
@@ -283,12 +279,15 @@ contract Timelock is
     /// ---------------------------------------------------------------
 
     /// @notice returns all currently non cancelled and non-executed proposals
-    /// some proposals may not be able to be executed if they have passed the expiration period
+    /// some proposals may not be able to be executed if they have passed the
+    /// expiration period
     function getAllProposals() external view returns (bytes32[] memory) {
         return _liveProposals.values();
     }
 
     /// @dev See {IERC165-supportsInterface}.
+    /// @notice supports 1155 and 721 receiver
+    /// also supports ERC165 interface id
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -300,46 +299,39 @@ contract Timelock is
             || super.supportsInterface(interfaceId);
     }
 
-    /// @dev Returns whether an id correspond to a registered operation. This
-    /// includes both Pending, Ready and Done operations.
+    /// @dev Returns whether an id corresponds to a registered operation. This
+    /// includes Pending, Ready, Done and Expired operations.
+    /// Cancelled operations will return false.
     function isOperation(bytes32 id) public view returns (bool) {
-        return getTimestamp(id) > 0;
-    }
-
-    /// @dev Returns whether an operation is pending or not.
-    /// Note that a "pending" operation may also be "ready".
-    function isOperationPending(bytes32 id) external view returns (bool) {
-        return getTimestamp(id) > _DONE_TIMESTAMP;
+        return timestamps[id] > 0;
     }
 
     /// @dev Returns whether an operation is ready for execution.
     /// Note that a "ready" operation is also "pending".
     /// cannot be executed after the expiry period.
     function isOperationReady(bytes32 id) public view returns (bool) {
-        uint256 timestamp = getTimestamp(id);
+        /// cache timestamp, save up to 2 extra SLOADs
+        uint256 timestamp = timestamps[id];
         return timestamp > _DONE_TIMESTAMP && timestamp <= block.timestamp
             && timestamp + expirationPeriod > block.timestamp;
     }
 
     /// @dev Returns whether an operation is done or not.
     function isOperationDone(bytes32 id) public view returns (bool) {
-        return getTimestamp(id) == _DONE_TIMESTAMP;
+        return timestamps[id] == _DONE_TIMESTAMP;
     }
 
     /// @dev Returns whether an operation is expired
+    /// @notice operations expire on their expiry timestamp, not after
     function isOperationExpired(bytes32 id) public view returns (bool) {
-        /// if operation is done
-        uint256 timestamp = getTimestamp(id);
-        /// if timestamp is 0, the operation is not scheduled, therefore it is expired
-        return timestamp == 0
-            ? true
-            : block.timestamp > timestamp + expirationPeriod;
-    }
+        /// if operation is done, save an extra SLOAD
+        uint256 timestamp = timestamps[id];
 
-    /// @dev Returns the timestamp at which an operation becomes ready (0 for
-    /// unset operations, 1 for done operations).
-    function getTimestamp(bytes32 id) public view returns (uint256) {
-        return timestamps[id];
+        /// if timestamp is 0, the operation is not scheduled, revert
+        require(timestamp != 0, "Timelock: operation non-existent");
+        require(timestamp != 1, "Timelock: operation already executed");
+
+        return block.timestamp >= timestamp + expirationPeriod;
     }
 
     /// @dev Returns the identifier of an operation containing a single transaction.
@@ -379,6 +371,9 @@ contract Timelock is
     /// @dev Schedule an operation containing a single transaction.
     /// Emits {CallSalt} if salt is nonzero, and {CallScheduled}.
     /// the caller must be the safe.
+    /// Callable only by the safe and when the contract is not paused
+    /// @param target to call
+    /// @param value amount of native token to spend
     function schedule(
         address target,
         uint256 value,
@@ -388,17 +383,21 @@ contract Timelock is
     ) external onlySafe whenNotPaused {
         bytes32 id = hashOperation(target, value, data, salt);
 
+        /// this is technically a duplicate check as _schedule makes the same
+        /// check again
         require(_liveProposals.add(id), "Timelock: duplicate id");
 
+        /// SSTORE timestamps[id] = block.timestamp + delay
+        /// check delay >= minDelay
         _schedule(id, delay);
 
         emit CallScheduled(id, 0, target, value, data, salt, delay);
     }
 
     /// @dev Schedule an operation containing a batch of transactions.
-    /// Emits {CallSalt} if salt is nonzero, and one {CallScheduled} event per transaction in the batch.
-    /// Requirements:
-    /// - the caller must be the safe
+    /// Emits {CallSalt} if salt is nonzero, and one {CallScheduled} event per
+    /// transaction in the batch.
+    /// Callable only by the safe and when the contract is not paused
     /// @param targets the addresses of the contracts to call
     /// @param values the values to send in the calls
     /// @param payloads the calldata to send in the calls
@@ -411,29 +410,33 @@ contract Timelock is
         bytes32 salt,
         uint256 delay
     ) external onlySafe whenNotPaused {
-        require(targets.length == values.length, "Timelock: length mismatch");
-        require(targets.length == payloads.length, "Timelock: length mismatch");
+        require(
+            targets.length == values.length && targets.length == payloads.length,
+            "Timelock: length mismatch"
+        );
 
         bytes32 id = hashOperationBatch(targets, values, payloads, salt);
 
+        /// this is technically a duplicate check as _schedule makes the same
+        /// check again
         require(_liveProposals.add(id), "Timelock: duplicate id");
 
+        /// SSTORE timestamps[id] = block.timestamp + delay
+        /// check delay >= minDelay
         _schedule(id, delay);
 
-        unchecked {
-            for (uint256 i = 0; i < targets.length; ++i) {
-                emit CallScheduled(
-                    id, i, targets[i], values[i], payloads[i], salt, delay
-                );
-            }
+        for (uint256 i = 0; i < targets.length; i++) {
+            emit CallScheduled(
+                id, i, targets[i], values[i], payloads[i], salt, delay
+            );
         }
     }
 
     /// @dev Execute a ready operation containing a single transaction.
-    /// Requirements:
-    ///  - the operation has not expired.
-    /// This function can reenter, but it doesn't pose a risk because _afterCall checks that the proposal is pending,
-    /// thus any modifications to the operation during reentrancy should be caught.
+    /// cannot execute the operation if it has expired.
+    /// This function can reenter, but it doesn't pose a risk because
+    /// _afterCall checks that the proposal is pending, thus any modifications
+    /// to the operation during reentrancy should be caught.
     /// slither-disable-next-line reentrancy-eth
     /// @param target the address of the contract to call
     /// @param value the value in native tokens to send in the call
@@ -447,10 +450,17 @@ contract Timelock is
     ) external payable whenNotPaused {
         bytes32 id = hashOperation(target, value, payload, salt);
 
+        /// first reentrancy check, impossible to reenter and execute the same
+        /// proposal twice
         require(_liveProposals.remove(id), "Timelock: proposal does not exist");
-        _beforeCall(id);
+        require(isOperationReady(id), "Timelock: operation is not ready");
+
         _execute(target, value, payload);
         emit CallExecuted(id, 0, target, value, payload);
+
+        /// second reentrancy check, second check that operation is ready,
+        /// operation will be not ready if already executed as timestamp will
+        /// be set to 1
         _afterCall(id);
     }
 
@@ -470,28 +480,37 @@ contract Timelock is
         bytes[] calldata payloads,
         bytes32 salt
     ) external payable whenNotPaused {
-        require(targets.length == values.length, "Timelock: length mismatch");
-        require(targets.length == payloads.length, "Timelock: length mismatch");
+        require(
+            targets.length == values.length && targets.length == payloads.length,
+            "Timelock: length mismatch"
+        );
 
         bytes32 id = hashOperationBatch(targets, values, payloads, salt);
 
+        /// first reentrancy check, impossible to reenter and execute the same
+        /// proposal twice
         require(_liveProposals.remove(id), "Timelock: proposal does not exist");
+        require(isOperationReady(id), "Timelock: operation is not ready");
 
-        _beforeCall(id);
-        for (uint256 i = 0; i < targets.length; ++i) {
-            address target = targets[i];
-            uint256 value = values[i];
+        for (uint256 i = 0; i < targets.length; i++) {
             bytes calldata payload = payloads[i];
-            _execute(target, value, payload);
-            emit CallExecuted(id, i, target, value, payload);
+
+            _execute(targets[i], values[i], payload);
+            emit CallExecuted(id, i, targets[i], values[i], payload);
         }
+
+        /// second reentrancy check, second check that operation is ready,
+        /// operation will be not ready if already executed as timestamp will
+        /// be set to 1
         _afterCall(id);
     }
 
     /// @notice cancel a timelocked operation
     /// cannot cancel an already executed operation.
+    /// not callable while paused, because while paused there should not be any
+    /// proposals in the _liveProposal set.
     /// @param id the identifier of the operation to cancel
-    function cancel(bytes32 id) external onlySafe {
+    function cancel(bytes32 id) external onlySafe whenNotPaused {
         require(
             isOperation(id) && _liveProposals.remove(id),
             "Timelock: operation does not exist"
@@ -499,6 +518,17 @@ contract Timelock is
 
         delete timestamps[id];
         emit Cancelled(id);
+    }
+
+    /// @notice clean up an expired timelock action
+    /// not callable while paused, because while paused there should not be any
+    /// proposals in the _liveProposal set.
+    /// @param id the identifier of the expired operation
+    function cleanup(bytes32 id) external whenNotPaused {
+        require(isOperationExpired(id), "Timelock: operation not expired");
+        assert(_liveProposals.remove(id));
+
+        emit Cleanup(id);
     }
 
     /// ----------------------------------------------------------
@@ -513,8 +543,9 @@ contract Timelock is
         /// check that msg.sender is the pause guardian, pause the contract
         super.pause();
 
-        while (_liveProposals.values().length > 0) {
-            bytes32 id = _liveProposals.at(0);
+        bytes32[] memory proposals = _liveProposals.values();
+        for (uint256 i = 0; i < proposals.length; i++) {
+            bytes32 id = proposals[i];
 
             delete timestamps[id];
             _liveProposals.remove(id);
@@ -531,6 +562,8 @@ contract Timelock is
 
     /// @notice any safe owner can call this function and execute
     /// a call to whitelisted contracts with whitelisted calldatas
+    /// no reentrancy checks needed here as the safe owners can execute this
+    /// whitelisted calldata as many times as they want
     /// @param target the addresses of the contracts to call
     /// @param value the values to send in the calls
     /// @param payload the calldata to send in the calls
@@ -538,7 +571,7 @@ contract Timelock is
         address target,
         uint256 value,
         bytes calldata payload
-    ) external payable onlySafeOwner {
+    ) external payable onlySafeOwner whenNotPaused {
         /// first ensure calldata to target is whitelisted,
         /// and that parameters are not malicious
         checkCalldata(target, payload);
@@ -546,23 +579,23 @@ contract Timelock is
 
         emit CallExecuted(bytes32(0), 0, target, value, payload);
     }
+
     /// @notice any safe owner can call this function and execute calls
     /// to whitelisted contracts with whitelisted calldatas
     /// @param targets the addresses of the contracts to call
     /// @param values the values to send in the calls
     /// @param payloads the calldata to send in the calls
-
     function executeWhitelistedBatch(
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads
-    ) external payable onlySafeOwner {
+    ) external payable onlySafeOwner whenNotPaused {
         require(
             targets.length == values.length && targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
-        for (uint256 i = 0; i < targets.length; ++i) {
+        for (uint256 i = 0; i < targets.length; i++) {
             address target = targets[i];
             uint256 value = values[i];
             bytes calldata payload = payloads[i];
@@ -651,7 +684,7 @@ contract Timelock is
             contractAddress.length == selector.length,
             "Timelock: arity mismatch"
         );
-        for (uint256 i = 0; i < contractAddress.length; ++i) {
+        for (uint256 i = 0; i < contractAddress.length; i++) {
             _removeAllCalldataChecks(contractAddress[i], selector[i]);
         }
     }
@@ -709,17 +742,12 @@ contract Timelock is
         timestamps[id] = block.timestamp + delay;
     }
 
-    /// @dev Checks before execution of an operation's calls.
-    /// @param id the identifier of the operation
-    function _beforeCall(bytes32 id) private view {
-        require(isOperationReady(id), "Timelock: operation is not ready");
-    }
-
     /// @dev Checks after execution of an operation's calls.
     /// @param id the identifier of the operation
     function _afterCall(bytes32 id) private {
-        /// unreachable state because removing the proposal id from the _liveProposals
-        /// set prevents this function from being called on the same id twice
+        /// unreachable state because removing the proposal id from the
+        /// _liveProposals set prevents this function from being called on the
+        /// same id twice
         require(isOperationReady(id), "Timelock: operation is not ready");
         timestamps[id] = _DONE_TIMESTAMP;
     }

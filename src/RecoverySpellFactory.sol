@@ -1,6 +1,7 @@
 pragma solidity 0.8.25;
 
 import {RecoverySpell} from "@src/RecoverySpell.sol";
+import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 
 /// @notice factory contract to create new RecoverySpell contracts
 /// Contract addresses can be determined in advance with different
@@ -21,7 +22,7 @@ import {RecoverySpell} from "@src/RecoverySpell.sol";
 ///   the safe.
 ///   - delay: the time required before the recovery transaction can be executed
 ///   on the new safe. can be 0 to execute immediately
-contract RecoveryFactory {
+contract RecoverySpellFactory {
     /// @notice emitted when a new recovery spell is created
     /// @param recoverySpell the address of the new recovery spell
     /// @param safe the address of the safe that is being recovered
@@ -45,7 +46,7 @@ contract RecoveryFactory {
         uint256 recoveryThreshold,
         uint256 delay
     ) external returns (RecoverySpell recovery) {
-        _paramChecks(safe, owners, threshold, recoveryThreshold, delay);
+        _paramChecks(owners, threshold, recoveryThreshold, delay);
 
         /// duplicate owner check
         for (uint256 i = 0; i < owners.length; i++) {
@@ -83,7 +84,7 @@ contract RecoveryFactory {
         uint256 recoveryThreshold,
         uint256 delay
     ) external view returns (address predictedAddress) {
-        _paramChecks(safe, owners, threshold, recoveryThreshold, delay);
+        _paramChecks(owners, threshold, recoveryThreshold, delay);
 
         /// duplicate owner check
         for (uint256 i = 0; i < owners.length; i++) {
@@ -94,47 +95,25 @@ contract RecoveryFactory {
             }
         }
 
-        predictedAddress = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            address(this),
-                            salt,
-                            keccak256(
-                                abi.encodePacked(
-                                    type(RecoverySpell).creationCode,
-                                    abi.encode(
-                                        owners,
-                                        safe,
-                                        threshold,
-                                        recoveryThreshold,
-                                        delay
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
+        predictedAddress = calculateCreate2Address(
+            address(this),
+            type(RecoverySpell).creationCode,
+            abi.encode(owners, safe, threshold, recoveryThreshold, delay),
+            salt
         );
     }
 
     /// @notice check the parameters of the RecoverySpell contract
-    /// @param safe to recover with the spell
     /// @param owners the owners of the contract
     /// @param threshold of owners required to execute transactions
     /// @param recoveryThreshold of owners required to execute recovery transactions
     /// @param delay time required before the recovery transaction can be executed
     function _paramChecks(
-        address safe,
         address[] memory owners,
         uint256 threshold,
         uint256 recoveryThreshold,
         uint256 delay
-    ) private view {
-        require(safe.code.length != 0, "RecoveryFactory: Safe has no code");
+    ) private pure {
         require(
             threshold <= owners.length,
             "RecoverySpell: Threshold must be lte number of owners"

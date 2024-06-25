@@ -16,8 +16,11 @@ import {ModuleManager} from "@safe/base/ModuleManager.sol";
 import {GuardManager} from "@safe/base/GuardManager.sol";
 import {OwnerManager} from "@safe/base/OwnerManager.sol";
 import {IMulticall3} from "@interface/IMulticall3.sol";
+import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
+import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
 import {SafeL2} from "@safe/SafeL2.sol";
 import {Enum} from "@safe/common/Enum.sol";
+import {Safe} from "@safe/Safe.sol";
 import {
     IMorpho,
     Position,
@@ -27,16 +30,18 @@ import {
 
 import {Test, stdError} from "forge-std/Test.sol";
 
+import "src/utils/Constants.sol";
 import {Timelock} from "src/Timelock.sol";
 import {SigHelper} from "test/utils/SigHelper.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
+import {SystemDeploy} from "src/deploy/SystemDeploy.s.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
-import {RecoveryFactory} from "src/RecoveryFactory.sol";
-import {MULTICALL3 as multicall} from "test/utils/Addresses.sol";
-import "test/utils/Addresses.sol";
+import {TimelockFactory} from "src/TimelockFactory.sol";
+import {InstanceDeployer} from "src/InstanceDeployer.sol";
+import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 
-contract SystemIntegrationFixture is Test, SigHelper {
+contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     using BytesHelper for bytes;
 
     /// @notice reference to the Timelock contract
@@ -48,8 +53,14 @@ contract SystemIntegrationFixture is Test, SigHelper {
     /// @notice reference to the TimeRestricted contract
     TimeRestricted public restricted;
 
-    /// @notice reference to the RecoveryFactory contract
-    RecoveryFactory public recoveryFactory;
+    /// @notice reference to the instance deployer
+    InstanceDeployer public deployer;
+
+    /// @notice reference to the RecoverySpellFactory contract
+    RecoverySpellFactory public recoveryFactory;
+
+    /// @notice reference to the TimelockFactory contract
+    TimelockFactory public timelockFactory;
 
     /// @notice empty for now, will change once tests progress
     address[] public contractAddresses;
@@ -88,8 +99,7 @@ contract SystemIntegrationFixture is Test, SigHelper {
     uint256 public constant pk3 = 3;
 
     /// @notice address of the factory contract
-    SafeProxyFactory public constant factory =
-        SafeProxyFactory(0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2);
+    SafeProxyFactory public factory;
 
     /// @notice liquidation loan to value ratio
     uint256 public constant lltv = 915000000000000000;
@@ -118,13 +128,37 @@ contract SystemIntegrationFixture is Test, SigHelper {
     bytes32 public recoverySalt =
         0x00000000000000001234567890abcdef00000000000000001234567890abcdef;
 
+    /// @notice address of the recovery spell contract
     address public recoverySpellAddress;
 
+    /// @notice address of the morpho blue contract
+    address public morphoBlue;
+
+    /// @notice logic contract for the safe
+    address public logic;
+
+    /// @notice ethena USD contract
+    address public ethenaUsd;
+
+    /// @notice DAI contract
+    address public dai;
+
+    /// @notice morpho blue irm contract
+    address public irm;
+
+    /// @notice morpho blue oracle contract
+    address public oracle;
+
+    /// @notice the multicall contract
+    address public multicall;
+
+    /// @notice time the test started
     uint256 public startTimestamp;
 
-    /// no owners need to sign to recover the safe
+    /// @notice no owners need to sign to recover the safe
     uint256 public constant RECOVERY_THRESHOLD_OWNERS = 0;
 
+    /// @notice the length of the market params in bytes
     uint256 constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
 
     /// @notice event emitted when the recovery is executed
@@ -133,6 +167,20 @@ contract SystemIntegrationFixture is Test, SigHelper {
 
     function setUp() public {
         startTimestamp = block.timestamp;
+
+        /// set addresses object in msig proposal
+        addresses = new Addresses("./Addresses.json");
+
+        deploy();
+
+        factory = SafeProxyFactory(addresses.getAddress("SAFE_FACTORY"));
+        morphoBlue = addresses.getAddress("MORPHO_BLUE");
+        logic = addresses.getAddress("SAFE_LOGIC");
+        ethenaUsd = addresses.getAddress("ETHENA_USD");
+        dai = addresses.getAddress("DAI");
+        irm = addresses.getAddress("MORPHO_BLUE_IRM");
+        oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
+        multicall = addresses.getAddress("MULTICALL3");
 
         owners.push(vm.addr(pk1));
         owners.push(vm.addr(pk2));
@@ -148,8 +196,12 @@ contract SystemIntegrationFixture is Test, SigHelper {
             recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
         }
 
-        restricted = new TimeRestricted();
-        recoveryFactory = new RecoveryFactory();
+        restricted = TimeRestricted(addresses.getAddress("TIME_RESTRICTED"));
+        recoveryFactory =
+            RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
+        deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
+        timelockFactory =
+            TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
 
         bytes memory initdata = abi.encodeWithSignature(
             "setup(address[],uint256,address,bytes,address,address,uint256,address)",

@@ -196,11 +196,6 @@ contract CallHelper is Test {
 
         assertEq(
             Timelock(payable(timelock)).timestamps(id),
-            Timelock(payable(timelock)).getTimestamp(id),
-            "timestamps should be equal"
-        );
-        assertEq(
-            Timelock(payable(timelock)).timestamps(id),
             block.timestamp + delay,
             "timestamps should equal block timestamp"
         );
