@@ -62,6 +62,17 @@ contract InstanceDeployer {
         uint256 creationTime
     );
 
+    /// @param sender address that attempted to create the safe
+    /// @param timestamp time the safe creation failed
+    /// @param safeInitdata initialization data for the safe
+    /// @param creationSalt salt used to create the safe
+    event SafeCreationFailed(
+        address indexed sender,
+        uint256 indexed timestamp,
+        bytes safeInitdata,
+        uint256 creationSalt
+    );
+
     constructor(
         address _safeProxyFactory,
         address _safeProxyLogic,
@@ -154,10 +165,21 @@ contract InstanceDeployer {
         /// chains
         instance.timelockParams.salt = bytes32(creationSalt);
 
-        safe = SafeProxyFactory(safeProxyFactory).createProxyWithNonce(
+        /// safe guard against front-running safe creation with the same
+        /// address, init data and creation salt on other chains
+        try SafeProxyFactory(safeProxyFactory).createProxyWithNonce(
             safeProxyLogic, safeInitdata, creationSalt
-        );
+        ) returns (SafeProxy safeProxy) {
+            safe = safeProxy;
+        } catch {
+            emit SafeCreationFailed(
+                msg.sender, block.timestamp, safeInitdata, creationSalt
+            );
+        }
 
+        /// if front-running occurred, there should be no way for the safe to
+        /// be created without the exact same address, which means init data
+        /// set the owner of the safe to be this factory address.
         require(
             Safe(payable(safe)).isOwner(address(this)) == true,
             "owner not set correctly"
@@ -209,12 +231,26 @@ contract InstanceDeployer {
             GuardManager.setGuard.selector, timeRestricted
         );
 
+        /// add the timelock as a module to the safe
+        /// this enables the timelock to execute calls + delegate calls through
+        /// the safe
         calls3[index++].callData = abi.encodeWithSelector(
             ModuleManager.enableModule.selector, address(timelock)
         );
 
-        /// enable all recovery spells
+        /// enable all recovery spells in the safe by adding them as modules
         for (uint256 i = 0; i < instance.recoverySpells.length; i++) {
+            /// all recovery spells should be private at the time of safe
+            /// creation, however we cannot enforce this except by excluding
+            /// recovery spells that are not private.
+
+            /// We cannot have a check here that recovery spells are private
+            /// because if we did, and a recovery spell got activated, and it
+            /// was activated on another chain where the system instance was
+            /// deployed, and then the system instance was not deployed on this
+            /// chain, then a malicious user could deploy the recovery spell
+            /// before the system instance to block the instance from ever
+            /// being deployed to this chain.
             calls3[index++].callData = abi.encodeWithSelector(
                 ModuleManager.enableModule.selector, instance.recoverySpells[i]
             );
@@ -222,12 +258,18 @@ contract InstanceDeployer {
 
         calls3[index++].callData = abi.encodeWithSelector(
             OwnerManager.swapOwner.selector,
+            /// previous owner
             address(1),
+            /// old owner (this address)
             address(this),
+            /// new owner, the first owner the caller wants to add
             instance.owners[0]
         );
 
-        /// only cover indexes 1 through newOwners.length - 1
+        /// - add owners with threshold of 1
+        /// - only cover indexes 1 through newOwners.length - 1
+        /// - leave the last index for the final owner which will adjust the
+        /// threshold
         for (uint256 i = 1; i < instance.owners.length - 1; i++) {
             calls3[index++].callData = abi.encodeWithSelector(
                 OwnerManager.addOwnerWithThreshold.selector,
@@ -236,6 +278,8 @@ contract InstanceDeployer {
             );
         }
 
+        /// if there are more than one owner, add the final owner with the
+        /// updated threshold
         if (instance.owners.length > 1) {
             /// add final owner with the updated threshold
             calls3[index++].callData = abi.encodeWithSelector(
@@ -245,9 +289,13 @@ contract InstanceDeployer {
             );
         }
 
+        /// ensure that the number of calls is equal to the index
+        /// this is a safety check and should never be false
         assert(calls3.length == index);
 
         bytes memory signature;
+        /// craft the signature singing off on all of the multicall
+        /// operations
         {
             bytes32 r = bytes32(uint256(uint160(address(this))));
             uint8 v = 1;
@@ -270,13 +318,13 @@ contract InstanceDeployer {
                 ///
                 ///                              Data Offsets
                 ///
-                ///                 -------------------------------------
-                ///  bytes length   |      32     |   32  |  32   |  1  |
-                ///                 -------------------------------------
-                ///      bytes      |  0-31       | 32-63 | 64-95 | 96  |
-                ///                 -------------------------------------
-                ///      data       | length = 65 |   r   |   s   |  v  |
-                ///                 -------------------------------------
+                ///                 --------------------------------------
+                ///  bytes length   |      32     |   32  |  32   |   1  |
+                ///                 --------------------------------------
+                ///      bytes      |     0-31    | 32-63 | 64-95 |  96  |
+                ///                 --------------------------------------
+                ///      data       | length = 65 |   r   |   s   |   v  |
+                ///                 --------------------------------------
                 ///
 
                 /// store r at offset 32 to 64 in the allocated pointer
