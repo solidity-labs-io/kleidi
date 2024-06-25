@@ -262,6 +262,7 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
                 && block.timestamp >= recoveryInitiated + delay + 1,
             "RecoverySpell: Recovery not ready"
         );
+
         _executeRecovery(previousModule);
     }
 

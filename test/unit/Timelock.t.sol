@@ -56,20 +56,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             endIndex,
             data
         );
-
-        vm.expectRevert("Timelock: expiry period too short");
-        new Timelock(
-            address(0),
-            MINIMUM_DELAY,
-            MINIMUM_DELAY - 1,
-            guardian,
-            PAUSE_DURATION,
-            contractAddresses,
-            selector,
-            startIndex,
-            endIndex,
-            data
-        );
     }
 
     /// todo test that after a proposal is scheduled, it cannot be executed if it expires
@@ -93,9 +79,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
-        assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
-        );
+        assertGt(timelock.timestamps(id), 1, "operation should be pending");
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
             timelock.isOperationReady(id), "operation should not be ready"
@@ -146,9 +130,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id =
             timelock.hashOperationBatch(targets, values, datas, bytes32(0));
 
-        assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
-        );
+        assertGt(timelock.timestamps(id), 1, "operation should be pending");
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
             timelock.isOperationReady(id), "operation should not be ready"
@@ -205,9 +187,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
 
-        assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
-        );
+        assertGt(timelock.timestamps(id), 1, "operation should be pending");
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertTrue(
             timelock.isOperationReady(id), "operation should not be ready"
@@ -254,9 +234,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertTrue(timelock.pauseUsed(), "pause should be used");
         assertTrue(timelock.paused(), "timelock should be paused");
 
-        assertFalse(
-            timelock.isOperationPending(id), "operation should not be pending"
-        );
+        assertEq(timelock.timestamps(id), 0, "operation should be pending");
         assertFalse(timelock.isOperation(id), "operation should not be present");
         assertFalse(
             timelock.isOperationReady(id), "operation should not be ready"
@@ -589,9 +567,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "expirationPeriod should be updated"
         );
 
-        assertFalse(
-            timelock.isOperationPending(id), "operation should not be pending"
-        );
+        assertEq(timelock.timestamps(id), 1, "operation should be pending");
         assertTrue(timelock.isOperationDone(id), "operation should be done");
         assertTrue(timelock.isOperation(id), "operation should exist");
 
@@ -659,8 +635,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id =
             timelock.hashOperationBatch(targets, values, datas, bytes32(0));
 
-        assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+        assertEq(
+            timelock.timestamps(id),
+            block.timestamp + MINIMUM_DELAY,
+            "operation should be scheduled"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
@@ -840,8 +818,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id =
             timelock.hashOperationBatch(targets, values, datas, bytes32(0));
 
-        assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+        assertEq(
+            timelock.timestamps(id),
+            block.timestamp + MINIMUM_DELAY,
+            "operation should be scheduled"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
@@ -936,9 +916,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertFalse(
             timelock.isOperation(id), "operation should no longer be present"
         );
-        assertTrue(
-            timelock.isOperationExpired(id), "operation should not be expired"
-        );
+
+        vm.expectRevert("Timelock: operation non-existent");
+        timelock.isOperationExpired(id);
+
         assertEq(
             timelock.getAllProposals().length,
             0,
@@ -954,6 +935,77 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.prank(address(safe));
         vm.expectRevert("Timelock: operation does not exist");
         timelock.cancel(id);
+    }
+
+    function testOperationExpiresNonExecutable() public {
+        bytes32 id = testScheduleProposalSafeSucceeds();
+        uint256 timestamp = block.timestamp + MIN_DELAY;
+
+        assertFalse(
+            timelock.isOperationExpired(id), "operation should not be expired"
+        );
+
+        vm.warp(block.timestamp + MINIMUM_DELAY);
+
+        assertFalse(
+            timelock.isOperationExpired(id), "operation should not be expired"
+        );
+
+        vm.warp(block.timestamp + EXPIRATION_PERIOD - 1);
+
+        assertFalse(
+            timelock.isOperationExpired(id), "operation should not be expired"
+        );
+
+        vm.warp(block.timestamp + 1);
+
+        assertTrue(
+            timelock.isOperationExpired(id), "operation should not be expired"
+        );
+
+        vm.expectRevert("Timelock: operation is not ready");
+        timelock.execute(
+            address(timelock),
+            0,
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            bytes32(0)
+        );
+
+        assertEq(
+            timelock.getAllProposals().length,
+            1,
+            "only a single proposal should be present"
+        );
+        assertEq(
+            timelock.timestamps(id),
+            timestamp,
+            "timestamps pre-cleanup should equal block timestamp"
+        );
+
+        timelock.cleanup(id);
+
+        assertEq(
+            timelock.getAllProposals().length,
+            0,
+            "no proposals should be present post cleanup"
+        );
+
+        assertEq(
+            timelock.timestamps(id),
+            timestamp,
+            "timestamps post cleanup should equal block timestamp"
+        );
+    }
+
+    function testCannotCleanupNonExpiredProposal() public {
+        bytes32 id = testScheduleProposalSafeSucceeds();
+
+        assertFalse(
+            timelock.isOperationExpired(id), "operation should not be expired"
+        );
+
+        vm.expectRevert("Timelock: operation not expired");
+        timelock.cleanup(id);
     }
 
     function testExecuteWhitelistedBatchArityMismatchFails() public {
@@ -1117,6 +1169,27 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
     }
 
+    function testExecuteBatchAfterTimelockExpiryFails() public {
+        (
+            ,
+            address[] memory targets,
+            uint256[] memory values,
+            bytes[] memory datas
+        ) = testScheduleBatchProposalSafeSucceeds();
+
+        vm.expectRevert("Timelock: operation is not ready");
+        timelock.executeBatch(targets, values, datas, bytes32(0));
+
+        vm.warp(block.timestamp + MINIMUM_DELAY - 1);
+
+        vm.expectRevert("Timelock: operation is not ready");
+        timelock.executeBatch(targets, values, datas, bytes32(0));
+
+        vm.warp(block.timestamp + 1 + EXPIRATION_PERIOD);
+        vm.expectRevert("Timelock: operation is not ready");
+        timelock.executeBatch(targets, values, datas, bytes32(0));
+    }
+
     /// test a timelock execution call that fails due to reentrancy check in _afterCall
 
     function testReentrantExecuteFails() public {
@@ -1189,8 +1262,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
             bytes32(0)
         );
 
-        assertTrue(
-            timelock.isOperationPending(id), "operation should be pending"
+        assertEq(
+            timelock.timestamps(id),
+            block.timestamp + MINIMUM_DELAY,
+            "operation should be scheduled"
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(

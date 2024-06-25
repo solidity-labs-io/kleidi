@@ -17,8 +17,10 @@ import {GuardManager} from "@safe/base/GuardManager.sol";
 import {OwnerManager} from "@safe/base/OwnerManager.sol";
 import {IMulticall3} from "@interface/IMulticall3.sol";
 import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
+import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
 import {SafeL2} from "@safe/SafeL2.sol";
 import {Enum} from "@safe/common/Enum.sol";
+import {Safe} from "@safe/Safe.sol";
 import {
     IMorpho,
     Position,
@@ -28,18 +30,19 @@ import {
 
 import {Test, stdError} from "forge-std/Test.sol";
 
+import "src/utils/Constants.sol";
 import {Timelock} from "src/Timelock.sol";
 import {SigHelper} from "test/utils/SigHelper.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
+import {SystemDeploy} from "src/deploy/SystemDeploy.s.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
 import {TimeRestricted} from "src/TimeRestricted.sol";
+import {TimelockFactory} from "src/TimelockFactory.sol";
+import {InstanceDeployer} from "src/InstanceDeployer.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 
-contract SystemIntegrationFixture is Test, SigHelper {
+contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     using BytesHelper for bytes;
-
-    /// @notice addresses object
-    Addresses public addresses;
 
     /// @notice reference to the Timelock contract
     Timelock public timelock;
@@ -50,8 +53,14 @@ contract SystemIntegrationFixture is Test, SigHelper {
     /// @notice reference to the TimeRestricted contract
     TimeRestricted public restricted;
 
+    /// @notice reference to the instance deployer
+    InstanceDeployer public deployer;
+
     /// @notice reference to the RecoverySpellFactory contract
     RecoverySpellFactory public recoveryFactory;
+
+    /// @notice reference to the TimelockFactory contract
+    TimelockFactory public timelockFactory;
 
     /// @notice empty for now, will change once tests progress
     address[] public contractAddresses;
@@ -158,7 +167,12 @@ contract SystemIntegrationFixture is Test, SigHelper {
 
     function setUp() public {
         startTimestamp = block.timestamp;
+
+        /// set addresses object in msig proposal
         addresses = new Addresses("./Addresses.json");
+
+        deploy();
+
         factory = SafeProxyFactory(addresses.getAddress("SAFE_FACTORY"));
         morphoBlue = addresses.getAddress("MORPHO_BLUE");
         logic = addresses.getAddress("SAFE_LOGIC");
@@ -182,8 +196,12 @@ contract SystemIntegrationFixture is Test, SigHelper {
             recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
         }
 
-        restricted = new TimeRestricted();
-        recoveryFactory = new RecoverySpellFactory();
+        restricted = TimeRestricted(addresses.getAddress("TIME_RESTRICTED"));
+        recoveryFactory =
+            RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
+        deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
+        timelockFactory =
+            TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
 
         bytes memory initdata = abi.encodeWithSignature(
             "setup(address[],uint256,address,bytes,address,address,uint256,address)",

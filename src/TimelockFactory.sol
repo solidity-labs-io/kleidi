@@ -5,6 +5,19 @@ pragma solidity ^0.8.0;
 import {Timelock} from "src/Timelock.sol";
 import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 
+struct DeploymentParams {
+    uint256 minDelay;
+    uint256 expirationPeriod;
+    address pauser;
+    uint128 pauseDuration;
+    address[] contractAddresses;
+    bytes4[] selector;
+    uint16[] startIndex;
+    uint16[] endIndex;
+    bytes[] data;
+    bytes32 salt;
+}
+
 /// @notice simple factory contract that creates timelocks
 contract TimelockFactory {
     /// ---------------------------------------------------------
@@ -54,7 +67,7 @@ contract TimelockFactory {
         uint16[] memory endIndex,
         bytes[] memory data,
         bytes32 salt
-    ) external returns (address timelock) {
+    ) public returns (address timelock) {
         timelock = address(
             new Timelock{salt: salt}(
                 _safe,
@@ -73,6 +86,25 @@ contract TimelockFactory {
         factoryCreated[timelock] = true;
 
         emit TimelockCreated(timelock, block.timestamp, msg.sender);
+    }
+
+    function createTimelock(address safe, DeploymentParams memory params)
+        external
+        returns (address timelock)
+    {
+        return createTimelock(
+            safe,
+            params.minDelay,
+            params.expirationPeriod,
+            params.pauser,
+            params.pauseDuration,
+            params.contractAddresses,
+            params.selector,
+            params.startIndex,
+            params.endIndex,
+            params.data,
+            params.salt
+        );
     }
 
     /// @notice Initializes the contract with the following parameters:
@@ -99,7 +131,7 @@ contract TimelockFactory {
         uint16[] memory endIndex,
         bytes[] memory data,
         bytes32 salt
-    ) external view returns (address) {
+    ) public view returns (address) {
         return calculateCreate2Address(
             address(this),
             type(Timelock).creationCode,
@@ -116,6 +148,26 @@ contract TimelockFactory {
                 data
             ),
             salt
+        );
+    }
+
+    function calculateAddress(address safe, DeploymentParams memory params)
+        external
+        view
+        returns (address)
+    {
+        return calculateAddress(
+            safe,
+            params.minDelay,
+            params.expirationPeriod,
+            params.pauser,
+            params.pauseDuration,
+            params.contractAddresses,
+            params.selector,
+            params.startIndex,
+            params.endIndex,
+            params.data,
+            params.salt
         );
     }
 }
