@@ -172,6 +172,22 @@ contract InstanceDeployer {
         ) returns (SafeProxy safeProxy) {
             safe = safeProxy;
         } catch {
+            /// calculate salt just like the safe proxy factory does
+            bytes32 salt = keccak256(
+                abi.encodePacked(keccak256(safeInitdata), creationSalt)
+            );
+            safe = SafeProxy(
+                payable(
+                    calculateCreate2Address(
+                        safeProxyFactory,
+                        SafeProxyFactory(safeProxyFactory).proxyCreationCode(),
+                        abi.encode(safeProxyLogic),
+                        salt
+                    )
+                )
+            );
+
+            /// todo calculate what the address should be
             emit SafeCreationFailed(
                 msg.sender, block.timestamp, safeInitdata, creationSalt
             );
@@ -189,6 +205,8 @@ contract InstanceDeployer {
             "owners not set correctly"
         );
 
+        /// the factory uses the msg.sender for creating its salt, so there is
+        /// no way to front-run the timelock creation
         timelock = Timelock(
             payable(
                 TimelockFactory(timelockFactory).createTimelock(
@@ -278,6 +296,7 @@ contract InstanceDeployer {
             );
         }
 
+        /// if there is only one owner, the threshold is set to 1
         /// if there are more than one owner, add the final owner with the
         /// updated threshold
         if (instance.owners.length > 1) {
