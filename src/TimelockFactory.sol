@@ -54,7 +54,7 @@ contract TimelockFactory {
     /// @param startIndex start index of the calldata to be whitelisted
     /// @param endIndex end index of the calldata to be whitelisted
     /// @param data calldata to be whitelisted that resides between start and end index
-    /// @param salt for create2 opcode
+    /// @param salt for create2 opcode, combined with msg.sender to prevent front-running
     function createTimelock(
         address _safe,
         uint256 _minDelay,
@@ -69,7 +69,7 @@ contract TimelockFactory {
         bytes32 salt
     ) public returns (address timelock) {
         timelock = address(
-            new Timelock{salt: salt}(
+            new Timelock{salt: keccak256(abi.encodePacked(salt, msg.sender))}(
                 _safe,
                 _minDelay,
                 _expirationPeriod,
@@ -147,7 +147,53 @@ contract TimelockFactory {
                 endIndex,
                 data
             ),
-            salt
+            keccak256(abi.encodePacked(salt, msg.sender))
+        );
+    }
+
+    /// @notice Initializes the contract with the following parameters:
+    /// @param _safe safe contract that owns this timelock
+    /// @param _minDelay initial minimum delay for operations
+    /// @param _expirationPeriod timelocked actions expiration period
+    /// @param _pauser address that can pause the contract
+    /// @param _pauseDuration duration the contract can be paused for
+    /// @param contractAddresses accounts that will have calldata whitelisted
+    /// @param selector function selectors to be whitelisted
+    /// @param startIndex start index of the calldata to be whitelisted
+    /// @param endIndex end index of the calldata to be whitelisted
+    /// @param data calldata to be whitelisted that resides between start and end index
+    /// @param salt for create2 opcode
+    /// @param sender for calculating create2 hash
+    function calculateAddress(
+        address _safe,
+        uint256 _minDelay,
+        uint256 _expirationPeriod,
+        address _pauser,
+        uint128 _pauseDuration,
+        address[] memory contractAddresses,
+        bytes4[] memory selector,
+        uint16[] memory startIndex,
+        uint16[] memory endIndex,
+        bytes[] memory data,
+        bytes32 salt,
+        address sender
+    ) public view returns (address) {
+        return calculateCreate2Address(
+            address(this),
+            type(Timelock).creationCode,
+            abi.encode(
+                _safe,
+                _minDelay,
+                _expirationPeriod,
+                _pauser,
+                _pauseDuration,
+                contractAddresses,
+                selector,
+                startIndex,
+                endIndex,
+                data
+            ),
+            keccak256(abi.encodePacked(salt, sender))
         );
     }
 
