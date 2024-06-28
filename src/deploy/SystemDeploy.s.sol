@@ -14,6 +14,13 @@ import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 /// all contracts are permissionless
 /// DO_PRINT=false DO_BUILD=false DO_RUN=false DO_DEPLOY=true DO_VALIDATE=true forge script src/deploy/SystemDeploy.s.sol:SystemDeploy --fork-url base -vvvvv
 contract SystemDeploy is MultisigProposal {
+    bytes32 public salt =
+        0x0000000000000000000000000000000000000000000000000000000000003afe;
+
+    constructor() {
+        addresses = new Addresses("./Addresses.json");
+    }
+
     function name() public pure override returns (string memory) {
         return "SYS_DEPLOY";
     }
@@ -24,23 +31,24 @@ contract SystemDeploy is MultisigProposal {
 
     function deploy() public override {
         if (!addresses.isAddressSet("TIMELOCK_FACTORY")) {
-            TimelockFactory factory = new TimelockFactory();
+            TimelockFactory factory = new TimelockFactory{salt: salt}();
             addresses.addAddress("TIMELOCK_FACTORY", address(factory), true);
         }
         if (!addresses.isAddressSet("RECOVERY_SPELL_FACTORY")) {
-            RecoverySpellFactory recoveryFactory = new RecoverySpellFactory();
+            RecoverySpellFactory recoveryFactory =
+                new RecoverySpellFactory{salt: salt}();
             addresses.addAddress(
                 "RECOVERY_SPELL_FACTORY", address(recoveryFactory), true
             );
         }
         if (!addresses.isAddressSet("TIME_RESTRICTED")) {
-            TimeRestricted timeRestricted = new TimeRestricted();
+            TimeRestricted timeRestricted = new TimeRestricted{salt: salt}();
             addresses.addAddress(
                 "TIME_RESTRICTED", address(timeRestricted), true
             );
         }
         if (!addresses.isAddressSet("INSTANCE_DEPLOYER")) {
-            InstanceDeployer deployer = new InstanceDeployer(
+            InstanceDeployer deployer = new InstanceDeployer{salt: salt}(
                 addresses.getAddress("SAFE_FACTORY"),
                 addresses.getAddress("SAFE_LOGIC"),
                 addresses.getAddress("TIMELOCK_FACTORY"),
