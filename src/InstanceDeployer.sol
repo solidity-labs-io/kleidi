@@ -69,6 +69,7 @@ contract InstanceDeployer {
     event SafeCreationFailed(
         address indexed sender,
         uint256 indexed timestamp,
+        address indexed safe,
         bytes safeInitdata,
         uint256 creationSalt
     );
@@ -187,9 +188,12 @@ contract InstanceDeployer {
                 )
             );
 
-            /// todo calculate what the address should be
             emit SafeCreationFailed(
-                msg.sender, block.timestamp, safeInitdata, creationSalt
+                msg.sender,
+                block.timestamp,
+                address(safe),
+                safeInitdata,
+                creationSalt
             );
         }
 
