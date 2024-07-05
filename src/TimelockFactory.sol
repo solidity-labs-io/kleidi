@@ -88,6 +88,7 @@ contract TimelockFactory {
         emit TimelockCreated(timelock, block.timestamp, msg.sender);
     }
 
+    /// @notice Creates a timelock for a given safe and deployment parameters
     function createTimelock(address safe, DeploymentParams memory params)
         external
         returns (address timelock)
@@ -197,6 +198,8 @@ contract TimelockFactory {
         );
     }
 
+    /// @notice Calculates the timelock contract address
+    /// @param safe safe contract that owns this timelock
     function calculateAddress(address safe, DeploymentParams memory params)
         external
         view
