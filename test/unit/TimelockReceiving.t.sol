@@ -16,6 +16,7 @@ import {Timelock} from "src/Timelock.sol";
 import {MockSafe} from "test/mock/MockSafe.sol";
 import {MockERC721} from "test/mock/MockERC721.sol";
 import {MockERC1155} from "test/mock/MockERC1155.sol";
+import {MIN_DELAY as MINIMUM_DELAY} from "src/utils/Constants.sol";
 
 contract TimelockReceivingUnitTest is Test {
     /// @notice reference to the Timelock contract
@@ -35,9 +36,6 @@ contract TimelockReceivingUnitTest is Test {
 
     /// @notice duration of pause once glass is broken in seconds
     uint128 public constant PAUSE_DURATION = 10 days;
-
-    /// @notice minimum delay for a timelocked transaction in seconds
-    uint256 public constant MINIMUM_DELAY = 1 days;
 
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;

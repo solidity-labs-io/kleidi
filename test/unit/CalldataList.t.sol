@@ -48,7 +48,7 @@ contract CalldataListUnitTest is Test {
     uint128 public constant PAUSE_DURATION = 10 days;
 
     /// @notice minimum delay for a timelocked transaction in seconds
-    uint256 public constant MINIMUM_DELAY = 1 days;
+    uint256 public constant MINIMUM_DELAY = 2 days;
 
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;

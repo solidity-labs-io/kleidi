@@ -2,3 +2,5 @@
 @safe/=lib/safe-smart-account/contracts/
 @src/=src/
 @forge-std/=lib/forge-std/src/
+@interface/=src/interface/
+@forge-proposal-simulator=lib/forge-proposal-simulator/

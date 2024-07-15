@@ -1,185 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {
-    IERC165,
-    ERC165
-} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
-import {IERC20} from "@openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {FallbackManager} from "@safe/base/FallbackManager.sol";
-import {ModuleManager} from "@safe/base/ModuleManager.sol";
-import {GuardManager} from "@safe/base/GuardManager.sol";
-import {OwnerManager} from "@safe/base/OwnerManager.sol";
-import {SafeL2} from "@safe/SafeL2.sol";
+import "test/utils/SystemIntegrationFixture.sol";
 
-import {Test, console} from "forge-std/Test.sol";
-
-import {Enum} from "@safe/common/Enum.sol";
-import {Timelock} from "src/Timelock.sol";
-import {BytesHelper} from "src/BytesHelper.sol";
-import {TimeRestricted} from "src/TimeRestricted.sol";
-import {
-    IMorpho,
-    Position,
-    IMorphoBase,
-    MarketParams
-} from "src/interface/IMorpho.sol";
-
-interface call3 {
-    struct Call3 {
-        // Target contract to call.
-        address target;
-        // If false, the entire call will revert if the call fails.
-        bool allowFailure;
-        // Data to call on the target contract.
-        bytes callData;
-    }
-
-    struct Result {
-        // True if the call succeeded, false otherwise.
-        bool success;
-        // Return data if the call succeeded, or revert data if the call reverted.
-        bytes returnData;
-    }
-
-    /// @notice Aggregate calls, ensuring each returns success if required
-    /// @param calls An array of Call3 structs
-    /// @return returnData An array of Result structs
-    function aggregate3(Call3[] calldata calls)
-        external
-        payable
-        returns (Result[] memory returnData);
-}
-
-contract SystemIntegrationTest is Test {
+contract SystemIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
-
-    /// @notice reference to the Timelock contract
-    Timelock private timelock;
-
-    /// @notice reference to the deployed Safe contract
-    SafeL2 private safe;
-
-    /// @notice reference to the TimeRestricted contract
-    TimeRestricted public restricted;
-
-    /// @notice empty for now, will change once tests progress
-    address[] public contractAddresses;
-
-    /// @notice empty for now, will change once tests progress
-    bytes4[] public selector;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public startIndex;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public endIndex;
-
-    /// @notice empty for now, will change once tests progress
-    bytes[] public data;
-
-    /// @notice address of the guardian that can pause and break glass in case of emergency
-    address public guardian = address(0x11111);
-
-    /// @notice duration of pause once glass is broken in seconds
-    uint128 public constant PAUSE_DURATION = 10 days;
-
-    /// @notice minimum delay for a timelocked transaction in seconds
-    uint256 public constant MINIMUM_DELAY = 1 days;
-
-    /// @notice expiration period for a timelocked transaction in seconds
-    uint256 public constant EXPIRATION_PERIOD = 5 days;
-
-    /// @notice first private key
-    uint256 public constant pk1 = 4;
-
-    /// @notice second private key
-    uint256 public constant pk2 = 2;
-
-    /// @notice third private key
-    uint256 public constant pk3 = 3;
-
-    /// @notice address of the factory contract
-    SafeProxyFactory public constant factory =
-        SafeProxyFactory(0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2);
-
-    /// @notice address of the logic contract
-    address public logic = 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
-
-    /// @notice address of the multicall contract
-    address public multicall = 0xcA11bde05977b3631167028862bE2a173976CA11;
-
-    /// @notice address of the morphoBlue contract
-    address public morphoBlue = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
-
-    /// @notice address of the ethena token contract
-    address public ethenaUsd = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3;
-
-    /// @notice address of the dai token contract
-    address public constant dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-
-    /// @notice address of the irm contract
-    address public constant irm = 0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC;
-
-    /// @notice address of the oracle contract
-    address public constant oracle = 0xaE4750d0813B5E37A51f7629beedd72AF1f9cA35;
-
-    /// @notice liquidation loan to value ratio
-    uint256 public constant lltv = 915000000000000000;
-
-    /// @notice storage slot for the guard
-    /// keccak256("guard_manager.guard.address")
-    uint256 private constant GUARD_STORAGE_SLOT =
-        0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8;
-
-    address[] public owners;
-
-    uint256 public startTimestamp;
-
-    function setUp() public {
-        startTimestamp = block.timestamp;
-
-        restricted = new TimeRestricted();
-
-        owners.push(vm.addr(pk1));
-        owners.push(vm.addr(pk2));
-        owners.push(vm.addr(pk3));
-
-        bytes memory initdata = abi.encodeWithSignature(
-            "setup(address[],uint256,address,bytes,address,address,uint256,address)",
-            owners,
-            2,
-            address(0),
-            "",
-            address(0),
-            address(0),
-            0,
-            address(0)
-        );
-
-        safe = SafeL2(
-            payable(address(factory.createProxyWithNonce(logic, initdata, 0)))
-        );
-
-        // Assume the necessary parameters for the constructor
-        timelock = new Timelock(
-            address(safe), // _safe
-            MINIMUM_DELAY, // _minDelay
-            EXPIRATION_PERIOD, // _expirationPeriod
-            guardian, // _pauser
-            PAUSE_DURATION, // _pauseDuration
-            contractAddresses, // contractAddresses
-            selector, // selector
-            startIndex, // startIndex
-            endIndex, // endIndex
-            data // data
-        );
-    }
 
     function testSafeSetup() public view {
         (address[] memory modules,) = safe.getModulesPaginated(address(1), 10);
@@ -257,7 +82,7 @@ contract SystemIntegrationTest is Test {
     ///
     ///
     function testInitializeContract() public {
-        call3.Call3[] memory calls3 = new call3.Call3[](3);
+        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](4);
 
         calls3[0].target = address(restricted);
         calls3[0].allowFailure = false;
@@ -267,6 +92,9 @@ contract SystemIntegrationTest is Test {
 
         calls3[2].target = address(safe);
         calls3[2].allowFailure = false;
+
+        calls3[3].target = address(safe);
+        calls3[3].allowFailure = false;
 
         {
             uint8[] memory allowedDays = new uint8[](5);
@@ -301,8 +129,12 @@ contract SystemIntegrationTest is Test {
             ModuleManager.enableModule.selector, address(timelock)
         );
 
+        calls3[3].callData = abi.encodeWithSelector(
+            ModuleManager.enableModule.selector, recoverySpellAddress
+        );
+
         bytes memory safeData =
-            abi.encodeWithSelector(call3.aggregate3.selector, calls3);
+            abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3);
 
         bytes32 transactionHash = safe.getTransactionHash(
             multicall,
@@ -317,7 +149,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(transactionHash, safeData, collatedSignatures, 3);
 
@@ -342,6 +175,10 @@ contract SystemIntegrationTest is Test {
         assertEq(guard, address(restricted), "guard is not restricted");
         assertTrue(
             safe.isModuleEnabled(address(timelock)), "timelock not a module"
+        );
+        assertTrue(
+            safe.isModuleEnabled(recoverySpellAddress),
+            "recovery spell not a module"
         );
 
         assertEq(
@@ -536,7 +373,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(
             transactionHash, innerCalldatas, collatedSignatures, 3
@@ -583,7 +421,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -625,7 +464,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -667,7 +507,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -708,7 +549,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -749,7 +591,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -790,7 +633,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.warp(1714565295);
 
@@ -832,7 +676,8 @@ contract SystemIntegrationTest is Test {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
         vm.warp(1714565295);
@@ -873,7 +718,8 @@ contract SystemIntegrationTest is Test {
             startingNonce
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(transactionHash);
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
         vm.warp(1714565295);
@@ -951,39 +797,5 @@ contract SystemIntegrationTest is Test {
         assertEq(position.supplyShares, 0, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
-    }
-
-    /// ----------------- HELPERS -----------------
-
-    /// @notice The length of the data used to compute the id of a market.
-    /// @dev The length is 5 * 32 because `MarketParams` has 5 variables of 32 bytes each.
-    uint256 internal constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
-
-    /// @notice Returns the id of the market `marketParams`.
-    function id(MarketParams memory marketParams)
-        internal
-        pure
-        returns (bytes32 marketParamsId)
-    {
-        assembly ("memory-safe") {
-            marketParamsId :=
-                keccak256(marketParams, MARKET_PARAMS_BYTES_LENGTH)
-        }
-    }
-
-    function signTxAllOwners(bytes32 transactionHash)
-        private
-        pure
-        returns (bytes memory)
-    {
-        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(pk1, transactionHash);
-        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(pk2, transactionHash);
-        (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(pk3, transactionHash);
-
-        bytes memory sig1 = abi.encodePacked(r1, s1, v1);
-        bytes memory sig2 = abi.encodePacked(r2, s2, v2);
-        bytes memory sig3 = abi.encodePacked(r3, s3, v3);
-
-        return abi.encodePacked(sig1, sig2, sig3);
     }
 }
