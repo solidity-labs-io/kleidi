@@ -96,30 +96,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         calls3[3].target = address(safe);
         calls3[3].allowFailure = false;
 
-        {
-            uint8[] memory allowedDays = new uint8[](5);
-            allowedDays[0] = 1;
-            allowedDays[1] = 2;
-            allowedDays[2] = 3;
-            allowedDays[3] = 4;
-            allowedDays[4] = 5;
-
-            TimeRestricted.TimeRange[] memory ranges =
-                new TimeRestricted.TimeRange[](5);
-
-            ranges[0] = TimeRestricted.TimeRange(10, 11);
-            ranges[1] = TimeRestricted.TimeRange(10, 11);
-            ranges[2] = TimeRestricted.TimeRange(12, 13);
-            ranges[3] = TimeRestricted.TimeRange(10, 14);
-            ranges[4] = TimeRestricted.TimeRange(11, 13);
-
-            calls3[0].callData = abi.encodeWithSelector(
-                restricted.initializeConfiguration.selector,
-                address(timelock),
-                ranges,
-                allowedDays
-            );
-        }
+        calls3[0].callData =
+            abi.encodeWithSelector(restricted.checkSafe.selector);
 
         calls3[1].callData = abi.encodeWithSelector(
             GuardManager.setGuard.selector, address(restricted)
@@ -180,59 +158,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.isModuleEnabled(recoverySpellAddress),
             "recovery spell not a module"
         );
-
-        assertEq(
-            restricted.authorizedTimelock(address(safe)),
-            address(timelock),
-            "timelock not set correctly"
-        );
-        assertTrue(restricted.safeEnabled(address(safe)), "safe not enabled");
-
-        uint256[] memory daysEnabled = restricted.safeDaysEnabled(address(safe));
-
-        assertEq(
-            restricted.numDaysEnabled(address(safe)),
-            5,
-            "incorrect days enabled length"
-        );
-        assertEq(daysEnabled.length, 5, "incorrect days enabled length");
-        assertEq(daysEnabled[0], 1, "incorrect day 1");
-        assertEq(daysEnabled[1], 2, "incorrect day 2");
-        assertEq(daysEnabled[2], 3, "incorrect day 3");
-        assertEq(daysEnabled[3], 4, "incorrect day 4");
-        assertEq(daysEnabled[4], 5, "incorrect day 5");
-
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(safe), 1);
-            assertEq(startHour, 10, "incorrect start hour");
-            assertEq(endHour, 11, "incorrect end hour");
-        }
-
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(safe), 2);
-            assertEq(startHour, 10, "incorrect start hour");
-            assertEq(endHour, 11, "incorrect end hour");
-        }
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(safe), 3);
-            assertEq(startHour, 12, "incorrect start hour");
-            assertEq(endHour, 13, "incorrect end hour");
-        }
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(safe), 4);
-            assertEq(startHour, 10, "incorrect start hour");
-            assertEq(endHour, 14, "incorrect end hour");
-        }
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(safe), 5);
-            assertEq(startHour, 11, "incorrect start hour");
-            assertEq(endHour, 13, "incorrect end hour");
-        }
     }
 
     ///
@@ -428,7 +353,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// warp forward to allowed time
 
-        vm.expectRevert("TimeRestricted: no self calls");
+        vm.expectRevert("Guard: no self calls");
         safe.execTransaction(
             address(safe),
             0,
@@ -471,7 +396,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// warp forward to allowed time
 
-        vm.expectRevert("TimeRestricted: no self calls");
+        vm.expectRevert("Guard: no self calls");
         safe.execTransaction(
             address(safe),
             0,
@@ -514,7 +439,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// warp forward to allowed time
 
-        vm.expectRevert("TimeRestricted: no self calls");
+        vm.expectRevert("Guard: no self calls");
         safe.execTransaction(
             address(safe),
             0,
@@ -556,7 +481,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// warp forward to allowed time
 
-        vm.expectRevert("TimeRestricted: no self calls");
+        vm.expectRevert("Guard: no self calls");
         safe.execTransaction(
             address(safe),
             0,
@@ -598,7 +523,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// warp forward to allowed time
 
-        vm.expectRevert("TimeRestricted: no self calls");
+        vm.expectRevert("Guard: no self calls");
         safe.execTransaction(
             address(safe),
             0,
@@ -640,7 +565,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// warp forward to allowed time
 
-        vm.expectRevert("TimeRestricted: no self calls");
+        vm.expectRevert("Guard: no self calls");
         safe.execTransaction(
             address(safe),
             0,
@@ -683,7 +608,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.warp(1714565295);
 
         /// fails because call to self + calldata not zero length
-        vm.expectRevert("TimeRestricted: no self calls");
+        vm.expectRevert("Guard: no self calls");
         safe.execTransaction(
             address(safe),
             0,
