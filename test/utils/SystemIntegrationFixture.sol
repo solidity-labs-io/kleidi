@@ -31,12 +31,13 @@ import {
 import {Test, stdError} from "forge-std/Test.sol";
 
 import "src/utils/Constants.sol";
+
+import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
 import {SigHelper} from "test/utils/SigHelper.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
 import {SystemDeploy} from "src/deploy/SystemDeploy.s.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
-import {TimeRestricted} from "src/TimeRestricted.sol";
 import {TimelockFactory} from "src/TimelockFactory.sol";
 import {InstanceDeployer} from "src/InstanceDeployer.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
@@ -50,8 +51,8 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// @notice reference to the deployed Safe contract
     SafeL2 public safe;
 
-    /// @notice reference to the TimeRestricted contract
-    TimeRestricted public restricted;
+    /// @notice reference to the Guard contract
+    Guard public guard;
 
     /// @notice reference to the instance deployer
     InstanceDeployer public deployer;
@@ -196,7 +197,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
             recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
         }
 
-        restricted = TimeRestricted(addresses.getAddress("TIME_RESTRICTED"));
+        guard = Guard(addresses.getAddress("TIME_RESTRICTED"));
         recoveryFactory =
             RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
         deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
