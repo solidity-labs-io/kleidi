@@ -4,8 +4,8 @@ import {MultisigProposal} from
     "@forge-proposal-simulator/src/proposals/MultisigProposal.sol";
 import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
 
+import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
-import {TimeRestricted} from "src/TimeRestricted.sol";
 import {TimelockFactory} from "src/TimelockFactory.sol";
 import {InstanceDeployer} from "src/InstanceDeployer.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
@@ -26,7 +26,7 @@ contract SystemDeploy is MultisigProposal {
     }
 
     function description() public pure override returns (string memory) {
-        return "Deploy TimelockFactory and TimeRestricted contracts";
+        return "Deploy TimelockFactory and Guard contracts";
     }
 
     function deploy() public override {
@@ -42,10 +42,8 @@ contract SystemDeploy is MultisigProposal {
             );
         }
         if (!addresses.isAddressSet("TIME_RESTRICTED")) {
-            TimeRestricted timeRestricted = new TimeRestricted{salt: salt}();
-            addresses.addAddress(
-                "TIME_RESTRICTED", address(timeRestricted), true
-            );
+            Guard guard = new Guard{salt: salt}();
+            addresses.addAddress("TIME_RESTRICTED", address(guard), true);
         }
         if (!addresses.isAddressSet("INSTANCE_DEPLOYER")) {
             InstanceDeployer deployer = new InstanceDeployer{salt: salt}(
@@ -72,8 +70,8 @@ contract SystemDeploy is MultisigProposal {
             address restricted = addresses.getAddress("TIME_RESTRICTED");
             assertEq(
                 keccak256(restricted.code),
-                keccak256(type(TimeRestricted).runtimeCode),
-                "Incorrect TimeRestricted Bytecode"
+                keccak256(type(Guard).runtimeCode),
+                "Incorrect Guard Bytecode"
             );
 
             address recoverySpellFactory =
@@ -106,7 +104,7 @@ contract SystemDeploy is MultisigProposal {
                 "incorrect timelock factory"
             );
             assertEq(
-                deployer.timeRestricted(),
+                deployer.guard(),
                 addresses.getAddress("TIME_RESTRICTED"),
                 "incorrect TIME_RESTRICTED"
             );
