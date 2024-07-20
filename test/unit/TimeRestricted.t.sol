@@ -31,10 +31,7 @@ contract TimeRestrictedUnitTest is CallHelper {
     }
 
     function testEnableSafe() public {
-        _initializeConfiguration({
-            caller: address(this),
-            guard: address(guard)
-        });
+        _initializeConfiguration({caller: address(this), guard: address(guard)});
     }
 
     function testInitializeFailsSafeNoBytecode() public {

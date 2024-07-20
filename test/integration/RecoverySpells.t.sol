@@ -9,7 +9,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
     function _initializeContract() private {
         IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](4);
 
-        calls3[0].target = address(restricted);
+        calls3[0].target = address(guard);
         calls3[0].allowFailure = false;
 
         calls3[1].target = address(safe);
@@ -21,11 +21,10 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         calls3[3].target = address(safe);
         calls3[3].allowFailure = false;
 
-        calls3[0].callData =
-            abi.encodeWithSelector(restricted.checkSafe.selector);
+        calls3[0].callData = abi.encodeWithSelector(Guard.checkSafe.selector);
 
         calls3[1].callData = abi.encodeWithSelector(
-            GuardManager.setGuard.selector, address(restricted)
+            GuardManager.setGuard.selector, address(guard)
         );
 
         calls3[2].callData = abi.encodeWithSelector(
@@ -75,7 +74,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
 
         address guard = address(uint160(uint256(guardBytes.getFirstWord())));
 
-        assertEq(guard, address(restricted), "guard is not restricted");
+        assertEq(guard, address(guard), "guard is not guard");
         assertTrue(
             safe.isModuleEnabled(address(timelock)), "timelock not a module"
         );
@@ -100,7 +99,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
 
         IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](4);
 
-        calls3[0].target = address(restricted);
+        calls3[0].target = address(guard);
         calls3[0].allowFailure = false;
 
         calls3[1].target = address(safe);
@@ -112,11 +111,10 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         calls3[3].target = address(safe);
         calls3[3].allowFailure = false;
 
-        calls3[0].callData =
-            abi.encodeWithSelector(restricted.checkSafe.selector);
+        calls3[0].callData = abi.encodeWithSelector(guard.checkSafe.selector);
 
         calls3[1].callData = abi.encodeWithSelector(
-            GuardManager.setGuard.selector, address(restricted)
+            GuardManager.setGuard.selector, address(guard)
         );
 
         calls3[2].callData = abi.encodeWithSelector(
@@ -170,7 +168,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
                 SafeL2(payable(safe)).getStorageAt(GUARD_STORAGE_SLOT, 1);
             address guard = address(uint160(uint256(guardBytes.getFirstWord())));
 
-            assertEq(guard, address(restricted), "guard is not restricted");
+            assertEq(guard, address(guard), "guard is not guard");
         }
         assertTrue(
             safe.isModuleEnabled(address(timelock)), "timelock not a module"
