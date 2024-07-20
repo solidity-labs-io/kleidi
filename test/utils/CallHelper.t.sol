@@ -3,12 +3,12 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 
-import {TimeRestricted} from "src/TimeRestricted.sol";
+import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
 
 contract CallHelper is Test {
     /**
-     * TimeRestricted events *
+     * Guard events *
      */
 
     /// @notice Emitted when a time range is added to the allowed days
@@ -49,6 +49,10 @@ contract CallHelper is Test {
     /// @param safe address of the safe
     event GuardDisabled(address indexed safe);
 
+    /// @notice Emitted when the guard is added to a safe
+    /// @param safe address of the safe
+    event GuardEnabled(address indexed safe);
+
     /**
      * Timelock events *
      */
@@ -86,92 +90,14 @@ contract CallHelper is Test {
     );
 
     /**
-     * TimeRestricted helper functions to check emitted events *
+     * Guard helper functions to check emitted events *
      */
-    function _initializeConfiguration(
-        address caller,
-        address timeRestricted,
-        address timelock,
-        TimeRestricted.TimeRange[] memory timeRanges,
-        uint8[] memory allowedDays
-    ) internal {
-        for (uint256 i = 0; i < timeRanges.length; i++) {
-            vm.expectEmit(true, true, true, true, timeRestricted);
-            emit TimeRangeAdded(
-                caller,
-                allowedDays[i],
-                timeRanges[i].startHour,
-                timeRanges[i].endHour
-            );
-        }
+    function _initializeConfiguration(address caller, address guard) internal {
+        vm.expectEmit(true, true, true, true, guard);
+        emit GuardEnabled(caller);
 
         vm.prank(caller);
-        TimeRestricted(timeRestricted).initializeConfiguration(
-            timelock, timeRanges, allowedDays
-        );
-    }
-
-    function _addTimeRange(
-        address caller,
-        address timeRestricted,
-        address safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
-    ) internal {
-        vm.expectEmit(true, true, true, true, timeRestricted);
-        emit TimeRangeAdded(safe, dayOfWeek, startHour, endHour);
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).addTimeRange(
-            safe, dayOfWeek, startHour, endHour
-        );
-    }
-
-    function _editTimeRange(
-        address caller,
-        address timeRestricted,
-        address safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
-    ) internal {
-        (uint8 oldStartHour, uint8 oldEndHour) =
-            TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
-        vm.expectEmit(true, true, true, true, timeRestricted);
-        emit TimeRangeUpdated(
-            safe, dayOfWeek, oldStartHour, startHour, oldEndHour, endHour
-        );
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).editTimeRange(
-            safe, dayOfWeek, startHour, endHour
-        );
-    }
-
-    function _removeAllowedDay(
-        address caller,
-        address timeRestricted,
-        address safe,
-        uint8 dayOfWeek
-    ) internal {
-        (uint8 oldStartHour, uint8 oldEndHour) =
-            TimeRestricted(timeRestricted).dayTimeRanges(safe, dayOfWeek);
-        vm.expectEmit(true, true, true, true, timeRestricted);
-        emit TimeRangeDeleted(safe, dayOfWeek, oldStartHour, oldEndHour);
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).removeAllowedDay(safe, dayOfWeek);
-    }
-
-    function _disableGaurd(address caller, address timeRestricted, address safe)
-        internal
-    {
-        vm.expectEmit(true, true, true, true, timeRestricted);
-        emit GuardDisabled(safe);
-
-        vm.prank(caller);
-        TimeRestricted(timeRestricted).disableGuard(safe);
+        Guard(guard).checkSafe();
     }
 
     /**
