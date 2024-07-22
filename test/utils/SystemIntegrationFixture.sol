@@ -197,7 +197,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
             recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
         }
 
-        guard = Guard(addresses.getAddress("TIME_RESTRICTED"));
+        guard = Guard(addresses.getAddress("GUARD"));
         recoveryFactory =
             RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
         deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));

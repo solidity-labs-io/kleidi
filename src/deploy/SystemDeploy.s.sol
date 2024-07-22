@@ -41,16 +41,16 @@ contract SystemDeploy is MultisigProposal {
                 "RECOVERY_SPELL_FACTORY", address(recoveryFactory), true
             );
         }
-        if (!addresses.isAddressSet("TIME_RESTRICTED")) {
+        if (!addresses.isAddressSet("GUARD")) {
             Guard guard = new Guard{salt: salt}();
-            addresses.addAddress("TIME_RESTRICTED", address(guard), true);
+            addresses.addAddress("GUARD", address(guard), true);
         }
         if (!addresses.isAddressSet("INSTANCE_DEPLOYER")) {
             InstanceDeployer deployer = new InstanceDeployer{salt: salt}(
                 addresses.getAddress("SAFE_FACTORY"),
                 addresses.getAddress("SAFE_LOGIC"),
                 addresses.getAddress("TIMELOCK_FACTORY"),
-                addresses.getAddress("TIME_RESTRICTED"),
+                addresses.getAddress("GUARD"),
                 addresses.getAddress("MULTICALL3")
             );
 
@@ -67,9 +67,9 @@ contract SystemDeploy is MultisigProposal {
                 "Incorrect TimelockFactory Bytecode"
             );
 
-            address restricted = addresses.getAddress("TIME_RESTRICTED");
+            address guard = addresses.getAddress("GUARD");
             assertEq(
-                keccak256(restricted.code),
+                keccak256(guard.code),
                 keccak256(type(Guard).runtimeCode),
                 "Incorrect Guard Bytecode"
             );
@@ -105,8 +105,8 @@ contract SystemDeploy is MultisigProposal {
             );
             assertEq(
                 deployer.guard(),
-                addresses.getAddress("TIME_RESTRICTED"),
-                "incorrect TIME_RESTRICTED"
+                addresses.getAddress("GUARD"),
+                "incorrect GUARD"
             );
             assertEq(
                 deployer.multicall3(),
