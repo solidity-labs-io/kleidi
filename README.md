@@ -35,7 +35,7 @@ Instance deployer will
 
 ## Edge Cases
 
-- If the timelock is removed as a module from the Safe before the Guard is disabled, there will be no way to rotate the signers of the Safe, add new modules, or remove modules. This is because the TimeRestricted guard will prevent these actions from being executed.
+- If the timelock is removed as a module from the Safe before the Guard is disabled, there will be no way to rotate the signers of the Safe, add new modules, or remove modules. 
 
 
 ### Build
