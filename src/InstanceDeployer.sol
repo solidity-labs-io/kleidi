@@ -26,9 +26,9 @@ import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 ///    All of the following actions are batched into a single action
 ///  through multicall. The actions are as follows:
 ///
-///    3. call the time restricted contract to initialize the configuration
+///    3. call the guard contract from the safe
 ///    4. add the timelock as a module to the safe
-///    5. add the time restricted contract as a guard to the safe
+///    5. add the guard to the safe
 ///    6. add all recovery spells as modules to the safe
 ///    7. rotate this contract as the safe owner off the safe and add the supplied
 /// owners to the safe. Update the proposal threshold on the final call
@@ -102,7 +102,7 @@ contract InstanceDeployer {
     /// 1. new safe created with specified owners and threshold
     /// 2. new timelock created owned by the safe
     /// 3. timelock is a module in the safe
-    /// 4. time restricted is configured as a guard on the safe
+    /// 4. the guard is configured on the safe
     /// 5. all recovery spells are added as modules on the safe
     /// 6. this contract is no longer an owner and threshold is updated to
     /// the threshold parameter passed
