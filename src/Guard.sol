@@ -16,7 +16,7 @@ import {BytesHelper} from "src/BytesHelper.sol";
 /// Config:
 ///  - the timelock must be a module of the safe to enact changes to the owners and modules
 ///  - the safe must not be the only executor on the timelock, otherwise the safe could be
-///  locked out of making changes, except recvoery spells
+///  locked out of making changes, except recovery spells
 
 /// no new modules, upgrades, owners, or fallback handlers can be added or
 /// removed by a transaction because all self calls are disallowed.
