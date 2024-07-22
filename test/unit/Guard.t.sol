@@ -5,10 +5,10 @@ import {Enum} from "@safe/common/Enum.sol";
 
 import {console} from "forge-std/Test.sol";
 
-import {CallHelper} from "test/utils/CallHelper.t.sol";
 import {Guard} from "src/Guard.sol";
+import {CallHelper} from "test/utils/CallHelper.t.sol";
 
-contract TimeRestrictedUnitTest is CallHelper {
+contract GuardUnitTest is CallHelper {
     Guard public guard;
 
     address public timelock;
