@@ -1,9 +1,5 @@
 pragma solidity 0.8.25;
 
-import {BokkyPooBahsDateTimeLibrary} from
-    "src/calendar/BokkyPooBahsDateTimeLibrary.sol";
-import {EnumerableSet} from
-    "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {BaseGuard} from "@safe/base/GuardManager.sol";
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
@@ -20,9 +16,9 @@ import {BytesHelper} from "src/BytesHelper.sol";
 /// Config:
 ///  - the timelock must be a module of the safe to enact changes to the owners and modules
 ///  - the safe must not be the only executor on the timelock, otherwise the safe could be
-///  locked out of making changes, except dark spells
+///  locked out of making changes, except recvoery spells
 
-/// no new modules, upgrades, owners, or fallback handlers can added or
+/// no new modules, upgrades, owners, or fallback handlers can be added or
 /// removed by a transaction because all self calls are disallowed.
 /// this implies that the only way these values can be set are through
 /// the timelock, which can call back into the safe and use delegatecall
@@ -43,8 +39,6 @@ import {BytesHelper} from "src/BytesHelper.sol";
 
 contract Guard is BaseGuard {
     using BytesHelper for bytes;
-    using BokkyPooBahsDateTimeLibrary for uint256;
-    using EnumerableSet for EnumerableSet.UintSet;
 
     /// @notice storage slot for the fallback handler
     /// keccak256("fallback_manager.handler.address")
