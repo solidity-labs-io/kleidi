@@ -6,11 +6,9 @@ import {Safe} from "@safe/Safe.sol";
 
 import {BytesHelper} from "src/BytesHelper.sol";
 
-/// @notice Only the timelock can add, edit, remove or disable
-/// time ranges after initialization.
-/// This guard restricts changing owners and modules. It enforces
+/// @notice This guard restricts changing owners and modules. It enforces
 /// that the owners and modules remain the same after a transaction is
-/// executed. If there is any changes, transactions are reverted.
+/// executed by not allowing self or delegate calls.
 
 /// Config:
 ///  - the timelock must be a module of the safe to enact changes to the owners and modules
