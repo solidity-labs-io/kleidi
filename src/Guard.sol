@@ -9,7 +9,7 @@ import {BytesHelper} from "src/BytesHelper.sol";
 /// @notice Only the timelock can add, edit, remove or disable
 /// time ranges after initialization.
 /// Contract that restricts Safe interactions to a specific time range
-/// This guard also restricts changing owners and modules. It enforces
+/// This guard restricts changing owners and modules. It enforces
 /// that the owners and modules remain the same after a transaction is
 /// executed. If there is any changes, transactions are reverted.
 
