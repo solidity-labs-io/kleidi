@@ -49,7 +49,7 @@ import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 /// - anyone can execute a proposal that has passed the timelock if it has not
 /// expired.
 /// - whitelisted calldata can be executed at any time the contract is not
-///  paused, even outside of the time restricted window.
+///  paused.
 /// - pausing clears all queued timelock actions
 /// - the timelock can only be paused by the pause guardian
 /// - pausing the timelock revokes the pause guardian

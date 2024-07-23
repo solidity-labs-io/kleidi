@@ -54,34 +54,13 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         instance.timelockParams.endIndex = new uint16[](0);
         instance.timelockParams.data = new bytes[](0);
 
-        uint8[] memory allowedDays = new uint8[](5);
-        allowedDays[0] = 1;
-        allowedDays[1] = 2;
-        allowedDays[2] = 3;
-        allowedDays[3] = 4;
-        allowedDays[4] = 5;
-
-        TimeRestricted.TimeRange[] memory timeRanges =
-            new TimeRestricted.TimeRange[](5);
-
-        timeRanges[0] = TimeRestricted.TimeRange(10, 11);
-        timeRanges[1] = TimeRestricted.TimeRange(10, 11);
-        timeRanges[2] = TimeRestricted.TimeRange(12, 13);
-        timeRanges[3] = TimeRestricted.TimeRange(10, 14);
-        timeRanges[4] = TimeRestricted.TimeRange(11, 13);
-
-        instance.timeRanges = timeRanges;
-        instance.allowedDays = allowedDays;
-
         uint256 creationSalt = uint256(
             keccak256(
                 abi.encode(
                     instance.owners,
                     instance.threshold,
                     instance.recoverySpells,
-                    instance.timelockParams,
-                    instance.timeRanges,
-                    instance.allowedDays
+                    instance.timelockParams
                 )
             )
         );
@@ -98,7 +77,7 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             address(0),
             /// no data because there are no external actions on initialization
             "",
-            /// no fallback handler allowed by TimeRestricted
+            /// no fallback handler allowed by Guard
             address(0),
             /// no payment token
             address(0),
@@ -144,53 +123,6 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         assertEq(
             array.length, 1 + recoverySpellLength, "module length incorrect"
         );
-
-        uint256[] memory daysEnabled =
-            restricted.safeDaysEnabled(address(newSafe));
-
-        assertEq(
-            restricted.numDaysEnabled(address(newSafe)),
-            5,
-            "incorrect days enabled length"
-        );
-        assertEq(daysEnabled.length, 5, "incorrect days enabled length");
-        assertEq(daysEnabled[0], 1, "incorrect day 1");
-        assertEq(daysEnabled[1], 2, "incorrect day 2");
-        assertEq(daysEnabled[2], 3, "incorrect day 3");
-        assertEq(daysEnabled[3], 4, "incorrect day 4");
-        assertEq(daysEnabled[4], 5, "incorrect day 5");
-
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(newSafe), 1);
-            assertEq(startHour, 10, "incorrect start hour");
-            assertEq(endHour, 11, "incorrect end hour");
-        }
-
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(newSafe), 2);
-            assertEq(startHour, 10, "incorrect start hour");
-            assertEq(endHour, 11, "incorrect end hour");
-        }
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(newSafe), 3);
-            assertEq(startHour, 12, "incorrect start hour");
-            assertEq(endHour, 13, "incorrect end hour");
-        }
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(newSafe), 4);
-            assertEq(startHour, 10, "incorrect start hour");
-            assertEq(endHour, 14, "incorrect end hour");
-        }
-        {
-            (uint8 startHour, uint8 endHour) =
-                restricted.dayTimeRanges(address(newSafe), 5);
-            assertEq(startHour, 11, "incorrect start hour");
-            assertEq(endHour, 13, "incorrect end hour");
-        }
 
         /// timelock validations
 
@@ -287,25 +219,6 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         instance.timelockParams.endIndex = new uint16[](0);
         instance.timelockParams.data = new bytes[](0);
 
-        uint8[] memory allowedDays = new uint8[](5);
-        allowedDays[0] = 1;
-        allowedDays[1] = 2;
-        allowedDays[2] = 3;
-        allowedDays[3] = 4;
-        allowedDays[4] = 5;
-
-        TimeRestricted.TimeRange[] memory timeRanges =
-            new TimeRestricted.TimeRange[](5);
-
-        timeRanges[0] = TimeRestricted.TimeRange(10, 11);
-        timeRanges[1] = TimeRestricted.TimeRange(10, 11);
-        timeRanges[2] = TimeRestricted.TimeRange(12, 13);
-        timeRanges[3] = TimeRestricted.TimeRange(10, 14);
-        timeRanges[4] = TimeRestricted.TimeRange(11, 13);
-
-        instance.timeRanges = timeRanges;
-        instance.allowedDays = allowedDays;
-
         (newTimelock, newSafe) = deployer.createSystemInstance(instance);
 
         if (runAssertions) {
@@ -338,53 +251,6 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             assertEq(
                 array.length, 1 + recoverySpellLength, "module length incorrect"
             );
-
-            uint256[] memory daysEnabled =
-                restricted.safeDaysEnabled(address(newSafe));
-
-            assertEq(
-                restricted.numDaysEnabled(address(newSafe)),
-                5,
-                "incorrect days enabled length"
-            );
-            assertEq(daysEnabled.length, 5, "incorrect days enabled length");
-            assertEq(daysEnabled[0], 1, "incorrect day 1");
-            assertEq(daysEnabled[1], 2, "incorrect day 2");
-            assertEq(daysEnabled[2], 3, "incorrect day 3");
-            assertEq(daysEnabled[3], 4, "incorrect day 4");
-            assertEq(daysEnabled[4], 5, "incorrect day 5");
-
-            {
-                (uint8 startHour, uint8 endHour) =
-                    restricted.dayTimeRanges(address(newSafe), 1);
-                assertEq(startHour, 10, "incorrect start hour");
-                assertEq(endHour, 11, "incorrect end hour");
-            }
-
-            {
-                (uint8 startHour, uint8 endHour) =
-                    restricted.dayTimeRanges(address(newSafe), 2);
-                assertEq(startHour, 10, "incorrect start hour");
-                assertEq(endHour, 11, "incorrect end hour");
-            }
-            {
-                (uint8 startHour, uint8 endHour) =
-                    restricted.dayTimeRanges(address(newSafe), 3);
-                assertEq(startHour, 12, "incorrect start hour");
-                assertEq(endHour, 13, "incorrect end hour");
-            }
-            {
-                (uint8 startHour, uint8 endHour) =
-                    restricted.dayTimeRanges(address(newSafe), 4);
-                assertEq(startHour, 10, "incorrect start hour");
-                assertEq(endHour, 14, "incorrect end hour");
-            }
-            {
-                (uint8 startHour, uint8 endHour) =
-                    restricted.dayTimeRanges(address(newSafe), 5);
-                assertEq(startHour, 11, "incorrect start hour");
-                assertEq(endHour, 13, "incorrect end hour");
-            }
 
             /// timelock validations
 

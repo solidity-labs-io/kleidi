@@ -6,12 +6,14 @@ import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 /// @notice factory contract to create new RecoverySpell contracts
 /// Contract addresses can be determined in advance with different
 /// parameters, salts and parameters.
-/// Edge cases:
+///
+/// Edge Cases:
 ///    If the safe address has no bytecode, or is incorrectly
-///    specified, then the dark spell address will be calculated
+///    specified, then the recovery spell address will be calculated
 ///    correctly, but it will not actually map to the corresponding
 ///    contract.
-/// An explanation of the contract paramters one by one:
+///
+/// Contract Paramters:
 ///   - salt: a random number used to create the contract address
 ///   - owners: the new owners of the contract
 ///   - safe: the address of the safe to recover
@@ -22,6 +24,7 @@ import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 ///   the safe.
 ///   - delay: the time required before the recovery transaction can be executed
 ///   on the new safe. can be 0 to execute immediately
+
 contract RecoverySpellFactory {
     /// @notice emitted when a new recovery spell is created
     /// @param recoverySpell the address of the new recovery spell

@@ -4,8 +4,8 @@ import {MultisigProposal} from
     "@forge-proposal-simulator/src/proposals/MultisigProposal.sol";
 import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
 
+import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
-import {TimeRestricted} from "src/TimeRestricted.sol";
 import {TimelockFactory} from "src/TimelockFactory.sol";
 import {InstanceDeployer} from "src/InstanceDeployer.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
@@ -26,7 +26,7 @@ contract SystemDeploy is MultisigProposal {
     }
 
     function description() public pure override returns (string memory) {
-        return "Deploy TimelockFactory and TimeRestricted contracts";
+        return "Deploy TimelockFactory and Guard contracts";
     }
 
     function deploy() public override {
@@ -41,18 +41,16 @@ contract SystemDeploy is MultisigProposal {
                 "RECOVERY_SPELL_FACTORY", address(recoveryFactory), true
             );
         }
-        if (!addresses.isAddressSet("TIME_RESTRICTED")) {
-            TimeRestricted timeRestricted = new TimeRestricted{salt: salt}();
-            addresses.addAddress(
-                "TIME_RESTRICTED", address(timeRestricted), true
-            );
+        if (!addresses.isAddressSet("GUARD")) {
+            Guard guard = new Guard{salt: salt}();
+            addresses.addAddress("GUARD", address(guard), true);
         }
         if (!addresses.isAddressSet("INSTANCE_DEPLOYER")) {
             InstanceDeployer deployer = new InstanceDeployer{salt: salt}(
                 addresses.getAddress("SAFE_FACTORY"),
                 addresses.getAddress("SAFE_LOGIC"),
                 addresses.getAddress("TIMELOCK_FACTORY"),
-                addresses.getAddress("TIME_RESTRICTED"),
+                addresses.getAddress("GUARD"),
                 addresses.getAddress("MULTICALL3")
             );
 
@@ -69,11 +67,11 @@ contract SystemDeploy is MultisigProposal {
                 "Incorrect TimelockFactory Bytecode"
             );
 
-            address restricted = addresses.getAddress("TIME_RESTRICTED");
+            address guard = addresses.getAddress("GUARD");
             assertEq(
-                keccak256(restricted.code),
-                keccak256(type(TimeRestricted).runtimeCode),
-                "Incorrect TimeRestricted Bytecode"
+                keccak256(guard.code),
+                keccak256(type(Guard).runtimeCode),
+                "Incorrect Guard Bytecode"
             );
 
             address recoverySpellFactory =
@@ -106,9 +104,9 @@ contract SystemDeploy is MultisigProposal {
                 "incorrect timelock factory"
             );
             assertEq(
-                deployer.timeRestricted(),
-                addresses.getAddress("TIME_RESTRICTED"),
-                "incorrect TIME_RESTRICTED"
+                deployer.guard(),
+                addresses.getAddress("GUARD"),
+                "incorrect GUARD"
             );
             assertEq(
                 deployer.multicall3(),

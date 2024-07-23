@@ -9,8 +9,8 @@ import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
 
+import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
-import {TimeRestricted} from "src/TimeRestricted.sol";
 import {calculateCreate2Address} from "src/utils/Create2Helper.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 
@@ -26,9 +26,9 @@ import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 ///    All of the following actions are batched into a single action
 ///  through multicall. The actions are as follows:
 ///
-///    3. call the time restricted contract to initialize the configuration
+///    3. call the guard contract from the safe
 ///    4. add the timelock as a module to the safe
-///    5. add the time restricted contract as a guard to the safe
+///    5. add the guard to the safe
 ///    6. add all recovery spells as modules to the safe
 ///    7. rotate this contract as the safe owner off the safe and add the supplied
 /// owners to the safe. Update the proposal threshold on the final call
@@ -44,8 +44,8 @@ contract InstanceDeployer {
     /// @notice timelock factory address
     address public immutable timelockFactory;
 
-    /// @notice TimeRestricted address
-    address public immutable timeRestricted;
+    /// @notice Guard address
+    address public immutable guard;
 
     /// @notice MULTICALL3 address
     address public immutable multicall3;
@@ -78,13 +78,13 @@ contract InstanceDeployer {
         address _safeProxyFactory,
         address _safeProxyLogic,
         address _timelockFactory,
-        address _timeRestricted,
+        address _guard,
         address _multicall3
     ) {
         safeProxyFactory = _safeProxyFactory;
         safeProxyLogic = _safeProxyLogic;
         timelockFactory = _timelockFactory;
-        timeRestricted = _timeRestricted;
+        guard = _guard;
         multicall3 = _multicall3;
     }
 
@@ -95,9 +95,6 @@ contract InstanceDeployer {
         address[] recoverySpells;
         /// timelock information
         DeploymentParams timelockParams;
-        /// time restriction information
-        TimeRestricted.TimeRange[] timeRanges;
-        uint8[] allowedDays;
     }
 
     /// @notice function to create a system instance that has the following
@@ -105,7 +102,7 @@ contract InstanceDeployer {
     /// 1. new safe created with specified owners and threshold
     /// 2. new timelock created owned by the safe
     /// 3. timelock is a module in the safe
-    /// 4. time restricted is configured as a guard on the safe
+    /// 4. the guard is configured on the safe
     /// 5. all recovery spells are added as modules on the safe
     /// 6. this contract is no longer an owner and threshold is updated to
     /// the threshold parameter passed
@@ -138,7 +135,7 @@ contract InstanceDeployer {
             address(0),
             /// no data because there are no external actions on initialization
             "",
-            /// no fallback handler allowed by TimeRestricted
+            /// no fallback handler allowed by Guard
             address(0),
             /// no payment token
             address(0),
@@ -154,9 +151,7 @@ contract InstanceDeployer {
                     instance.owners,
                     instance.threshold,
                     instance.recoverySpells,
-                    instance.timelockParams,
-                    instance.timeRanges,
-                    instance.allowedDays
+                    instance.timelockParams
                 )
             )
         );
@@ -234,24 +229,19 @@ contract InstanceDeployer {
         );
         uint256 index = 0;
 
-        calls3[0].target = timeRestricted;
+        calls3[0].target = guard;
         calls3[0].allowFailure = false;
 
-        calls3[index++].callData = abi.encodeWithSelector(
-            TimeRestricted.initializeConfiguration.selector,
-            address(timelock),
-            instance.timeRanges,
-            instance.allowedDays
-        );
+        calls3[index++].callData =
+            abi.encodeWithSelector(Guard.checkSafe.selector);
 
         for (uint256 i = 1; i < calls3.length; i++) {
             calls3[i].target = address(safe);
             calls3[i].allowFailure = false;
         }
 
-        calls3[index++].callData = abi.encodeWithSelector(
-            GuardManager.setGuard.selector, timeRestricted
-        );
+        calls3[index++].callData =
+            abi.encodeWithSelector(GuardManager.setGuard.selector, guard);
 
         /// add the timelock as a module to the safe
         /// this enables the timelock to execute calls + delegate calls through
@@ -433,7 +423,7 @@ contract InstanceDeployer {
             address(0),
             /// no data because there are no external actions on initialization
             "",
-            /// no fallback handler allowed by TimeRestricted
+            /// no fallback handler allowed by Guard
             address(0),
             /// no payment token
             address(0),
@@ -450,9 +440,7 @@ contract InstanceDeployer {
                         instance.owners,
                         instance.threshold,
                         instance.recoverySpells,
-                        instance.timelockParams,
-                        instance.timeRanges,
-                        instance.allowedDays
+                        instance.timelockParams
                     )
                 )
             );
