@@ -11,7 +11,7 @@ library BytesHelper {
     {
         require(toSlice.length >= 4, "No function signature");
 
-        assembly {
+        assembly ("memory-safe") {
             functionSignature := mload(add(toSlice, 0x20))
         }
     }
@@ -25,7 +25,7 @@ library BytesHelper {
     {
         require(toSlice.length >= 32, "Length less than 32 bytes");
 
-        assembly {
+        assembly ("memory-safe") {
             value := mload(add(toSlice, 0x20))
         }
     }
