@@ -50,6 +50,10 @@ contract RecoverySpellFactory {
         uint256 delay
     ) external returns (RecoverySpell recovery) {
         _paramChecks(owners, threshold, recoveryThreshold, delay);
+        /// no checks on parameters as all valid recovery spells are
+        /// deployed from the factory which will not allow a recovery
+        /// spell to be created that does not have valid parameters
+        require(safe.code.length != 0, "RecoverySpell: safe non-existent");
 
         /// duplicate owner check
         for (uint256 i = 0; i < owners.length; i++) {
