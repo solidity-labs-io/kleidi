@@ -73,7 +73,7 @@ forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL
 forge coverage --mc UnitTest --report lcov
 ```
 
-#### Integration Test Coverage
+#### Unit & Integration Test Coverage
 
 ```shell
 forge coverage --report summary --report lcov --fork-url $ETH_RPC_URL --fork-block-number 20515328
