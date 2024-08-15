@@ -56,11 +56,7 @@ contract TimelockReceivingUnitTest is Test {
             EXPIRATION_PERIOD, // _expirationPeriod
             guardian, // _pauser
             PAUSE_DURATION, // _pauseDuration
-            new address[](0), // contractAddresses
-            new bytes4[](0), // selector
-            new uint16[](0), // startIndex
-            new uint16[](0), // endIndex
-            new bytes[](0) // data
+            new address[](0) // hotSigners
         );
     }
 
