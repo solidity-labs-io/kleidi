@@ -26,6 +26,9 @@ contract CalldataListUnitTest is Test {
     /// @notice reference to the MockLending contract
     MockLending private lending;
 
+    /// @notice the 3 hot signers that can execute whitelisted actions
+    address[] public hotSigners;
+
     /// @notice empty for now, will change once tests progress
     address[] public contractAddresses;
 
@@ -53,7 +56,16 @@ contract CalldataListUnitTest is Test {
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
 
+    /// @notice addresses of the hot signers
+    address public constant HOT_SIGNER_ONE = address(0x11111);
+    address public constant HOT_SIGNER_TWO = address(0x22222);
+    address public constant HOT_SIGNER_THREE = address(0x33333);
+
     function setUp() public {
+        hotSigners.push(HOT_SIGNER_ONE);
+        hotSigners.push(HOT_SIGNER_TWO);
+        hotSigners.push(HOT_SIGNER_THREE);
+
         // at least start at unix timestamp of 1m so that block timestamp isn't 0
         vm.warp(block.timestamp + 1_000_000);
 
@@ -68,11 +80,7 @@ contract CalldataListUnitTest is Test {
             EXPIRATION_PERIOD, // _expirationPeriod
             guardian, // _pauser
             PAUSE_DURATION, // _pauseDuration
-            contractAddresses, // contractAddresses
-            selector, // selector
-            startIndex, // startIndex
-            endIndex, // endIndex
-            data // data
+            hotSigners
         );
     }
 
