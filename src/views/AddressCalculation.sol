@@ -63,7 +63,6 @@ contract AddressCalculation {
         );
     }
 
-    /// TODO test this function
     /// @notice calculate address without safety checks
     /// WARNING: only use this if you know what you are doing and are an
     /// advanced user.
