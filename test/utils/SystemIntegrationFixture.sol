@@ -28,7 +28,7 @@ import {
     MarketParams
 } from "src/interface/IMorpho.sol";
 
-import {Test, stdError} from "forge-std/Test.sol";
+import {Test, stdError, console} from "forge-std/Test.sol";
 
 import "src/utils/Constants.sol";
 
@@ -38,9 +38,14 @@ import {SigHelper} from "test/utils/SigHelper.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
 import {SystemDeploy} from "src/deploy/SystemDeploy.s.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
-import {TimelockFactory} from "src/TimelockFactory.sol";
-import {InstanceDeployer} from "src/InstanceDeployer.sol";
+import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
+import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
+import {
+    InstanceDeployer,
+    NewInstance,
+    SystemInstance
+} from "src/InstanceDeployer.sol";
 
 contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     using BytesHelper for bytes;
@@ -57,26 +62,17 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// @notice reference to the instance deployer
     InstanceDeployer public deployer;
 
+    /// @notice reference to the AddressCalculation contract
+    AddressCalculation public addressCalculation;
+
     /// @notice reference to the RecoverySpellFactory contract
     RecoverySpellFactory public recoveryFactory;
 
     /// @notice reference to the TimelockFactory contract
     TimelockFactory public timelockFactory;
 
-    /// @notice empty for now, will change once tests progress
-    address[] public contractAddresses;
-
-    /// @notice empty for now, will change once tests progress
-    bytes4[] public selector;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public startIndex;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public endIndex;
-
-    /// @notice empty for now, will change once tests progress
-    bytes[] public data;
+    /// @notice the 3 hot signers that can execute whitelisted actions
+    address[] public hotSigners;
 
     /// @notice address of the guardian that can pause and break glass in case of emergency
     address public guardian = address(0x11111);
@@ -89,6 +85,9 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
 
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
+
+    /// @notice number of signatures required on the gnosis safe
+    uint256 public constant QUORUM = 2;
 
     /// @notice first public key
     uint256 public constant pk1 = 4;
@@ -156,17 +155,38 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// @notice time the test started
     uint256 public startTimestamp;
 
-    /// @notice no owners need to sign to recover the safe
-    uint256 public constant RECOVERY_THRESHOLD_OWNERS = 0;
+    /// @notice 2 owners need to sign to recover the safe
+    uint256 public constant RECOVERY_THRESHOLD_OWNERS = 2;
 
     /// @notice the length of the market params in bytes
     uint256 constant MARKET_PARAMS_BYTES_LENGTH = 5 * 32;
+
+    /// @notice addresses of the hot signers
+    address public constant HOT_SIGNER_ONE = address(0x11111);
+    address public constant HOT_SIGNER_TWO = address(0x22222);
+    address public constant HOT_SIGNER_THREE = address(0x33333);
 
     /// @notice event emitted when the recovery is executed
     /// @param time the time the recovery was executed
     event SafeRecovered(uint256 indexed time);
 
+    /// @param sender address that attempted to create the safe
+    /// @param timestamp time the safe creation failed
+    /// @param safeInitdata initialization data for the safe
+    /// @param creationSalt salt used to create the safe
+    event SafeCreationFailed(
+        address indexed sender,
+        uint256 indexed timestamp,
+        address indexed safe,
+        bytes safeInitdata,
+        uint256 creationSalt
+    );
+
     function setUp() public {
+        hotSigners.push(HOT_SIGNER_ONE);
+        hotSigners.push(HOT_SIGNER_TWO);
+        hotSigners.push(HOT_SIGNER_THREE);
+
         startTimestamp = block.timestamp;
 
         /// set addresses object in msig proposal
@@ -187,6 +207,10 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         owners.push(vm.addr(pk2));
         owners.push(vm.addr(pk3));
 
+        vm.label(owners[0], "Owner 1");
+        vm.label(owners[1], "Owner 2");
+        vm.label(owners[2], "Owner 3");
+
         recoveryPrivateKeys.push(10);
         recoveryPrivateKeys.push(11);
         recoveryPrivateKeys.push(12);
@@ -204,44 +228,47 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         timelockFactory =
             TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
 
-        bytes memory initdata = abi.encodeWithSignature(
-            "setup(address[],uint256,address,bytes,address,address,uint256,address)",
+        addressCalculation = new AddressCalculation(address(deployer));
+
+        NewInstance memory instance = NewInstance(
             owners,
-            2,
-            address(0),
-            "",
-            address(0),
-            address(0),
-            0,
-            address(0)
+            QUORUM,
+            /// no recovery spells for now
+            new address[](0),
+            DeploymentParams(
+                MINIMUM_DELAY,
+                EXPIRATION_PERIOD,
+                guardian,
+                PAUSE_DURATION,
+                hotSigners,
+                bytes32(0)
+            )
         );
 
-        safe = SafeL2(
-            payable(address(factory.createProxyWithNonce(logic, initdata, 0)))
-        );
+        SystemInstance memory calculatedInstance =
+            addressCalculation.calculateAddress(instance);
 
         recoverySpellAddress = recoveryFactory.calculateAddress(
             recoverySalt,
             recoveryOwners,
-            address(safe),
+            address(calculatedInstance.safe),
             recoveryThreshold,
             RECOVERY_THRESHOLD_OWNERS,
             recoveryDelay
         );
 
-        // Assume the necessary parameters for the constructor
-        timelock = new Timelock(
-            address(safe), // _safe
-            MINIMUM_DELAY, // _minDelay
-            EXPIRATION_PERIOD, // _expirationPeriod
-            guardian, // _pauser
-            PAUSE_DURATION, // _pauseDuration
-            contractAddresses, // contractAddresses
-            selector, // selector
-            startIndex, // startIndex
-            endIndex, // endIndex
-            data // data
-        );
+        address[] memory recoverySpells = new address[](1);
+        recoverySpells[0] = recoverySpellAddress;
+        instance.recoverySpells = recoverySpells;
+
+        SystemInstance memory walletInstance =
+            deployer.createSystemInstance(instance);
+
+        safe = SafeL2(payable(walletInstance.safe));
+        timelock = Timelock(payable(walletInstance.timelock));
+
+        vm.label(address(timelock), "Timelock");
+        vm.label(address(safe), "Safe");
     }
 
     /// MORPHO Helper function
