@@ -267,6 +267,6 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             address(expectedContracts.timelock),
             address(actualContracts.timelock),
             "Timelock address should match"
-        );        
+        );
     }
 }
