@@ -16,8 +16,16 @@ import {Timelock} from "src/Timelock.sol";
 import {MockSafe} from "test/mock/MockSafe.sol";
 import {CallHelper} from "test/utils/CallHelper.t.sol";
 import {MockLending} from "test/mock/MockLending.sol";
-import {TimelockFactory} from "src/TimelockFactory.sol";
 import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
+import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
+import {
+    calculateCreate2Address, Create2Params
+} from "src/utils/Create2Helper.sol";
+import {
+    InstanceDeployer,
+    NewInstance,
+    SystemInstance
+} from "src/InstanceDeployer.sol";
 import {
     _DONE_TIMESTAMP,
     MIN_DELAY,
@@ -35,20 +43,8 @@ contract TimelockUnitFixture is CallHelper {
     /// @notice reference to the MockSafe contract
     MockSafe public safe;
 
-    /// @notice empty for now, will change once tests progress
-    address[] public contractAddresses;
-
-    /// @notice empty for now, will change once tests progress
-    bytes4[] public selector;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public startIndex;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public endIndex;
-
-    /// @notice empty for now, will change once tests progress
-    bytes[] public data;
+    /// @notice the 3 hot signers that can execute whitelisted actions
+    address[] public hotSigners;
 
     /// @notice address of the guardian that can pause and break glass in case of emergency
     address public guardian = address(0x11111);
@@ -62,7 +58,16 @@ contract TimelockUnitFixture is CallHelper {
     /// @notice salt for timelock creation through the factory
     bytes32 public constant salt = keccak256(hex"3afe");
 
+    /// @notice addresses of the hot signers
+    address public constant HOT_SIGNER_ONE = address(0x11111);
+    address public constant HOT_SIGNER_TWO = address(0x22222);
+    address public constant HOT_SIGNER_THREE = address(0x33333);
+
     function setUp() public {
+        hotSigners.push(HOT_SIGNER_ONE);
+        hotSigners.push(HOT_SIGNER_TWO);
+        hotSigners.push(HOT_SIGNER_THREE);
+
         // at least start at unix timestamp of 1m so that block timestamp isn't 0
         vm.warp(block.timestamp + 1_000_000 + EXPIRATION_PERIOD);
 
@@ -75,16 +80,14 @@ contract TimelockUnitFixture is CallHelper {
             payable(
                 timelockFactory.createTimelock(
                     address(safe), // _safe
-                    MINIMUM_DELAY, // _minDelay
-                    EXPIRATION_PERIOD, // _expirationPeriod
-                    guardian, // _pauser
-                    PAUSE_DURATION, // _pauseDuration
-                    contractAddresses, // contractAddresses
-                    selector, // selector
-                    startIndex, // startIndex
-                    endIndex, // endIndex
-                    data, // data
-                    salt
+                    DeploymentParams(
+                        MINIMUM_DELAY, // _minDelay
+                        EXPIRATION_PERIOD, // _expirationPeriod
+                        guardian, // _pauser
+                        PAUSE_DURATION, // _pauseDuration
+                        hotSigners,
+                        salt
+                    )
                 )
             )
         );
