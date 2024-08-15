@@ -50,11 +50,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             EXPIRATION_PERIOD,
             guardian,
             PAUSE_DURATION,
-            contractAddresses,
-            selector,
-            startIndex,
-            endIndex,
-            data
+            new address[](0)
         );
     }
 
@@ -258,6 +254,30 @@ contract TimelockUnitTest is TimelockUnitFixture {
     /// prove this through both positive and negative tests
     /// revert when not timelock, and succeed when timelock
 
+    function testRevokeHotSignerFailsNotSafe() public {
+        vm.expectRevert("Timelock: caller is not the safe");
+        timelock.revokeHotSigner(address(this));
+    }
+
+    function testAddHotSignerFailsNotTimelock() public {
+        bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes16(
+                    bytes4(
+                        keccak256(
+                            "AccessControlUnauthorizedAccount(address,bytes32)"
+                        )
+                    )
+                ),
+                address(this),
+                bytes32(0)
+            )
+        );
+
+        timelock.grantRole(hotSignerRole, address(this));
+    }
+
     function testSetGuardianFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.setGuardian(address(0));
@@ -271,7 +291,11 @@ contract TimelockUnitTest is TimelockUnitFixture {
     function testAddCalldataChecksFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.addCalldataChecks(
-            contractAddresses, selector, startIndex, endIndex, data
+            new address[](0),
+            new bytes4[](0),
+            new uint16[](0),
+            new uint16[](0),
+            new bytes[](0)
         );
     }
 
@@ -282,7 +306,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
     function testRemoveAllCalldataChecksFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
-        timelock.removeAllCalldataChecks(contractAddresses, selector);
+        timelock.removeAllCalldataChecks(new address[](0), new bytes4[](0));
     }
 
     function testUpdateDelayFailsNonTimelock() public {
@@ -475,11 +499,37 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
     }
 
+    function testRevokeHotSignerSafeSucceeds() public {
+        vm.prank(address(safe));
+        timelock.revokeHotSigner(HOT_SIGNER_ONE);
+
+        vm.prank(address(safe));
+        timelock.revokeHotSigner(HOT_SIGNER_TWO);
+
+        vm.prank(address(safe));
+        timelock.revokeHotSigner(HOT_SIGNER_THREE);
+
+        assertFalse(
+            timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_ONE),
+            "Hot signer one should have role revoked"
+        );
+        assertFalse(
+            timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_TWO),
+            "Hot signer two should have role revoked"
+        );
+        assertFalse(
+            timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_THREE),
+            "Hot signer three should have role revoked"
+        );
+    }
+
+    /// TODO fill this test out
     function testScheduleCallSucceedsUnderNormalConditions() public {
         // Prepare the scheduling parameters
         // Call schedule() with valid parameters
     }
 
+    /// TODO fill this test out
     function testExecuteCallRevertsIfNotReady() public {
         // Prepare and schedule a call
         // Attempt to execute before it's ready
@@ -503,6 +553,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
             ),
             salt: bytes32(0)
         });
+
+        vm.expectRevert("Timelock: operation already executed");
+        timelock.isOperationExpired(id);
 
         assertEq(
             timelock.minDelay(), MINIMUM_DELAY, "minDelay should be updated"
@@ -588,6 +641,36 @@ contract TimelockUnitTest is TimelockUnitFixture {
         uint256[] memory values = new uint256[](1);
         values[0] = 0;
 
+        {
+            bytes[] memory payloads = new bytes[](1);
+            payloads[0] = abi.encodeWithSelector(
+                timelock.grantRole.selector,
+                timelock.HOT_SIGNER_ROLE(),
+                address(this)
+            );
+
+            _scheduleBatch({
+                caller: address(safe),
+                timelock: address(timelock),
+                targets: targets,
+                values: values,
+                payloads: payloads,
+                salt: bytes32(0),
+                delay: MINIMUM_DELAY
+            });
+
+            vm.warp(block.timestamp + MINIMUM_DELAY);
+
+            _executeBatch({
+                caller: address(this),
+                timelock: address(timelock),
+                targets: targets,
+                values: values,
+                payloads: payloads,
+                salt: bytes32(0)
+            });
+        }
+
         MockLending lending = new MockLending();
 
         address[] memory targetAddresses = new address[](2);
@@ -665,11 +748,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             payloads: datas,
             salt: bytes32(0)
         });
-
-        address[] memory safeSigner = new address[](1);
-        safeSigner[0] = address(this);
-
-        safe.setOwners(safeSigner);
 
         timelock.checkCalldata(
             address(lending),
@@ -770,6 +848,36 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         uint256[] memory values = new uint256[](1);
         values[0] = 0;
+
+        {
+            bytes[] memory payloads = new bytes[](1);
+            payloads[0] = abi.encodeWithSelector(
+                timelock.grantRole.selector,
+                timelock.HOT_SIGNER_ROLE(),
+                address(this)
+            );
+
+            _scheduleBatch({
+                caller: address(safe),
+                timelock: address(timelock),
+                targets: targets,
+                values: values,
+                payloads: payloads,
+                salt: bytes32(0),
+                delay: MINIMUM_DELAY
+            });
+
+            vm.warp(block.timestamp + MINIMUM_DELAY);
+
+            _executeBatch({
+                caller: address(this),
+                timelock: address(timelock),
+                targets: targets,
+                values: values,
+                payloads: payloads,
+                salt: bytes32(0)
+            });
+        }
 
         MockLending lending = new MockLending();
 
@@ -890,13 +998,40 @@ contract TimelockUnitTest is TimelockUnitFixture {
         return address(lending);
     }
 
-    function testExecuteWhitelistedNonSafeOwnerFails() public {
-        vm.expectRevert("Timelock: caller is not the safe owner");
+    function testExecuteWhitelistedNotHotSignerFails() public {
+        bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes16(
+                    bytes4(
+                        keccak256(
+                            "AccessControlUnauthorizedAccount(address,bytes32)"
+                        )
+                    )
+                ),
+                address(this),
+                hotSignerRole
+            )
+        );
         timelock.executeWhitelisted(address(this), 0, "");
     }
 
-    function testExecuteWhitelistedBatchNonSafeOwnerFails() public {
-        vm.expectRevert("Timelock: caller is not the safe owner");
+    function testExecuteWhitelistedBatchNotHotSignerFails() public {
+        bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
+
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes16(
+                    bytes4(
+                        keccak256(
+                            "AccessControlUnauthorizedAccount(address,bytes32)"
+                        )
+                    )
+                ),
+                address(this),
+                hotSignerRole
+            )
+        );
         timelock.executeWhitelistedBatch(
             new address[](0), new uint256[](0), new bytes[](0)
         );
@@ -1009,10 +1144,11 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testExecuteWhitelistedBatchArityMismatchFails() public {
-        address[] memory safeSigner = new address[](1);
-        safeSigner[0] = address(this);
+        bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
 
-        safe.setOwners(safeSigner);
+        vm.prank(address(timelock));
+        timelock.grantRole(hotSignerRole, address(this));
+
         vm.expectRevert("Timelock: length mismatch");
         timelock.executeWhitelistedBatch(
             new address[](1), new uint256[](0), new bytes[](0)
