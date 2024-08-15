@@ -16,6 +16,13 @@ contract RecoverySpellFactoryUnitTest is Test {
         vm.etch(SAFE, SAFE_BYTECODE);
     }
 
+    function testDeployRecoverySpellFailsNonExistentSafe() public {
+        vm.expectRevert("RecoverySpell: safe non-existent");
+        recoveryFactory.createRecoverySpell(
+            bytes32(0), new address[](1), address(0), 1, 1, 1
+        );
+    }
+
     function testDeployTwiceSameParamsFails(
         bytes32 salt,
         uint8 ownerLength,
