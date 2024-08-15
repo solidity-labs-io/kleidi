@@ -3,14 +3,151 @@ pragma solidity 0.8.25;
 
 import "test/utils/TimelockUnitFixture.sol";
 
-/// TODO: Add tests for TimelockFactory
 contract TimelockFactoryUnitTest is TimelockUnitFixture {
-    function testSetup() public view {}
+    /// @notice Emitted when a call is scheduled as part of operation `id`.
+    /// @param timelock address of the newly created timelock
+    /// @param creationTime of the new timelock
+    /// @param sender that called the contract to create the timelock
+    event TimelockCreated(
+        address indexed timelock, uint256 creationTime, address sender
+    );
 
-    /// Tests
-    /// - create2
-    /// - different sender gives different address with all of the same parameters
-    /// - factoryCreated is updated when new timelock addresses are created
-    /// - events are correct
-    /// - addresses calculated correctly
+    function testTimelockCreation() public view {
+        assertEq(timelock.minDelay(), MIN_DELAY, "Min delay should be set");
+        assertEq(
+            timelock.expirationPeriod(),
+            EXPIRATION_PERIOD,
+            "Expiration period should be set"
+        );
+        assertEq(timelock.pauseGuardian(), guardian, "Guardian should be set");
+        assertEq(
+            timelock.pauseDuration(),
+            PAUSE_DURATION,
+            "Pause duration should be set"
+        );
+
+        assertTrue(
+            timelockFactory.factoryCreated(address(timelock)),
+            "timelock should be created by factory"
+        );
+        assertFalse(timelock.pauseUsed(), "timelock pause should not be used");
+        assertFalse(timelock.paused(), "timelock should not be paused");
+
+        assertTrue(
+            timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_ONE),
+            "Hot signer one should have role"
+        );
+        assertTrue(
+            timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_TWO),
+            "Hot signer two should have role"
+        );
+        assertTrue(
+            timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_THREE),
+            "Hot signer three should have role"
+        );
+    }
+
+    function testCreateTimelockThroughFactory() public {
+        DeploymentParams memory params = DeploymentParams({
+            minDelay: MINIMUM_DELAY + 1,
+            expirationPeriod: EXPIRATION_PERIOD,
+            pauser: guardian,
+            pauseDuration: PAUSE_DURATION,
+            hotSigners: hotSigners,
+            salt: salt
+        });
+
+        address newTimelock =
+            timelockFactory.createTimelock(address(this), params);
+
+        assertTrue(
+            timelockFactory.factoryCreated(newTimelock),
+            "Timelock should be created by factory"
+        );
+        assertTrue(newTimelock.code.length > 0, "Timelock not created");
+    }
+
+    function testCreateTimelockThroughFactoryDifferentSendersSameParams()
+        public
+    {
+        DeploymentParams memory params = DeploymentParams({
+            minDelay: MINIMUM_DELAY + 1,
+            expirationPeriod: EXPIRATION_PERIOD,
+            pauser: guardian,
+            pauseDuration: PAUSE_DURATION,
+            hotSigners: hotSigners,
+            salt: salt
+        });
+
+        vm.prank(address(1000000000));
+        address newTimelockSenderOne =
+            timelockFactory.createTimelock(address(this), params);
+
+        assertTrue(
+            timelockFactory.factoryCreated(newTimelockSenderOne),
+            "Timelock should be created by factory"
+        );
+        assertTrue(newTimelockSenderOne.code.length > 0, "Timelock not created");
+
+        vm.prank(address(2000000000));
+        address newTimelockSenderTwo =
+            timelockFactory.createTimelock(address(this), params);
+
+        assertTrue(
+            timelockFactory.factoryCreated(newTimelockSenderTwo),
+            "Timelock should be created by factory"
+        );
+        assertTrue(newTimelockSenderTwo.code.length > 0, "Timelock not created");
+
+        assertNotEq(
+            newTimelockSenderTwo,
+            newTimelockSenderOne,
+            "Timelocks should be different"
+        );
+    }
+
+    function testTimelockCreationCode() public view {
+        bytes memory timelockCreationCode =
+            timelockFactory.timelockCreationCode();
+        bytes memory actualTimelockCreationCode = type(Timelock).creationCode;
+
+        assertEq(
+            timelockCreationCode,
+            actualTimelockCreationCode,
+            "Timelock creation code should be empty"
+        );
+    }
+
+    function testTimelockCreatedEventEmitted() public {
+        address safeAddress = address(0x3afe);
+        DeploymentParams memory params = DeploymentParams({
+            minDelay: MINIMUM_DELAY + 1,
+            expirationPeriod: EXPIRATION_PERIOD,
+            pauser: guardian,
+            pauseDuration: PAUSE_DURATION,
+            hotSigners: hotSigners,
+            salt: salt
+        });
+
+        Create2Params memory create2Params;
+        create2Params.creator = address(timelockFactory);
+        create2Params.creationCode = timelockFactory.timelockCreationCode();
+        create2Params.constructorParams = abi.encode(
+            safeAddress,
+            params.minDelay,
+            params.expirationPeriod,
+            params.pauser,
+            params.pauseDuration,
+            params.hotSigners
+        );
+        create2Params.salt =
+            keccak256(abi.encodePacked(params.salt, address(this)));
+
+        address newTimelock = calculateCreate2Address(create2Params);
+
+        vm.expectEmit(true, true, true, true, address(timelockFactory));
+        emit TimelockCreated(newTimelock, block.timestamp, address(this));
+
+        timelockFactory.createTimelock(safeAddress, params);
+    }
 }
