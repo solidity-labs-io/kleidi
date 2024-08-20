@@ -100,7 +100,11 @@ contract AddressCalculation {
                     abi.encode(
                         instance.owners,
                         instance.threshold,
-                        instance.timelockParams
+                        instance.timelockParams.minDelay,
+                        instance.timelockParams.expirationPeriod,
+                        instance.timelockParams.pauser,
+                        instance.timelockParams.pauseDuration,
+                        instance.timelockParams.hotSigners
                     )
                 )
             );
