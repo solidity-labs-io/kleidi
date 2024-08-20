@@ -89,6 +89,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         irm = addresses.getAddress("MORPHO_BLUE_IRM");
         oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
         multicall = addresses.getAddress("MULTICALL3");
+        morphoBlue = addresses.getAddress("MORPHO_BLUE");
 
         guard = Guard(addresses.getAddress("GUARD"));
         recoveryFactory =
@@ -123,7 +124,10 @@ contract DeploymentMultichainTest is SystemDeploy {
         );
     }
 
-    function testDifferentCalldataSameAddresses() public {
+    function testDifferentCalldataSameAddresses()
+        public
+        returns (NewInstance memory instance)
+    {
         address[] memory owners = new address[](3);
         owners[0] = vm.addr(10);
         owners[1] = vm.addr(11);
@@ -134,8 +138,6 @@ contract DeploymentMultichainTest is SystemDeploy {
         hotSigners[0] = vm.addr(1111111);
         hotSigners[1] = vm.addr(2222222);
 
-        NewInstance memory instance;
-
         {
             /// each morpho blue function call needs two checks:
             /// 1). check the pool id where funds are being deposited is whitelisted.
@@ -145,14 +147,19 @@ contract DeploymentMultichainTest is SystemDeploy {
             uint16[] memory startIndexes = new uint16[](8);
             /// morpho blue supply
             startIndexes[0] = 4;
+            
             /// only grab last twenty bytes of the 7th argument
             startIndexes[1] = 4 + 32 * 7 + 12;
+            
             /// ethena usd approve morpho
             startIndexes[2] = 16;
+
             /// only check last twenty bytes of the 1st argument
             startIndexes[3] = 4 + 32 * 8 + 12;
+            
             /// only grab last twenty bytes of the 8th argument
             startIndexes[4] = 4 + 32 * 8 + 12;
+            
             /// only grab last twenty bytes of the 8th argument
             startIndexes[5] = 4 + 32 * 8 + 12;
 
@@ -165,21 +172,29 @@ contract DeploymentMultichainTest is SystemDeploy {
             uint16[] memory endIndexes = new uint16[](8);
             /// morpho blue supply
             endIndexes[0] = startIndexes[0] + 32 * 5;
+
             /// last twenty bytes represents who supplying on behalf of
             endIndexes[1] = startIndexes[1] + 20;
+
             /// ethena usd approve morpho
             endIndexes[2] = startIndexes[2] + 20;
+
             /// last twenty bytes represents who is approved to spend the tokens
             /// morpho borrow
             endIndexes[3] = startIndexes[3] + 20;
+
             /// morpho repay
             endIndexes[4] = startIndexes[4] + 20;
+
             /// morpho withdraw
             endIndexes[5] = startIndexes[5] + 20;
+
             /// last twenty bytes represents asset receiver
             endIndexes[6] = startIndexes[6] + 20;
+
             /// last twenty bytes represents asset receiver
             endIndexes[7] = startIndexes[7] + 20;
+
             /// last twenty bytes represents asset receiver
 
             bytes4[] memory selectors = new bytes4[](8);
@@ -206,8 +221,8 @@ contract DeploymentMultichainTest is SystemDeploy {
             /// morpho blue address can be approved to spend eUSD
             calldatas[2] = abi.encodePacked(morphoBlue);
 
-            /// not packed because the MarketParams struct is not packed
-            calldatas[3] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            /// can only borrow on behalf of timelock
+            calldatas[3] = "";
 
             /// can only deposit to timelock
             calldatas[4] = "";
@@ -235,7 +250,7 @@ contract DeploymentMultichainTest is SystemDeploy {
             isSelfAddressCheck[0] = false;
             isSelfAddressCheck[1] = true;
             isSelfAddressCheck[2] = false;
-            isSelfAddressCheck[3] = false;
+            isSelfAddressCheck[3] = true;
             isSelfAddressCheck[4] = true;
             isSelfAddressCheck[5] = true;
             isSelfAddressCheck[6] = true;
@@ -309,6 +324,21 @@ contract DeploymentMultichainTest is SystemDeploy {
         SystemInstance memory calculatedInstanceBase =
             addressCalculation.calculateAddress(instance);
 
+        /// change the whitelisted calldata before deployment on base
+        instance.timelockParams.contractAddresses = new address[](1);
+        instance.timelockParams.selectors = new bytes4[](1);
+
+        instance.timelockParams.startIndexes = new uint16[](1);
+        instance.timelockParams.startIndexes[0] = 4;
+
+        instance.timelockParams.endIndexes = new uint16[](1);
+        instance.timelockParams.endIndexes[0] = 10;
+
+        instance.timelockParams.datas = new bytes[](1);
+        instance.timelockParams.datas[0] = new bytes(6);
+
+        instance.timelockParams.isSelfAddressCheck = new bool[](1);
+
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
             deployer.createSystemInstance(instance);
@@ -334,15 +364,8 @@ contract DeploymentMultichainTest is SystemDeploy {
             "Deployed vs Actual Timelock addresses should be the same"
         );
 
-        /// TODO test actual deployment on both chains with different calldata
+        /// TODO
         /// - add recovery spells into the mix
-
-        instance.timelockParams.contractAddresses = new address[](1);
-        instance.timelockParams.selectors = new bytes4[](1);
-        instance.timelockParams.startIndexes = new uint16[](1);
-        instance.timelockParams.endIndexes = new uint16[](1);
-        instance.timelockParams.datas = new bytes[](1);
-        instance.timelockParams.isSelfAddressCheck = new bool[](1);
 
         {
             vm.expectRevert("InstanceDeployer: safe already created");
