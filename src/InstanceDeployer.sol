@@ -117,6 +117,10 @@ contract InstanceDeployer {
         multicall3 = _multicall3;
     }
 
+    /// callable only by the hot signer of the timelock
+    /// this prevents a malicious user from deploying a system instance with
+    /// calldata that was not intended to be whitelisted.
+
     /// @notice function to create a system instance that has the following
     /// contracts and configurations:
     /// 1. new safe created with specified owners and threshold
@@ -214,6 +218,22 @@ contract InstanceDeployer {
                     address(walletInstance.safe), instance.timelockParams
                 )
             )
+        );
+
+        require(
+            walletInstance.timelock.hasRole(
+                walletInstance.timelock.HOT_SIGNER_ROLE(), msg.sender
+            ),
+            "InstanceDeployer: sender must be hot signer"
+        );
+
+        walletInstance.timelock.initialize(
+            instance.timelockParams.contractAddresses,
+            instance.timelockParams.selectors,
+            instance.timelockParams.startIndexes,
+            instance.timelockParams.endIndexes,
+            instance.timelockParams.datas,
+            instance.timelockParams.isSelfAddressCheck
         );
 
         /// checks that contracts successfully deployed
