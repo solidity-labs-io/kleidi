@@ -147,19 +147,19 @@ contract DeploymentMultichainTest is SystemDeploy {
             uint16[] memory startIndexes = new uint16[](8);
             /// morpho blue supply
             startIndexes[0] = 4;
-            
+
             /// only grab last twenty bytes of the 7th argument
             startIndexes[1] = 4 + 32 * 7 + 12;
-            
+
             /// ethena usd approve morpho
             startIndexes[2] = 16;
 
             /// only check last twenty bytes of the 1st argument
             startIndexes[3] = 4 + 32 * 8 + 12;
-            
+
             /// only grab last twenty bytes of the 8th argument
             startIndexes[4] = 4 + 32 * 8 + 12;
-            
+
             /// only grab last twenty bytes of the 8th argument
             startIndexes[5] = 4 + 32 * 8 + 12;
 
