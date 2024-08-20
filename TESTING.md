@@ -6,7 +6,8 @@
 ## Scenario Test
 
 - [ ] full Morpho Blue whitelisted calldata walkthrough
-    - [ ] supply collateral
+    - [x] supply collateral
+    - [x] withdraw collateral
     - [ ] borrow
     - [ ] repay
     - [ ] supply borrow asset
