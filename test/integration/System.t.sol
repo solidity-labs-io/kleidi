@@ -259,22 +259,29 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
 
             bytes[] memory calldatas = new bytes[](8);
-            calldatas[0] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
             /// can only deposit to dai/eusd pool
+            calldatas[0] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            
+            /// can only deposit to timelock
             calldatas[1] = "";
-            /// can only deposit to timelock
-            calldatas[2] = abi.encodePacked(morphoBlue);
+            
             /// morpho blue address can be approved to spend eUSD
-            calldatas[3] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            calldatas[2] = abi.encodePacked(morphoBlue);
+            
             /// not packed because the MarketParams struct is not packed
-            calldatas[4] = "";
+            calldatas[3] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            
             /// can only deposit to timelock
-            calldatas[5] = "";
+            calldatas[4] = "";
+            
             /// can only repay on behalf of timelock
-            calldatas[6] = "";
+            calldatas[5] = "";
+
             /// can only supply collateral on behalf of timelock
-            calldatas[7] = "";
+            calldatas[6] = "";
+            
             /// can only withdraw collateral back to timelock
+            calldatas[7] = "";
 
             address[] memory targets = new address[](8);
             targets[0] = morphoBlue;
