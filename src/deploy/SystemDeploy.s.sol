@@ -8,6 +8,7 @@ import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
 import {TimelockFactory} from "src/TimelockFactory.sol";
 import {InstanceDeployer} from "src/InstanceDeployer.sol";
+import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 
 /// @notice system deployment contract
@@ -26,7 +27,7 @@ contract SystemDeploy is MultisigProposal {
     }
 
     function description() public pure override returns (string memory) {
-        return "Deploy TimelockFactory and Guard contracts";
+        return "Deploy Factories, Instance Deployer, Guard and View contracts";
     }
 
     function deploy() public override {
@@ -55,6 +56,15 @@ contract SystemDeploy is MultisigProposal {
             );
 
             addresses.addAddress("INSTANCE_DEPLOYER", address(deployer), true);
+        }
+        if (!addresses.isAddressSet("ADDRESS_CALCULATION")) {
+            AddressCalculation addressCalculation = new AddressCalculation{
+                salt: salt
+            }(addresses.getAddress("INSTANCE_DEPLOYER"));
+
+            addresses.addAddress(
+                "ADDRESS_CALCULATION", address(addressCalculation), true
+            );
         }
     }
 
