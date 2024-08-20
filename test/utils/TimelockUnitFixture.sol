@@ -86,10 +86,25 @@ contract TimelockUnitFixture is CallHelper {
                         guardian, // _pauser
                         PAUSE_DURATION, // _pauseDuration
                         hotSigners,
+                        new address[](0),
+                        new bytes4[](0),
+                        new uint16[](0),
+                        new uint16[](0),
+                        new bytes[](0),
+                        new bool[](0),
                         salt
                     )
                 )
             )
+        );
+
+        timelock.initialize(
+            new address[](0),
+            new bytes4[](0),
+            new uint16[](0),
+            new uint16[](0),
+            new bytes[](0),
+            new bool[](0)
         );
     }
 }
