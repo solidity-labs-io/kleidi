@@ -241,6 +241,12 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
                 guardian,
                 PAUSE_DURATION,
                 hotSigners,
+                new address[](0),
+                new bytes4[](0),
+                new uint16[](0),
+                new uint16[](0),
+                new bytes[](0),
+                new bool[](0),
                 bytes32(0)
             )
         );
@@ -261,6 +267,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         recoverySpells[0] = recoverySpellAddress;
         instance.recoverySpells = recoverySpells;
 
+        vm.prank(HOT_SIGNER_ONE);
         SystemInstance memory walletInstance =
             deployer.createSystemInstance(instance);
 
