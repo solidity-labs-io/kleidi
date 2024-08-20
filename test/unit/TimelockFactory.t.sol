@@ -54,6 +54,12 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -76,6 +82,12 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -126,6 +138,12 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
