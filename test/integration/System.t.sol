@@ -217,11 +217,12 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             startIndexes[4] = 4 + 32 * 8 + 12;
             /// only grab last twenty bytes of the 8th argument
             startIndexes[5] = 4 + 32 * 8 + 12;
-            /// only grab last twenty bytes of the 8th argument
+            
+            /// check last twenty bytes of the 7th argument
             startIndexes[6] = 4 + 32 * 6 + 12;
-            /// only grab last twenty bytes of the 7th argument
-            startIndexes[7] = 4 + 32 * 8 + 12;
-            /// only grab last twenty bytes of the 8th argument
+            
+            /// check last twenty bytes of the 8th argument
+            startIndexes[7] = 4 + 32 * 7 + 12;
 
             uint16[] memory endIndexes = new uint16[](8);
             /// morpho blue supply
@@ -260,19 +261,19 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bytes[] memory calldatas = new bytes[](8);
             calldatas[0] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
             /// can only deposit to dai/eusd pool
-            calldatas[1] = abi.encodePacked(timelock);
+            calldatas[1] = "";
             /// can only deposit to timelock
             calldatas[2] = abi.encodePacked(morphoBlue);
             /// morpho blue address can be approved to spend eUSD
             calldatas[3] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
             /// not packed because the MarketParams struct is not packed
-            calldatas[4] = abi.encodePacked(timelock);
+            calldatas[4] = "";
             /// can only deposit to timelock
-            calldatas[5] = abi.encodePacked(timelock);
+            calldatas[5] = "";
             /// can only repay on behalf of timelock
-            calldatas[6] = abi.encodePacked(timelock);
+            calldatas[6] = "";
             /// can only supply collateral on behalf of timelock
-            calldatas[7] = abi.encodePacked(timelock);
+            calldatas[7] = "";
             /// can only withdraw collateral back to timelock
 
             address[] memory targets = new address[](8);
@@ -285,13 +286,24 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             targets[6] = morphoBlue;
             targets[7] = morphoBlue;
 
+            bool[] memory isSelfAddressCheck = new bool[](8);
+            isSelfAddressCheck[0] = false;
+            isSelfAddressCheck[1] = true;
+            isSelfAddressCheck[2] = false;
+            isSelfAddressCheck[3] = false;
+            isSelfAddressCheck[4] = true;
+            isSelfAddressCheck[5] = true;
+            isSelfAddressCheck[6] = true;
+            isSelfAddressCheck[7] = true;
+
             contractCall = abi.encodeWithSelector(
                 Timelock.addCalldataChecks.selector,
                 targets,
                 selectors,
                 startIndexes,
                 endIndexes,
-                calldatas
+                calldatas,
+                isSelfAddressCheck
             );
 
             /// inner calldata
@@ -666,42 +678,43 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         /// warp to current timestamp to prevent math underflow
         /// with cached timestamp in the future which doesn't work
         vm.warp(startTimestamp);
-
-        address[] memory targets = new address[](2);
-        targets[0] = address(ethenaUsd);
-        targets[1] = address(morphoBlue);
-
-        uint256[] memory values = new uint256[](2);
-
-        bytes[] memory calldatas = new bytes[](2);
-
         uint256 supplyAmount = 100000;
 
-        deal(ethenaUsd, address(timelock), supplyAmount);
+        {
+            address[] memory targets = new address[](2);
+            targets[0] = address(ethenaUsd);
+            targets[1] = address(morphoBlue);
 
-        calldatas[0] = abi.encodeWithSelector(
-            IERC20.approve.selector, morphoBlue, supplyAmount
-        );
+            uint256[] memory values = new uint256[](2);
 
-        calldatas[1] = abi.encodeWithSelector(
-            IMorphoBase.supplyCollateral.selector,
-            dai,
-            ethenaUsd,
-            oracle,
-            irm,
-            lltv,
-            supplyAmount,
-            /// supply supplyAmount of eUSD
-            address(timelock),
-            ""
-        );
+            bytes[] memory calldatas = new bytes[](2);
 
-        IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
-        );
+            deal(ethenaUsd, address(timelock), supplyAmount);
 
-        vm.prank(HOT_SIGNER_ONE);
-        timelock.executeWhitelistedBatch(targets, values, calldatas);
+            calldatas[0] = abi.encodeWithSelector(
+                IERC20.approve.selector, morphoBlue, supplyAmount
+            );
+
+            calldatas[1] = abi.encodeWithSelector(
+                IMorphoBase.supplyCollateral.selector,
+                dai,
+                ethenaUsd,
+                oracle,
+                irm,
+                lltv,
+                supplyAmount,
+                /// supply supplyAmount of eUSD
+                address(timelock),
+                ""
+            );
+
+            IMorphoBase(morphoBlue).accrueInterest(
+                MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+        }
 
         bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
 
@@ -711,5 +724,73 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         assertEq(position.supplyShares, 0, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
+
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(morphoBlue);
+
+            uint256[] memory values = new uint256[](1);
+            values[0] = 0;
+
+            bytes[] memory calldatas = new bytes[](1);
+            calldatas[0] = abi.encodeWithSelector(
+                IMorphoBase.withdrawCollateral.selector,
+                dai,
+                ethenaUsd,
+                oracle,
+                irm,
+                lltv,
+                supplyAmount,
+                address(timelock),
+                address(timelock)
+            );
+
+            vm.prank(HOT_SIGNER_TWO);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            position = IMorpho(morphoBlue).position(marketId, address(timelock));
+
+            assertEq(position.supplyShares, 0, "incorrect supply shares");
+            assertEq(position.borrowShares, 0, "incorrect borrow shares");
+            assertEq(position.collateral, 0, "incorrect collateral");
+
+            assertEq(
+                IERC20(ethenaUsd).balanceOf(address(timelock)),
+                supplyAmount,
+                "incorrect eUSD balance post withdrawal"
+            );
+        }
+    }
+
+    function testWithdrawToNonWhitelistedAddressFails() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 supplyAmount = 100000;
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(morphoBlue);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(
+            IMorphoBase.withdrawCollateral.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            supplyAmount,
+            address(timelock),
+            address(this)
+        );
+
+        vm.prank(HOT_SIGNER_THREE);
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
     }
 }
