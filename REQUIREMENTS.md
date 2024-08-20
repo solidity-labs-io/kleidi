@@ -14,11 +14,31 @@ The Guard contract prevents the Safe contract from directly modifying its own pa
 
 ## Recovery Spells
 
-Recovery spells are modules that are authorized to make changes to the Safe contract without the Timelock. These are used to recover the Safe contract in the event that the safe signers permanently go offline. If the time delay on a recovery spell is shorter than the timelock, the recovery spell can kick the safe owners without the current safe owners being able to veto this change. This is why it is important to have a longer time delay on the recovery spells than on the timelock.
+Recovery spells are modules that are authorized to make changes to the Safe contract without the Timelock. These are used to recover the Safe contract in the event that the safe signers permanently go offline.
+
+### Malicious Recovery Spell Scenario
+If the time delay on a recovery spell is shorter than the timelock, the recovery spell can kick the safe owners without the current safe owners being able to veto this change. This is why it is important to have a longer time delay on the recovery spells than on the timelock.
+
+### Malicious Safe Signer Takeover Scenario
+Conversely, if the Safe keys are compromised, and the recovery spell time delay is longer than the timelock, then the attacker can rotate the keys on the Safe through a timelocked transaction and remove the recovery spell as a module.
+
+## Guardian
+
+If the guardian is set, as a long as a social recovery module is set, and the guardian can be reached before a malicious proposal becomes executable, and a recovery spell exists whose time delay is shorter than the guardian pause duration, the guardian can pause the timelock, cancelling all malicious proposals, which stops them from being executed, and then the recovery spell can execute and rotate signing keys.
+
+### Malicious Recovery Spell Scenario with Guardian
+
+If the guardian is set, and a recovery spell is malicious, the guardian cannot veto this change. This is why it is important to have a longer time delay on the recovery spells than the timelock.
+
+### Malicious Safe Signer Takeover Scenario with Guardian
+
+If the Safe keys are compromised, and the guardian is set, and the guardian can be reached before a malicious proposal becomes executable, and a recovery spell exists whose time delay is shorter than the guardian pause duration, the guardian can pause the timelock, cancelling all malicious proposals, which stops them from being executed, and then the recovery spell can execute and rotate signing keys.
 
 ## Timelock
 
 The timelock calldata whitelisting feature can be abused and set to malicious targets, or targets such as DEX's that allow swapping of tokens. If malicious targets and calldatas are whitelisted, the timelock can have all of its funds drained immediately.
+
+It is recommended to have the timelock delay be shorter than the recovery spell delay so that the timelock can cancel malicious recovery spells.
 
 ## Onchain Policy Engine
 
