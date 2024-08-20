@@ -10,6 +10,36 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         validate();
     }
 
+    function testNonHotSignerCannotDeploy() public {
+        uint8 recoverySpellLength = 7;
+        uint8 ownersLength = 3;
+
+        NewInstance memory instance;
+
+        instance.owners = new address[](ownersLength);
+        instance.threshold = 2;
+        instance.recoverySpells = new address[](recoverySpellLength);
+
+        for (uint256 i = 0; i < ownersLength; i++) {
+            instance.owners[i] = address(uint160(11 + i));
+        }
+
+        for (uint256 i = 0; i < recoverySpellLength; i++) {
+            instance.recoverySpells[i] = address(uint160(101 + i));
+        }
+
+        instance.timelockParams.minDelay = MIN_DELAY;
+        instance.timelockParams.expirationPeriod = EXPIRATION_PERIOD;
+        instance.timelockParams.pauser = guardian;
+        instance.timelockParams.pauseDuration = PAUSE_DURATION;
+        instance.timelockParams.salt = bytes32(uint256(0x3a17));
+        instance.timelockParams.hotSigners = new address[](0);
+
+        vm.prank(HOT_SIGNER_ONE);
+        vm.expectRevert("InstanceDeployer: sender must be hot signer");
+        deployer.createSystemInstance(instance);
+    }
+
     function testCreateSystemInstance(
         uint8 ownersLength,
         uint8 threshold,
@@ -206,8 +236,10 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         instance.timelockParams.pauser = guardian;
         instance.timelockParams.pauseDuration = PAUSE_DURATION;
         instance.timelockParams.salt = bytes32(uint256(0x3a17));
-        instance.timelockParams.hotSigners = new address[](0);
+        instance.timelockParams.hotSigners = new address[](1);
+        instance.timelockParams.hotSigners[0] = HOT_SIGNER_ONE;
 
+        vm.prank(HOT_SIGNER_ONE);
         SystemInstance memory wallet = deployer.createSystemInstance(instance);
 
         newTimelock = wallet.timelock;
@@ -302,6 +334,12 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
                 guardian,
                 PAUSE_DURATION,
                 hotSigners,
+                new address[](0),
+                new bytes4[](0),
+                new uint16[](0),
+                new uint16[](0),
+                new bytes[](0),
+                new bool[](0),
                 bytes32(0)
             )
         );
@@ -343,13 +381,14 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
 
         vm.expectEmit(true, true, true, true, address(deployer));
         emit SafeCreationFailed(
-            address(this),
+            HOT_SIGNER_ONE,
             block.timestamp,
             address(safeProxy),
             safeInitdata,
             creationSalt
         );
 
+        vm.prank(HOT_SIGNER_ONE);
         SystemInstance memory walletInstance =
             deployer.createSystemInstance(instance);
 
