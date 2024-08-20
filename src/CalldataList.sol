@@ -55,6 +55,10 @@ abstract contract CalldataList {
             => mapping(bytes4 selector => Index[] calldataChecks)
     ) private _calldataList;
 
+    /// @notice constant hash of the address of this contract
+    bytes32 public immutable ADDRESS_THIS_HASH =
+        keccak256(abi.encodePacked(address(this)));
+
     /// @notice get the calldata checks for a specific contract and function selector
     function getCalldataChecks(address contractAddress, bytes4 selector)
         public
@@ -100,12 +104,14 @@ abstract contract CalldataList {
     /// @param startIndex the start index of the calldata
     /// @param endIndex the end index of the calldata
     /// @param data the calldata that is stored
+    /// @param isSelfAddressCheck whether or not this is a self address check
     function _addCalldataCheck(
         address contractAddress,
         bytes4 selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes memory data
+        bytes memory data,
+        bool isSelfAddressCheck
     ) internal {
         require(
             startIndex >= 4, "CalldataList: Start index must be greater than 3"
@@ -118,7 +124,20 @@ abstract contract CalldataList {
             contractAddress != address(this),
             "CalldataList: Contract address cannot be this"
         );
-        bytes32 dataHash = keccak256(data);
+
+        if (isSelfAddressCheck) {
+            require(
+                data.length == 0,
+                "CalldataList: Data must be empty for self address check"
+            );
+            require(
+                endIndex - startIndex == 20,
+                "CalldataList: Self address check must be 20 bytes"
+            );
+        }
+
+        bytes32 dataHash =
+            isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
 
         _calldataList[contractAddress][selector].push(
             Index(startIndex, endIndex, dataHash)
@@ -140,13 +159,15 @@ abstract contract CalldataList {
         bytes4[] memory selectors,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
-        bytes[] memory datas
+        bytes[] memory datas,
+        bool[] memory isSelfAddressCheck
     ) internal {
         require(
             contractAddresses.length == selectors.length
                 && selectors.length == startIndexes.length
                 && startIndexes.length == endIndexes.length
-                && endIndexes.length == datas.length,
+                && endIndexes.length == datas.length
+                && datas.length == isSelfAddressCheck.length,
             "CalldataList: Array lengths must be equal"
         );
 
@@ -156,7 +177,8 @@ abstract contract CalldataList {
                 selectors[i],
                 startIndexes[i],
                 endIndexes[i],
-                datas[i]
+                datas[i],
+                isSelfAddressCheck[i]
             );
         }
     }
