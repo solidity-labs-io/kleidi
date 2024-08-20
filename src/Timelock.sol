@@ -20,6 +20,8 @@ import {CalldataList} from "src/CalldataList.sol";
 import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 
+/// @notice DO NOT DEPLOY OUTSIDE OF INSTANCE DEPLOYER
+
 /// @notice known issues:
 /// - a malicious pauser can cancel all in flight proposals,
 /// for the pause duration, effectively locking funds for
@@ -90,6 +92,9 @@ contract Timelock is
     /// ------------------- STORAGE VARIABLES -------------------
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
+
+    /// @notice whether the contract has been initialized
+    bool public initialized;
 
     /// @notice minimum delay for all timelock proposals
     uint256 public minDelay;
@@ -246,6 +251,33 @@ contract Timelock is
         for (uint256 i = 0; i < hotSigners.length; i++) {
             _grantRole(HOT_SIGNER_ROLE, hotSigners[i]);
         }
+    }
+
+    /// @param contractAddresses the address of the contract that the calldata check is added to
+    /// @param selectors the function selector of the function that the calldata check is added to
+    /// @param startIndexes the start indexes of the calldata
+    /// @param endIndexes the end indexes of the calldata
+    /// @param datas the calldata that is stored
+    /// @param isSelfAddressCheck whether the calldata check is for the timelock
+    function initialize(
+        address[] memory contractAddresses,
+        bytes4[] memory selectors,
+        uint16[] memory startIndexes,
+        uint16[] memory endIndexes,
+        bytes[] memory datas,
+        bool[] memory isSelfAddressCheck
+    ) external {
+        require(!initialized, "Timelock: already initialized");
+        initialized = true;
+
+        _addCalldataChecks(
+            contractAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            datas,
+            isSelfAddressCheck
+        );
     }
 
     /// ---------------------------------------------------------------
@@ -557,6 +589,8 @@ contract Timelock is
     /// ----------------------------------------------------------
     /// ----------------------------------------------------------
 
+    /// TODO should we check value for hot signer calls?
+
     /// @notice any safe owner can call this function and execute
     /// a call to whitelisted contracts with whitelisted calldatas
     /// no reentrancy checks needed here as the safe owners can execute this
@@ -635,15 +669,22 @@ contract Timelock is
     /// @param endIndexes the end indexes of the calldata
     /// @param datas the calldatas that are checked for each corresponding function at each index
     /// on each contract
+    /// @param isSelfAddressCheck whether the calldata check is a self address check
     function addCalldataChecks(
         address[] memory contractAddresses,
         bytes4[] memory selectors,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
-        bytes[] memory datas
+        bytes[] memory datas,
+        bool[] memory isSelfAddressCheck
     ) external onlyTimelock {
         _addCalldataChecks(
-            contractAddresses, selectors, startIndexes, endIndexes, datas
+            contractAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            datas,
+            isSelfAddressCheck
         );
     }
 
@@ -653,14 +694,23 @@ contract Timelock is
     /// @param startIndex the start indexes of the calldata
     /// @param endIndex the end indexes of the calldata
     /// @param data the calldata that is stored
+    /// @param isSelfAddressCheck whether the calldata check is a self address check
     function addCalldataCheck(
         address contractAddress,
         bytes4 selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes memory data
+        bytes memory data,
+        bool isSelfAddressCheck
     ) external onlyTimelock {
-        _addCalldataCheck(contractAddress, selector, startIndex, endIndex, data);
+        _addCalldataCheck(
+            contractAddress,
+            selector,
+            startIndex,
+            endIndex,
+            data,
+            isSelfAddressCheck
+        );
     }
 
     /// @notice remove a single calldata check for a given contract address
