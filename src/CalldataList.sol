@@ -126,6 +126,7 @@ abstract contract CalldataList {
         );
 
         if (isSelfAddressCheck) {
+            /// self address check, data must be empty
             require(
                 data.length == 0,
                 "CalldataList: Data must be empty for self address check"
@@ -133,6 +134,12 @@ abstract contract CalldataList {
             require(
                 endIndex - startIndex == 20,
                 "CalldataList: Self address check must be 20 bytes"
+            );
+        } else {
+            /// not self address check, data length must equal delta index
+            require(
+                data.length == endIndex - startIndex,
+                "CalldataList: Data length mismatch"
             );
         }
 
