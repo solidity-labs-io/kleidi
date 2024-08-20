@@ -82,6 +82,15 @@ contract CalldataListUnitTest is Test {
             PAUSE_DURATION, // _pauseDuration
             hotSigners
         );
+
+        timelock.initialize(
+            new address[](0),
+            new bytes4[](0),
+            new uint16[](0),
+            new uint16[](0),
+            new bytes[](0),
+            new bool[](0)
+        );
     }
 
     function testArityMismatchAddCalldataChecks() public {
@@ -112,6 +121,10 @@ contract CalldataListUnitTest is Test {
         bytes[] memory checkedCalldata = new bytes[](1);
         checkedCalldata[0] = abi.encodePacked(address(timelock));
 
+        bool[] memory isSelfAddressCheck = new bool[](2);
+        isSelfAddressCheck[0] = true;
+        isSelfAddressCheck[1] = true;
+
         vm.expectRevert("CalldataList: Array lengths must be equal");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
@@ -119,7 +132,8 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldata
+            checkedCalldata,
+            isSelfAddressCheck
         );
     }
 
@@ -127,11 +141,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            3,
-            4,
-            abi.encodePacked(address(timelock))
+            address(lending), MockLending.deposit.selector, 3, 4, "", true
         );
     }
 
@@ -141,11 +151,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            4,
-            abi.encodePacked(address(timelock))
+            address(lending), MockLending.deposit.selector, 4, 4, "", true
         );
     }
 
@@ -155,11 +161,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            3,
-            abi.encodePacked(address(timelock))
+            address(lending), MockLending.deposit.selector, 4, 3, "", true
         );
     }
 
@@ -167,11 +169,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Contract address cannot be this");
         timelock.addCalldataCheck(
-            address(timelock),
-            Timelock.schedule.selector,
-            4,
-            5,
-            abi.encodePacked(address(timelock))
+            address(timelock), Timelock.schedule.selector, 4, 5, "", true
         );
     }
 }
