@@ -58,6 +58,15 @@ contract TimelockReceivingUnitTest is Test {
             PAUSE_DURATION, // _pauseDuration
             new address[](0) // hotSigners
         );
+
+        timelock.initialize(
+            new address[](0), // targets
+            new bytes4[](0), // selectors
+            new uint16[](0), // startIndexes
+            new uint16[](0), // endIndexes
+            new bytes[](0), // datas
+            new bool[](0) // isSelfAddressCheck
+        );
     }
 
     function testReceive1155Mint() public {
