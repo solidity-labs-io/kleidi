@@ -74,8 +74,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
     }
 
-    /// todo test that after a proposal is scheduled, it cannot be executed if it expires
-
     function testScheduleProposalSafeSucceeds() public returns (bytes32) {
         _schedule({
             caller: address(safe),
@@ -361,6 +359,34 @@ contract TimelockUnitTest is TimelockUnitFixture {
             true
         );
     }
+    
+    function testAddCalldataChecksFailsLengthMismatch() public {
+        vm.prank(address(timelock));
+        vm.expectRevert(
+            "CalldataList: Data length mismatch"
+        );
+        timelock.addCalldataCheck(
+            address(10000),
+            timelock.addCalldataCheck.selector,
+            10,
+            13,
+            hex"1234",
+            false
+        );
+        
+        vm.prank(address(timelock));
+        vm.expectRevert(
+            "CalldataList: Data length mismatch"
+        );
+        timelock.addCalldataCheck(
+            address(10000),
+            timelock.addCalldataCheck.selector,
+            9,
+            28,
+            hex"1234",
+            false
+        );
+    }
 
     function testAddCalldataChecksFailsSelfCheckDeltaNotTwenty() public {
         vm.prank(address(timelock));
@@ -584,18 +610,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_THREE),
             "Hot signer three should have role revoked"
         );
-    }
-
-    /// TODO fill this test out
-    function testScheduleCallSucceedsUnderNormalConditions() public {
-        // Prepare the scheduling parameters
-        // Call schedule() with valid parameters
-    }
-
-    /// TODO fill this test out
-    function testExecuteCallRevertsIfNotReady() public {
-        // Prepare and schedule a call
-        // Attempt to execute before it's ready
     }
 
     function testExecuteCallSucceedsWhenReady() public {
