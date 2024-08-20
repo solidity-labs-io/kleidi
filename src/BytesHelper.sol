@@ -45,7 +45,7 @@ library BytesHelper {
             "Start index is greater than the length of the byte string"
         );
         require(
-            end < toSlice.length,
+            end <= toSlice.length,
             "End index is greater than the length of the byte string"
         );
         require(start < end, "Start index not less than end index");
