@@ -1,5 +1,6 @@
 # Test List
 
+- cross chain deployment of the wallet deployer system, check that all addresses are the same on each chain
 - cross chain deployment, same contract addresses, different whitelisted calldata and addresses
 
 ## Scenario Test
