@@ -25,6 +25,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -37,6 +43,8 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
 
         SystemInstance memory expectedContracts =
             addressCalculation.calculateAddress(instance);
+
+        vm.prank(HOT_SIGNER_ONE);
         SystemInstance memory actualContracts =
             deployer.createSystemInstance(instance);
 
@@ -65,6 +73,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -80,6 +94,8 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
 
         /// remove recovery spell
         instance.recoverySpells = new address[](0);
+
+        vm.prank(HOT_SIGNER_ONE);
         SystemInstance memory actualContracts =
             deployer.createSystemInstance(instance);
 
@@ -108,6 +124,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -121,6 +143,7 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         /// remove recovery spell
         instance.recoverySpells = new address[](0);
 
+        vm.prank(HOT_SIGNER_ONE);
         deployer.createSystemInstance(instance);
 
         vm.expectRevert("InstanceDeployer: safe already created");
@@ -142,6 +165,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -177,6 +206,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -189,6 +224,8 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
 
         /// remove recovery spell
         instance.recoverySpells = new address[](0);
+
+        vm.prank(HOT_SIGNER_ONE);
         SystemInstance memory contracts =
             deployer.createSystemInstance(instance);
 
@@ -213,6 +250,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -242,6 +285,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             pauser: guardian,
             pauseDuration: PAUSE_DURATION,
             hotSigners: hotSigners,
+            contractAddresses: new address[](0),
+            selectors: new bytes4[](0),
+            startIndexes: new uint16[](0),
+            endIndexes: new uint16[](0),
+            datas: new bytes[](0),
+            isSelfAddressCheck: new bool[](0),
             salt: salt
         });
 
@@ -255,6 +304,7 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         SystemInstance memory expectedContracts =
             addressCalculation.calculateAddressUnsafe(instance);
 
+        vm.prank(HOT_SIGNER_ONE);
         SystemInstance memory actualContracts =
             deployer.createSystemInstance(instance);
 
