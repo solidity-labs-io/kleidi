@@ -1,0 +1,23 @@
+name: Foundry Multichain tests
+
+on: [pull_request]
+
+env:
+  ETH_RPC_URL: ${{secrets.ETH_RPC_URL}}
+  
+jobs:
+  multichain-tests:
+    name: multichain-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Setup Environment
+        uses: ./.github/actions
+
+      - name: Multichain Tests
+        run: time forge test --mc DeploymentMultichainTest -vvv
