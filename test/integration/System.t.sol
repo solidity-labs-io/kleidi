@@ -268,8 +268,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// morpho blue address can be approved to spend eUSD
             calldatas[2] = abi.encodePacked(morphoBlue);
 
-            /// not packed because the MarketParams struct is not packed
-            calldatas[3] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            /// can only borrow to timelock
+            calldatas[3] = "";
 
             /// can only deposit to timelock
             calldatas[4] = "";
@@ -297,7 +297,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             isSelfAddressCheck[0] = false;
             isSelfAddressCheck[1] = true;
             isSelfAddressCheck[2] = false;
-            isSelfAddressCheck[3] = false;
+            isSelfAddressCheck[3] = true;
             isSelfAddressCheck[4] = true;
             isSelfAddressCheck[5] = true;
             isSelfAddressCheck[6] = true;
