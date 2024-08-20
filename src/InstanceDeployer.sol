@@ -163,7 +163,13 @@ contract InstanceDeployer {
         uint256 creationSalt = uint256(
             keccak256(
                 abi.encode(
-                    instance.owners, instance.threshold, instance.timelockParams
+                    instance.owners,
+                    instance.threshold,
+                    instance.timelockParams.minDelay,
+                    instance.timelockParams.expirationPeriod,
+                    instance.timelockParams.pauser,
+                    instance.timelockParams.pauseDuration,
+                    instance.timelockParams.hotSigners
                 )
             )
         );
