@@ -11,6 +11,12 @@ struct DeploymentParams {
     address pauser;
     uint128 pauseDuration;
     address[] hotSigners;
+    address[] contractAddresses;
+    bytes4[] selectors;
+    uint16[] startIndexes;
+    uint16[] endIndexes;
+    bytes[] datas;
+    bool[] isSelfAddressCheck;
     bytes32 salt;
 }
 
