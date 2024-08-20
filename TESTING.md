@@ -4,6 +4,12 @@
 
 ## Scenario Test
 
+- [ ] full Morpho Blue whitelisted calldata walkthrough
+    - [ ] supply collateral
+    - [ ] borrow
+    - [ ] repay
+    - [ ] supply borrow asset
+    - [ ] withdraw borrow asset
 - [ ] deploy safe with timelock, guard, and recovery spell, safe owners enact malicious proposal, guardian pauses, recovery spell rotates signers, new transactions are sent
 - [ ] hot signers move funds from one DeFi protocol to another
 - [ ] hot signers get revoked by the Safe
