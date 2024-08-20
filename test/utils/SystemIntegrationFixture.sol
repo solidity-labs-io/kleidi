@@ -227,8 +227,8 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
         timelockFactory =
             TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
-
-        addressCalculation = new AddressCalculation(address(deployer));
+        addressCalculation =
+            AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
 
         NewInstance memory instance = NewInstance(
             owners,
