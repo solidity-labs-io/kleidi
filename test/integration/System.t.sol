@@ -217,10 +217,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             startIndexes[4] = 4 + 32 * 8 + 12;
             /// only grab last twenty bytes of the 8th argument
             startIndexes[5] = 4 + 32 * 8 + 12;
-            
+
             /// check last twenty bytes of the 7th argument
             startIndexes[6] = 4 + 32 * 6 + 12;
-            
+
             /// check last twenty bytes of the 8th argument
             startIndexes[7] = 4 + 32 * 7 + 12;
 
