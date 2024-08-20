@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.25;
 
+import {AccessControlEnumerable} from
+    "@openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 import {IERC1155Receiver} from
     "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {IERC721Receiver} from
@@ -14,9 +16,11 @@ import {EnumerableSet} from
     "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Safe} from "@safe/Safe.sol";
 
-import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 import {CalldataList} from "src/CalldataList.sol";
 import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
+import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
+
+/// @notice DO NOT DEPLOY OUTSIDE OF INSTANCE DEPLOYER
 
 /// @notice known issues:
 /// - a malicious pauser can cancel all in flight proposals,
@@ -63,10 +67,10 @@ import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 /// propose timelocked operations which then modify the timelock parameters.
 contract Timelock is
     ConfigurablePauseGuardian,
+    AccessControlEnumerable,
     IERC1155Receiver,
     IERC721Receiver,
-    CalldataList,
-    ERC165
+    CalldataList
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -79,11 +83,18 @@ contract Timelock is
     /// @notice the safe address that governs this timelock
     address public immutable safe;
 
+    /// @notice role for hot wallet signers that can instantly execute actions
+    /// in DeFi
+    bytes32 public constant HOT_SIGNER_ROLE = keccak256("HOT_SIGNER_ROLE");
+
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
     /// ------------------- STORAGE VARIABLES -------------------
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
+
+    /// @notice whether the contract has been initialized
+    bool public initialized;
 
     /// @notice minimum delay for all timelock proposals
     uint256 public minDelay;
@@ -205,22 +216,14 @@ contract Timelock is
     /// @param _expirationPeriod timelocked actions expiration period
     /// @param _pauser address that can pause the contract
     /// @param _pauseDuration duration the contract can be paused for
-    /// @param contractAddresses accounts that will have calldata whitelisted
-    /// @param selector function selectors to be whitelisted
-    /// @param startIndex start index of the calldata to be whitelisted
-    /// @param endIndex end index of the calldata to be whitelisted
-    /// @param data calldata to be whitelisted that resides between start and end index
+    /// @param hotSigners accounts that can execute whitelisted calldata
     constructor(
         address _safe,
         uint256 _minDelay,
         uint256 _expirationPeriod,
         address _pauser,
         uint128 _pauseDuration,
-        address[] memory contractAddresses,
-        bytes4[] memory selector,
-        uint16[] memory startIndex,
-        uint16[] memory endIndex,
-        bytes[] memory data
+        address[] memory hotSigners
     ) {
         safe = _safe;
 
@@ -238,8 +241,42 @@ contract Timelock is
         _grantGuardian(_pauser);
         _updatePauseDuration(_pauseDuration);
 
+        /// grant the timelock the default admin role so that it can manage the
+        /// hot signer role
+        _grantRole(DEFAULT_ADMIN_ROLE, address(this));
+
+        /// set the admin of the hot signer role to the default admin role
+        _setRoleAdmin(HOT_SIGNER_ROLE, DEFAULT_ADMIN_ROLE);
+
+        for (uint256 i = 0; i < hotSigners.length; i++) {
+            _grantRole(HOT_SIGNER_ROLE, hotSigners[i]);
+        }
+    }
+
+    /// @param contractAddresses the address of the contract that the calldata check is added to
+    /// @param selectors the function selector of the function that the calldata check is added to
+    /// @param startIndexes the start indexes of the calldata
+    /// @param endIndexes the end indexes of the calldata
+    /// @param datas the calldata that is stored
+    /// @param isSelfAddressCheck whether the calldata check is for the timelock
+    function initialize(
+        address[] memory contractAddresses,
+        bytes4[] memory selectors,
+        uint16[] memory startIndexes,
+        uint16[] memory endIndexes,
+        bytes[] memory datas,
+        bool[] memory isSelfAddressCheck
+    ) external {
+        require(!initialized, "Timelock: already initialized");
+        initialized = true;
+
         _addCalldataChecks(
-            contractAddresses, selector, startIndex, endIndex, data
+            contractAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            datas,
+            isSelfAddressCheck
         );
     }
 
@@ -248,15 +285,6 @@ contract Timelock is
     /// -------------------------- Modifiers --------------------------
     /// ---------------------------------------------------------------
     /// ---------------------------------------------------------------
-
-    /// @notice allows only current safe owners to be able to call the function
-    modifier onlySafeOwner() {
-        require(
-            Safe(payable(safe)).isOwner(msg.sender),
-            "Timelock: caller is not the safe owner"
-        );
-        _;
-    }
 
     /// @notice allows only the safe to call the function
     modifier onlySafe() {
@@ -291,7 +319,7 @@ contract Timelock is
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(IERC165, ERC165)
+        override(IERC165, AccessControlEnumerable)
         returns (bool)
     {
         return interfaceId == type(IERC1155Receiver).interfaceId
@@ -526,6 +554,7 @@ contract Timelock is
     /// @param id the identifier of the expired operation
     function cleanup(bytes32 id) external whenNotPaused {
         require(isOperationExpired(id), "Timelock: operation not expired");
+        /// unreachable state assert statement
         assert(_liveProposals.remove(id));
 
         emit Cleanup(id);
@@ -560,6 +589,8 @@ contract Timelock is
     /// ----------------------------------------------------------
     /// ----------------------------------------------------------
 
+    /// TODO should we check value for hot signer calls?
+
     /// @notice any safe owner can call this function and execute
     /// a call to whitelisted contracts with whitelisted calldatas
     /// no reentrancy checks needed here as the safe owners can execute this
@@ -571,7 +602,7 @@ contract Timelock is
         address target,
         uint256 value,
         bytes calldata payload
-    ) external payable onlySafeOwner whenNotPaused {
+    ) external payable onlyRole(HOT_SIGNER_ROLE) whenNotPaused {
         /// first ensure calldata to target is whitelisted,
         /// and that parameters are not malicious
         checkCalldata(target, payload);
@@ -589,7 +620,7 @@ contract Timelock is
         address[] calldata targets,
         uint256[] calldata values,
         bytes[] calldata payloads
-    ) external payable onlySafeOwner whenNotPaused {
+    ) external payable onlyRole(HOT_SIGNER_ROLE) whenNotPaused {
         require(
             targets.length == values.length && targets.length == payloads.length,
             "Timelock: length mismatch"
@@ -607,6 +638,15 @@ contract Timelock is
 
             emit CallExecuted(bytes32(0), i, target, value, payload);
         }
+    }
+
+    /// Hot Signer Access Control Management Functions
+
+    /// @notice function to revoke the hot signer role from an address
+    /// can only be called by the timelock or the safe
+    /// @param deprecatedHotSigner the address of the hot signer to revoke
+    function revokeHotSigner(address deprecatedHotSigner) external onlySafe {
+        _revokeRole(HOT_SIGNER_ROLE, deprecatedHotSigner);
     }
 
     /// ---------------------------------------------------------------
@@ -629,15 +669,22 @@ contract Timelock is
     /// @param endIndexes the end indexes of the calldata
     /// @param datas the calldatas that are checked for each corresponding function at each index
     /// on each contract
+    /// @param isSelfAddressCheck whether the calldata check is a self address check
     function addCalldataChecks(
         address[] memory contractAddresses,
         bytes4[] memory selectors,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
-        bytes[] memory datas
+        bytes[] memory datas,
+        bool[] memory isSelfAddressCheck
     ) external onlyTimelock {
         _addCalldataChecks(
-            contractAddresses, selectors, startIndexes, endIndexes, datas
+            contractAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            datas,
+            isSelfAddressCheck
         );
     }
 
@@ -647,14 +694,23 @@ contract Timelock is
     /// @param startIndex the start indexes of the calldata
     /// @param endIndex the end indexes of the calldata
     /// @param data the calldata that is stored
+    /// @param isSelfAddressCheck whether the calldata check is a self address check
     function addCalldataCheck(
         address contractAddress,
         bytes4 selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes memory data
+        bytes memory data,
+        bool isSelfAddressCheck
     ) external onlyTimelock {
-        _addCalldataCheck(contractAddress, selector, startIndex, endIndex, data);
+        _addCalldataCheck(
+            contractAddress,
+            selector,
+            startIndex,
+            endIndex,
+            data,
+            isSelfAddressCheck
+        );
     }
 
     /// @notice remove a single calldata check for a given contract address
@@ -804,6 +860,7 @@ contract Timelock is
 
     /// @notice Handles ERC777 Token callback.
     /// return nothing (not standardized)
+    /// We implement this for completeness, doesn't have any value
     function tokensReceived(
         address,
         address,
@@ -811,11 +868,9 @@ contract Timelock is
         uint256,
         bytes calldata,
         bytes calldata
-    ) external pure {
-        /// We implement this for completeness, doesn't really have any value
-    }
+    ) external pure {}
 
-    /// @dev Contract can receive/hold ETH, emit an event when this happens for
+    /// @dev Timelock can receive/hold ETH, emit an event when this happens for
     /// offchain tracking
     receive() external payable {
         emit NativeTokensReceived(msg.sender, msg.value);

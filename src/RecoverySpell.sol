@@ -108,8 +108,10 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     ) {
         /// no checks on parameters as all valid recovery spells are
         /// deployed from the factory which will not allow a recovery
-        /// spell to be created that does not have valid parameters
-
+        /// spell to be created that does not have valid parameters.
+        /// A recovery spell can only be created by the factory if the Safe has
+        /// already been created on the chain the RecoverySpell is being
+        /// deployed on.
         owners = _owners;
         safe = Safe(payable(_safe));
         threshold = _safeThreshold;

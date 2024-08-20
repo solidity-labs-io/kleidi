@@ -18,7 +18,7 @@
         "isContract": false
     },
     {
-        "addr": "0x29B28B0Ff5B6B26448F3Ac02Cd209539626D96Ab",
+        "addr": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "name": "DEPLOYER_EOA",
         "chainId": 1,
         "isContract": false

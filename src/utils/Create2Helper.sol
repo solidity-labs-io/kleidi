@@ -25,3 +25,34 @@ function calculateCreate2Address(
         )
     );
 }
+
+struct Create2Params {
+    address creator;
+    bytes creationCode;
+    bytes constructorParams;
+    bytes32 salt;
+}
+
+function calculateCreate2Address(Create2Params memory params)
+    pure
+    returns (address)
+{
+    return address(
+        uint160(
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        bytes1(0xff),
+                        params.creator,
+                        params.salt,
+                        keccak256(
+                            abi.encodePacked(
+                                params.creationCode, params.constructorParams
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    );
+}

@@ -6,170 +6,8 @@ import "test/utils/SystemIntegrationFixture.sol";
 contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
 
-    function _initializeContract() private {
-        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](4);
-
-        calls3[0].target = address(guard);
-        calls3[0].allowFailure = false;
-
-        calls3[1].target = address(safe);
-        calls3[1].allowFailure = false;
-
-        calls3[2].target = address(safe);
-        calls3[2].allowFailure = false;
-
-        calls3[3].target = address(safe);
-        calls3[3].allowFailure = false;
-
-        calls3[0].callData = abi.encodeWithSelector(Guard.checkSafe.selector);
-
-        calls3[1].callData = abi.encodeWithSelector(
-            GuardManager.setGuard.selector, address(guard)
-        );
-
-        calls3[2].callData = abi.encodeWithSelector(
-            ModuleManager.enableModule.selector, address(timelock)
-        );
-
-        calls3[3].callData = abi.encodeWithSelector(
-            ModuleManager.enableModule.selector, recoverySpellAddress
-        );
-
-        bytes memory safeData =
-            abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3);
-
-        bytes32 transactionHash = safe.getTransactionHash(
-            multicall,
-            0,
-            safeData,
-            Enum.Operation.DelegateCall,
-            0,
-            0,
-            0,
-            address(0),
-            address(0),
-            safe.nonce()
-        );
-
-        bytes memory collatedSignatures =
-            signTxAllOwners(transactionHash, pk1, pk2, pk3);
-
-        safe.checkNSignatures(transactionHash, safeData, collatedSignatures, 3);
-
-        safe.execTransaction(
-            multicall,
-            0,
-            safeData,
-            Enum.Operation.DelegateCall,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(0)),
-            collatedSignatures
-        );
-
-        bytes memory guardBytes =
-            SafeL2(payable(safe)).getStorageAt(GUARD_STORAGE_SLOT, 1);
-
-        address guard = address(uint160(uint256(guardBytes.getFirstWord())));
-
-        assertEq(guard, address(guard), "guard is not guard");
-        assertTrue(
-            safe.isModuleEnabled(address(timelock)), "timelock not a module"
-        );
-        assertTrue(
-            safe.isModuleEnabled(recoverySpellAddress),
-            "recovery spell not a module"
-        );
-    }
-
     function testCreateAddAndUseCounterfactualRecoverySpellRecoveryThresholdTwo(
     ) public {
-        uint256 recoveryThresholdOwner = 2;
-
-        recoverySpellAddress = recoveryFactory.calculateAddress(
-            recoverySalt,
-            recoveryOwners,
-            address(safe),
-            recoveryThreshold,
-            recoveryThresholdOwner,
-            recoveryDelay
-        );
-
-        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](4);
-
-        calls3[0].target = address(guard);
-        calls3[0].allowFailure = false;
-
-        calls3[1].target = address(safe);
-        calls3[1].allowFailure = false;
-
-        calls3[2].target = address(safe);
-        calls3[2].allowFailure = false;
-
-        calls3[3].target = address(safe);
-        calls3[3].allowFailure = false;
-
-        calls3[0].callData = abi.encodeWithSelector(guard.checkSafe.selector);
-
-        calls3[1].callData = abi.encodeWithSelector(
-            GuardManager.setGuard.selector, address(guard)
-        );
-
-        calls3[2].callData = abi.encodeWithSelector(
-            ModuleManager.enableModule.selector, address(timelock)
-        );
-
-        calls3[3].callData = abi.encodeWithSelector(
-            ModuleManager.enableModule.selector, recoverySpellAddress
-        );
-
-        {
-            bytes memory safeData =
-                abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3);
-
-            bytes32 transactionHash = safe.getTransactionHash(
-                multicall,
-                0,
-                safeData,
-                Enum.Operation.DelegateCall,
-                0,
-                0,
-                0,
-                address(0),
-                address(0),
-                safe.nonce()
-            );
-
-            bytes memory collatedSignatures =
-                signTxAllOwners(transactionHash, pk1, pk2, pk3);
-
-            safe.checkNSignatures(
-                transactionHash, safeData, collatedSignatures, 3
-            );
-
-            safe.execTransaction(
-                multicall,
-                0,
-                safeData,
-                Enum.Operation.DelegateCall,
-                0,
-                0,
-                0,
-                address(0),
-                payable(address(0)),
-                collatedSignatures
-            );
-        }
-
-        {
-            bytes memory guardBytes =
-                SafeL2(payable(safe)).getStorageAt(GUARD_STORAGE_SLOT, 1);
-            address guard = address(uint160(uint256(guardBytes.getFirstWord())));
-
-            assertEq(guard, address(guard), "guard is not guard");
-        }
         assertTrue(
             safe.isModuleEnabled(address(timelock)), "timelock not a module"
         );
@@ -186,7 +24,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
                     recoveryOwners,
                     address(safe),
                     recoveryThreshold,
-                    recoveryThresholdOwner,
+                    RECOVERY_THRESHOLD_OWNERS,
                     recoveryDelay
                 )
             ),
@@ -252,8 +90,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         public
         returns (RecoverySpell recovery)
     {
-        _initializeContract();
-
         recovery = recoveryFactory.createRecoverySpell(
             recoverySalt,
             recoveryOwners,
@@ -272,7 +108,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             address(recovery).code.length != 0, "recovery spell not created"
         );
 
-        vm.prank(recoveryOwners[0]);
         recovery.initiateRecovery();
 
         assertEq(
@@ -283,7 +118,22 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
 
         vm.warp(block.timestamp + recoveryDelay + 1);
 
-        recovery.executeRecovery(address(1));
+        /// sign recovery transaction
+        bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+        bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+        uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+        bytes32 digest = recovery.getDigest();
+
+        for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+            (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+        }
+
+        vm.expectEmit(true, true, true, true, address(recovery));
+        emit SafeRecovered(block.timestamp);
+
+        /// execute recovery transaction
+        recovery.executeRecovery(address(1), v, r, s);
 
         assertFalse(
             safe.isModuleEnabled(recoverySpellAddress),
@@ -324,8 +174,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             recoveryThresholdOwners,
             recoveryDelay
         );
-
-        _initializeContract();
 
         RecoverySpell recovery = recoveryFactory.createRecoverySpell(
             recoverySalt,
@@ -391,16 +239,153 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
     }
 
     function testInitiateRecoveryPostRecoveryFails() public {
-        RecoverySpell recovery = testRecoverySpellRotatesAllSigners();
+        RecoverySpell recovery =
+            testRecoverySpellNoSignersNeededRotatesSafeSigners();
 
         vm.expectRevert("RecoverySpell: Recovery already initiated");
         recovery.initiateRecovery();
     }
 
     function testExecuteRecoveryPostRecoveryFails() public {
-        RecoverySpell recovery = testRecoverySpellRotatesAllSigners();
+        RecoverySpell recovery =
+            testRecoverySpellNoSignersNeededRotatesSafeSigners();
 
         vm.expectRevert(stdError.arithmeticError);
         recovery.executeRecovery(address(1));
+    }
+
+    function testAddRecoverySpellNoSignersNeeded()
+        public
+        returns (RecoverySpell recovery)
+    {
+        uint256 recoveryThresholdOwners = 0;
+        recovery = RecoverySpell(
+            recoveryFactory.calculateAddress(
+                recoverySalt,
+                recoveryOwners,
+                address(safe),
+                recoveryThreshold,
+                recoveryThresholdOwners,
+                recoveryDelay
+            )
+        );
+
+        assertTrue(address(recovery).code.length == 0, "recovery spell created");
+
+        /// timelock calls multisig, multisig calls multisig
+
+        bytes memory calldatas = abi.encodeWithSelector(
+            ModuleManager.execTransactionFromModule.selector,
+            address(safe),
+            0,
+            abi.encodeWithSelector(
+                ModuleManager.enableModule.selector, address(recovery)
+            ),
+            Enum.Operation.Call
+        );
+        bytes memory innerCalldatas = abi.encodeWithSelector(
+            Timelock.schedule.selector,
+            address(safe),
+            0,
+            calldatas,
+            /// salt
+            bytes32(0),
+            timelock.minDelay()
+        );
+
+        bytes32 transactionHash = safe.getTransactionHash(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+        safe.checkNSignatures(
+            transactionHash, innerCalldatas, collatedSignatures, 3
+        );
+
+        safe.execTransaction(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        vm.warp(block.timestamp + timelock.minDelay());
+
+        timelock.execute(address(safe), 0, calldatas, bytes32(0));
+
+        assertTrue(
+            safe.isModuleEnabled(recoverySpellAddress),
+            "recovery spell should be removed after execution"
+        );
+        assertEq(
+            timelock.getAllProposals().length, 0, "proposal should be removed"
+        );
+    }
+
+    function testRecoverySpellNoSignersNeededRotatesSafeSigners()
+        public
+        returns (RecoverySpell)
+    {
+        RecoverySpell recovery = testAddRecoverySpellNoSignersNeeded();
+
+        RecoverySpell createdRecovery = recoveryFactory.createRecoverySpell(
+            recoverySalt,
+            recoveryOwners,
+            address(safe),
+            recoveryThreshold,
+            0,
+            recoveryDelay
+        );
+
+        assertEq(
+            address(createdRecovery),
+            address(recovery),
+            "expected recovery address not correct"
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "recovery not initiated"
+        );
+
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        recovery.executeRecovery(address(1));
+
+        assertEq(safe.getThreshold(), recoveryThreshold, "quorum not updated");
+        assertEq(
+            safe.getOwners().length,
+            recoveryOwners.length,
+            "signer list not rotated"
+        );
+
+        for (uint256 i = 0; i < recoveryOwners.length; i++) {
+            assertTrue(
+                safe.isOwner(recoveryOwners[i]),
+                "recovery owner should be an owner"
+            );
+        }
+
+        return recovery;
     }
 }

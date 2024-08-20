@@ -26,6 +26,9 @@ contract CalldataListUnitTest is Test {
     /// @notice reference to the MockLending contract
     MockLending private lending;
 
+    /// @notice the 3 hot signers that can execute whitelisted actions
+    address[] public hotSigners;
+
     /// @notice empty for now, will change once tests progress
     address[] public contractAddresses;
 
@@ -53,7 +56,16 @@ contract CalldataListUnitTest is Test {
     /// @notice expiration period for a timelocked transaction in seconds
     uint256 public constant EXPIRATION_PERIOD = 5 days;
 
+    /// @notice addresses of the hot signers
+    address public constant HOT_SIGNER_ONE = address(0x11111);
+    address public constant HOT_SIGNER_TWO = address(0x22222);
+    address public constant HOT_SIGNER_THREE = address(0x33333);
+
     function setUp() public {
+        hotSigners.push(HOT_SIGNER_ONE);
+        hotSigners.push(HOT_SIGNER_TWO);
+        hotSigners.push(HOT_SIGNER_THREE);
+
         // at least start at unix timestamp of 1m so that block timestamp isn't 0
         vm.warp(block.timestamp + 1_000_000);
 
@@ -68,11 +80,16 @@ contract CalldataListUnitTest is Test {
             EXPIRATION_PERIOD, // _expirationPeriod
             guardian, // _pauser
             PAUSE_DURATION, // _pauseDuration
-            contractAddresses, // contractAddresses
-            selector, // selector
-            startIndex, // startIndex
-            endIndex, // endIndex
-            data // data
+            hotSigners
+        );
+
+        timelock.initialize(
+            new address[](0),
+            new bytes4[](0),
+            new uint16[](0),
+            new uint16[](0),
+            new bytes[](0),
+            new bool[](0)
         );
     }
 
@@ -104,6 +121,10 @@ contract CalldataListUnitTest is Test {
         bytes[] memory checkedCalldata = new bytes[](1);
         checkedCalldata[0] = abi.encodePacked(address(timelock));
 
+        bool[] memory isSelfAddressCheck = new bool[](2);
+        isSelfAddressCheck[0] = true;
+        isSelfAddressCheck[1] = true;
+
         vm.expectRevert("CalldataList: Array lengths must be equal");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
@@ -111,7 +132,8 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldata
+            checkedCalldata,
+            isSelfAddressCheck
         );
     }
 
@@ -119,11 +141,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            3,
-            4,
-            abi.encodePacked(address(timelock))
+            address(lending), MockLending.deposit.selector, 3, 4, "", true
         );
     }
 
@@ -133,11 +151,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            4,
-            abi.encodePacked(address(timelock))
+            address(lending), MockLending.deposit.selector, 4, 4, "", true
         );
     }
 
@@ -147,11 +161,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            3,
-            abi.encodePacked(address(timelock))
+            address(lending), MockLending.deposit.selector, 4, 3, "", true
         );
     }
 
@@ -159,11 +169,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Contract address cannot be this");
         timelock.addCalldataCheck(
-            address(timelock),
-            Timelock.schedule.selector,
-            4,
-            5,
-            abi.encodePacked(address(timelock))
+            address(timelock), Timelock.schedule.selector, 4, 5, "", true
         );
     }
 }

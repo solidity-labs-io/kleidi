@@ -50,8 +50,31 @@ forge build
 forge test -vvv
 ```
 
+### Testing
+
+#### Unit Testing
+
+```
+forge test --mc UnitTest -vvv
+```
+
+#### Integration Testing
+
+```
+forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL
+```
+
 ### Coverage
 
+
+#### Unit Test Coverage
+
 ```shell
-forge coverage --report summary --report lcov
+forge coverage --mc UnitTest --report lcov
+```
+
+#### Unit & Integration Test Coverage
+
+```shell
+forge coverage --report summary --report lcov --fork-url $ETH_RPC_URL --fork-block-number 20515328
 ```

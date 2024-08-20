@@ -10,6 +10,36 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         validate();
     }
 
+    function testNonHotSignerCannotDeploy() public {
+        uint8 recoverySpellLength = 7;
+        uint8 ownersLength = 3;
+
+        NewInstance memory instance;
+
+        instance.owners = new address[](ownersLength);
+        instance.threshold = 2;
+        instance.recoverySpells = new address[](recoverySpellLength);
+
+        for (uint256 i = 0; i < ownersLength; i++) {
+            instance.owners[i] = address(uint160(11 + i));
+        }
+
+        for (uint256 i = 0; i < recoverySpellLength; i++) {
+            instance.recoverySpells[i] = address(uint160(101 + i));
+        }
+
+        instance.timelockParams.minDelay = MIN_DELAY;
+        instance.timelockParams.expirationPeriod = EXPIRATION_PERIOD;
+        instance.timelockParams.pauser = guardian;
+        instance.timelockParams.pauseDuration = PAUSE_DURATION;
+        instance.timelockParams.salt = bytes32(uint256(0x3a17));
+        instance.timelockParams.hotSigners = new address[](0);
+
+        vm.prank(HOT_SIGNER_ONE);
+        vm.expectRevert("InstanceDeployer: sender must be hot signer");
+        deployer.createSystemInstance(instance);
+    }
+
     function testCreateSystemInstance(
         uint8 ownersLength,
         uint8 threshold,
@@ -29,7 +59,7 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         uint8 threshold = 5;
         uint8 recoverySpellLength = 7;
 
-        InstanceDeployer.NewInstance memory instance;
+        NewInstance memory instance;
 
         instance.owners = new address[](ownersLength);
         instance.threshold = threshold;
@@ -48,19 +78,12 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         instance.timelockParams.pauser = guardian;
         instance.timelockParams.pauseDuration = PAUSE_DURATION;
         instance.timelockParams.salt = bytes32(uint256(0x3a17));
-        instance.timelockParams.contractAddresses = new address[](0);
-        instance.timelockParams.selector = new bytes4[](0);
-        instance.timelockParams.startIndex = new uint16[](0);
-        instance.timelockParams.endIndex = new uint16[](0);
-        instance.timelockParams.data = new bytes[](0);
+        instance.timelockParams.hotSigners = new address[](0);
 
         uint256 creationSalt = uint256(
             keccak256(
                 abi.encode(
-                    instance.owners,
-                    instance.threshold,
-                    instance.recoverySpells,
-                    instance.timelockParams
+                    instance.owners, instance.threshold, instance.timelockParams
                 )
             )
         );
@@ -166,7 +189,7 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             ownersLength, threshold, recoverySpellLength, true
         );
 
-        vm.expectRevert("owner not set correctly");
+        vm.expectRevert(stdError.assertionError);
         _createAndValidateSystemInstance(
             ownersLength, threshold, recoverySpellLength, false
         );
@@ -194,7 +217,7 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         uint8 recoverySpellLength,
         bool runAssertions
     ) private returns (Timelock newTimelock, SafeProxy newSafe) {
-        InstanceDeployer.NewInstance memory instance;
+        NewInstance memory instance;
 
         instance.owners = new address[](ownersLength);
         instance.threshold = threshold;
@@ -213,13 +236,14 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         instance.timelockParams.pauser = guardian;
         instance.timelockParams.pauseDuration = PAUSE_DURATION;
         instance.timelockParams.salt = bytes32(uint256(0x3a17));
-        instance.timelockParams.contractAddresses = new address[](0);
-        instance.timelockParams.selector = new bytes4[](0);
-        instance.timelockParams.startIndex = new uint16[](0);
-        instance.timelockParams.endIndex = new uint16[](0);
-        instance.timelockParams.data = new bytes[](0);
+        instance.timelockParams.hotSigners = new address[](1);
+        instance.timelockParams.hotSigners[0] = HOT_SIGNER_ONE;
 
-        (newTimelock, newSafe) = deployer.createSystemInstance(instance);
+        vm.prank(HOT_SIGNER_ONE);
+        SystemInstance memory wallet = deployer.createSystemInstance(instance);
+
+        newTimelock = wallet.timelock;
+        newSafe = wallet.safe;
 
         if (runAssertions) {
             /// safe validations
@@ -293,13 +317,91 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         }
     }
 
-    /// recovery spell bytecode check
-
     /// timelock deploy failed
 
     /// safe deploy failed
 
-    function testSafeExecTransactionFails() public {}
+    function testSafeDeployFrontrunStillAllowsDeployment() public {
+        uint256 newQuorum = 3;
+        NewInstance memory instance = NewInstance(
+            owners,
+            newQuorum,
+            /// no recovery spells for now
+            new address[](0),
+            DeploymentParams(
+                MINIMUM_DELAY,
+                EXPIRATION_PERIOD,
+                guardian,
+                PAUSE_DURATION,
+                hotSigners,
+                new address[](0),
+                new bytes4[](0),
+                new uint16[](0),
+                new uint16[](0),
+                new bytes[](0),
+                new bool[](0),
+                bytes32(0)
+            )
+        );
 
-    /// safe exec transaction fails
+        address[] memory factoryOwner = new address[](1);
+        factoryOwner[0] = address(deployer);
+
+        bytes memory safeInitdata = abi.encodeWithSignature(
+            "setup(address[],uint256,address,bytes,address,address,uint256,address)",
+            factoryOwner,
+            1,
+            /// no to address because there are no external actions on
+            /// initialization
+            address(0),
+            /// no data because there are no external actions on initialization
+            "",
+            /// no fallback handler allowed by Guard
+            address(0),
+            /// no payment token
+            address(0),
+            /// no payment amount
+            0,
+            /// no payment receiver because no payment amount
+            address(0)
+        );
+
+        uint256 creationSalt = uint256(
+            keccak256(
+                abi.encode(
+                    instance.owners,
+                    instance.threshold,
+                    instance.timelockParams.minDelay,
+                    instance.timelockParams.expirationPeriod,
+                    instance.timelockParams.pauser,
+                    instance.timelockParams.pauseDuration,
+                    instance.timelockParams.hotSigners
+                )
+            )
+        );
+
+        SafeProxy safeProxy = SafeProxyFactory(deployer.safeProxyFactory())
+            .createProxyWithNonce(
+            deployer.safeProxyLogic(), safeInitdata, creationSalt
+        );
+
+        vm.expectEmit(true, true, true, true, address(deployer));
+        emit SafeCreationFailed(
+            HOT_SIGNER_ONE,
+            block.timestamp,
+            address(safeProxy),
+            safeInitdata,
+            creationSalt
+        );
+
+        vm.prank(HOT_SIGNER_ONE);
+        SystemInstance memory walletInstance =
+            deployer.createSystemInstance(instance);
+
+        assertEq(
+            address(walletInstance.safe),
+            address(safeProxy),
+            "safe proxy address incorrect"
+        );
+    }
 }

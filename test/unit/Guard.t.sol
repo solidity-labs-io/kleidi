@@ -42,7 +42,7 @@ contract GuardUnitTest is CallHelper {
 
     function testInitializeFailsSafeHasFallbackHandler() public {
         uint256 slot = FALLBACK_HANDLER_STORAGE_SLOT;
-        assembly {
+        assembly ("memory-safe") {
             sstore(slot, 1)
         }
 
@@ -146,7 +146,7 @@ contract GuardUnitTest is CallHelper {
         bytes memory result = new bytes(length * 32);
         for (uint256 index = 0; index < length; index++) {
             // solhint-disable-next-line no-inline-assembly
-            assembly {
+            assembly ("memory-safe") {
                 let word := sload(add(offset, index))
                 mstore(add(add(result, 0x20), mul(index, 0x20)), word)
             }

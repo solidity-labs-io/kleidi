@@ -52,11 +52,8 @@ contract BytesHelperUnitTest is Test {
         toSlice.sliceBytes(0, 11);
     }
 
-    function testSliceBytesFailsStartEqEndLength() public {
+    function testSliceBytesSucceedsEqEndLength() public pure {
         bytes memory toSlice = new bytes(10);
-        vm.expectRevert(
-            "End index is greater than the length of the byte string"
-        );
         toSlice.sliceBytes(0, 10);
     }
 
