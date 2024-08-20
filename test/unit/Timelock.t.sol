@@ -359,12 +359,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
             true
         );
     }
-    
+
     function testAddCalldataChecksFailsLengthMismatch() public {
         vm.prank(address(timelock));
-        vm.expectRevert(
-            "CalldataList: Data length mismatch"
-        );
+        vm.expectRevert("CalldataList: Data length mismatch");
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
@@ -373,11 +371,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
             hex"1234",
             false
         );
-        
+
         vm.prank(address(timelock));
-        vm.expectRevert(
-            "CalldataList: Data length mismatch"
-        );
+        vm.expectRevert("CalldataList: Data length mismatch");
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
