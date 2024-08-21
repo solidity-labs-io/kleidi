@@ -235,6 +235,10 @@ contract Timelock is
         minDelay = _minDelay;
         emit MinDelayChange(0, minDelay);
 
+        require(
+            _expirationPeriod >= MIN_DELAY,
+            "Timelock: expiration period too short"
+        );
         expirationPeriod = _expirationPeriod;
         emit ExpirationPeriodChange(0, _expirationPeriod);
 
