@@ -12,6 +12,7 @@ methods {
     function paused()                              external returns (bool)           ;
     function pause()                               external returns (bool)           ;
     function hasRole(bytes32,address)              external returns (bool)    envfree;
+    function checkCalldata(address,bytes)          external                   envfree;
 }
 
 definition oneDay() returns uint256 = 84600;

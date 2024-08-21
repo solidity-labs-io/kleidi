@@ -36,6 +36,9 @@ invariant onlyTwoRoles(bytes32 role)
 
 rule executeWhitelisted(env e, address target, uint256 value, bytes data, bytes4 selector) {
     requireInvariant noSelfWhitelisting(selector);
+    
+    /// make sure the action is whitelisted before calling
+    checkCalldata(target, data);
 
     executeWhitelisted(e, target, value, data);
 
