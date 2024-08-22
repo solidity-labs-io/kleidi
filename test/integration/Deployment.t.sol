@@ -584,7 +584,6 @@ contract DeploymentMultichainTest is SystemDeploy {
         SystemInstance memory calculatedInstanceBase =
             addressCalculation.calculateAddress(instance);
 
-
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
             deployer.createSystemInstance(instance);
