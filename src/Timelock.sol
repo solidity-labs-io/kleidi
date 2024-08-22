@@ -2,6 +2,10 @@
 
 pragma solidity 0.8.25;
 
+import {
+    AccessControl,
+    IAccessControl
+} from "@openzeppelin-contracts/contracts/access/AccessControl.sol";
 import {AccessControlEnumerable} from
     "@openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
 import {IERC1155Receiver} from
@@ -16,7 +20,7 @@ import {EnumerableSet} from
     "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Safe} from "@safe/Safe.sol";
 
-import {CalldataList} from "src/CalldataList.sol";
+import {BytesHelper} from "src/BytesHelper.sol";
 import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
 import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 
@@ -69,10 +73,10 @@ contract Timelock is
     ConfigurablePauseGuardian,
     AccessControlEnumerable,
     IERC1155Receiver,
-    IERC721Receiver,
-    CalldataList
+    IERC721Receiver
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using BytesHelper for bytes;
 
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
@@ -86,6 +90,10 @@ contract Timelock is
     /// @notice role for hot wallet signers that can instantly execute actions
     /// in DeFi
     bytes32 public constant HOT_SIGNER_ROLE = keccak256("HOT_SIGNER_ROLE");
+
+    /// @notice constant hash of the address of this contract
+    bytes32 public immutable ADDRESS_THIS_HASH =
+        keccak256(abi.encodePacked(address(this)));
 
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
@@ -108,6 +116,12 @@ contract Timelock is
 
     /// @notice mapping of proposal id to execution time
     mapping(bytes32 proposalId => uint256 executionTime) public timestamps;
+
+    /// @notice mapping of contract address to function selector to array of Index structs
+    mapping(
+        address contractAddress
+            => mapping(bytes4 selector => Index[] calldataChecks)
+    ) private _calldataList;
 
     /// minDelay >= MIN_DELAY && minDelay <= MAX_DELAY
 
@@ -209,6 +223,44 @@ contract Timelock is
     /// @param sender the address that sent the native currency
     /// @param value the amount of native currency received
     event NativeTokensReceived(address indexed sender, uint256 value);
+
+    /// @notice event emitted when a new calldata check is added
+    /// @param contractAddress the address of the contract that the calldata check is added to
+    /// @param selector the function selector of the function that the calldata check is added to
+    /// @param startIndex the start index of the calldata
+    /// @param endIndex the end index of the calldata
+    /// @param dataHash the hash of the calldata that is stored
+    event CalldataAdded(
+        address indexed contractAddress,
+        bytes4 indexed selector,
+        uint16 startIndex,
+        uint16 endIndex,
+        bytes32 dataHash
+    );
+
+    /// @notice event emitted when a calldata check is removed
+    /// @param contractAddress the address of the contract that the calldata check is removed from
+    /// @param selector the function selector of the function that the calldata check is removed from
+    /// @param startIndex the start index of the calldata
+    /// @param endIndex the end index of the calldata
+    /// @param dataHash the hash of the calldata that is stored
+    event CalldataRemoved(
+        address indexed contractAddress,
+        bytes4 indexed selector,
+        uint16 startIndex,
+        uint16 endIndex,
+        bytes32 dataHash
+    );
+
+    /// @notice struct used to store the start and end index of the calldata
+    /// and the calldata itself.
+    /// Once the calldata is stored, it can be used to check if the calldata
+    /// conforms to the expected values.
+    struct Index {
+        uint16 startIndex;
+        uint16 endIndex;
+        bytes32 dataHash;
+    }
 
     /// @notice Initializes the contract with the following parameters:
     /// @param _safe safe contract that owns this timelock
@@ -392,6 +444,45 @@ contract Timelock is
         bytes32 salt
     ) public pure returns (bytes32) {
         return keccak256(abi.encode(targets, values, payloads, salt));
+    }
+
+    /// @notice get the calldata checks for a specific contract and function selector
+    function getCalldataChecks(address contractAddress, bytes4 selector)
+        public
+        view
+        returns (Index[] memory)
+    {
+        return _calldataList[contractAddress][selector];
+    }
+
+    /// @notice check if the calldata conforms to the expected values
+    /// extracts indexes and checks that the data within the indexes
+    /// matches the expected data
+    /// @param contractAddress the address of the contract that the calldata check is applied to
+    /// @param data the calldata to check
+    function checkCalldata(address contractAddress, bytes memory data)
+        public
+        view
+    {
+        bytes4 selector = data.getFunctionSignature();
+
+        Index[] storage calldataChecks =
+            _calldataList[contractAddress][selector];
+
+        require(
+            calldataChecks.length > 0, "CalldataList: No calldata checks found"
+        );
+
+        for (uint256 i = 0; i < calldataChecks.length; i++) {
+            Index storage calldataCheck = calldataChecks[i];
+
+            require(
+                data.getSlicedBytesHash(
+                    calldataCheck.startIndex, calldataCheck.endIndex
+                ) == calldataCheck.dataHash,
+                "CalldataList: Calldata does not match expected value"
+            );
+        }
     }
 
     /// ---------------------------------------------------------------
@@ -581,7 +672,7 @@ contract Timelock is
             bytes32 id = proposals[i];
 
             delete timestamps[id];
-            _liveProposals.remove(id);
+            assert(_liveProposals.remove(id));
 
             emit Cancelled(id);
         }
@@ -592,8 +683,6 @@ contract Timelock is
     /// ------------------ SAFE OWNER FUNCTIONS ------------------
     /// ----------------------------------------------------------
     /// ----------------------------------------------------------
-
-    /// TODO should we check value for hot signer calls?
 
     /// @notice any safe owner can call this function and execute
     /// a call to whitelisted contracts with whitelisted calldatas
@@ -642,6 +731,45 @@ contract Timelock is
 
             emit CallExecuted(bytes32(0), i, target, value, payload);
         }
+    }
+
+    /// Access Control Enumerable Overrides
+
+    /// @notice function to grant a role to an address
+    /// @param role the role to grant
+    /// @param account the address to grant the role to
+    function grantRole(bytes32 role, address account)
+        public
+        override(AccessControl, IAccessControl)
+    {
+        require(role != DEFAULT_ADMIN_ROLE, "Timelock: cannot grant admin role");
+        super.grantRole(role, account);
+    }
+
+    /// @notice function to revoke a role from an address
+    /// @param role the role to revoke
+    /// @param account the address to revoke the role from
+    function revokeRole(bytes32 role, address account)
+        public
+        override(AccessControl, IAccessControl)
+    {
+        require(
+            role != DEFAULT_ADMIN_ROLE, "Timelock: cannot revoke admin role"
+        );
+        super.revokeRole(role, account);
+    }
+
+    /// @notice function to renounce a role
+    /// @param role the role to renounce
+    /// @param account the address to renounce the role from
+    function renounceRole(bytes32 role, address account)
+        public
+        override(AccessControl, IAccessControl)
+    {
+        require(
+            role != DEFAULT_ADMIN_ROLE, "Timelock: cannot renounce admin role"
+        );
+        super.renounceRole(role, account);
     }
 
     /// Hot Signer Access Control Management Functions
@@ -723,7 +851,7 @@ contract Timelock is
     /// @param selector the function selector of the function that the
     /// checks will be removed from
     /// @param index the starting index of the calldata check to remove
-    function removeCalldataChecks(
+    function removeCalldataCheck(
         address contractAddress,
         bytes4 selector,
         uint256 index
@@ -732,20 +860,20 @@ contract Timelock is
     }
 
     /// @notice remove all calldata checks for a given contract address
-    /// @param contractAddress the address of the contract that the
+    /// @param contractAddresses the address of the contract that the
     /// calldata checks are removed from
-    /// @param selector the function selector of the function that the
-    /// checks will be removed from
+    /// @param selectors the selectors of the functions that the checks will
+    /// be removed from
     function removeAllCalldataChecks(
-        address[] memory contractAddress,
-        bytes4[] memory selector
+        address[] memory contractAddresses,
+        bytes4[] memory selectors
     ) external onlyTimelock {
         require(
-            contractAddress.length == selector.length,
+            contractAddresses.length == selectors.length,
             "Timelock: arity mismatch"
         );
-        for (uint256 i = 0; i < contractAddress.length; i++) {
-            _removeAllCalldataChecks(contractAddress[i], selector[i]);
+        for (uint256 i = 0; i < contractAddresses.length; i++) {
+            _removeAllCalldataChecks(contractAddresses[i], selectors[i]);
         }
     }
 
@@ -821,6 +949,166 @@ contract Timelock is
     {
         (bool success,) = target.call{value: value}(data);
         require(success, "Timelock: underlying transaction reverted");
+    }
+
+    /// @notice add a calldata check
+    /// @param contractAddress the address of the contract that the calldata check is added to
+    /// @param selector the function selector of the function that the calldata check is added to
+    /// @param startIndex the start index of the calldata
+    /// @param endIndex the end index of the calldata
+    /// @param data the calldata that is stored
+    /// @param isSelfAddressCheck whether or not this is a self address check
+    function _addCalldataCheck(
+        address contractAddress,
+        bytes4 selector,
+        uint16 startIndex,
+        uint16 endIndex,
+        bytes memory data,
+        bool isSelfAddressCheck
+    ) private {
+        require(
+            startIndex >= 4, "CalldataList: Start index must be greater than 3"
+        );
+        require(
+            endIndex > startIndex,
+            "CalldataList: End index must be greater than start index"
+        );
+
+        /// prevent misconfiguration where a hot signer could change timelock
+        /// or safe parameters
+        require(
+            contractAddress != address(this),
+            "CalldataList: Address cannot be this"
+        );
+        require(contractAddress != safe, "CalldataList: Address cannot be safe");
+
+        if (isSelfAddressCheck) {
+            /// self address check, data must be empty
+            require(
+                data.length == 0,
+                "CalldataList: Data must be empty for self address check"
+            );
+            require(
+                endIndex - startIndex == 20,
+                "CalldataList: Self address check must be 20 bytes"
+            );
+        } else {
+            /// not self address check, data length must equal delta index
+            require(
+                data.length == endIndex - startIndex,
+                "CalldataList: Data length mismatch"
+            );
+        }
+
+        bytes32 dataHash =
+            isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
+
+        _calldataList[contractAddress][selector].push(
+            Index(startIndex, endIndex, dataHash)
+        );
+
+        emit CalldataAdded(
+            contractAddress, selector, startIndex, endIndex, dataHash
+        );
+    }
+
+    /// @notice add a calldata check
+    /// @param contractAddresses the address of the contract that the calldata check is added to
+    /// @param selectors the function selector of the function that the calldata check is added to
+    /// @param startIndexes the start indexes of the calldata
+    /// @param endIndexes the end indexes of the calldata
+    /// @param datas the calldata that is stored
+    function _addCalldataChecks(
+        address[] memory contractAddresses,
+        bytes4[] memory selectors,
+        uint16[] memory startIndexes,
+        uint16[] memory endIndexes,
+        bytes[] memory datas,
+        bool[] memory isSelfAddressCheck
+    ) private {
+        require(
+            contractAddresses.length == selectors.length
+                && selectors.length == startIndexes.length
+                && startIndexes.length == endIndexes.length
+                && endIndexes.length == datas.length
+                && datas.length == isSelfAddressCheck.length,
+            "CalldataList: Array lengths must be equal"
+        );
+
+        for (uint256 i = 0; i < contractAddresses.length; i++) {
+            _addCalldataCheck(
+                contractAddresses[i],
+                selectors[i],
+                startIndexes[i],
+                endIndexes[i],
+                datas[i],
+                isSelfAddressCheck[i]
+            );
+        }
+    }
+
+    /// @notice remove a calldata check by index
+    /// @param contractAddress the address of the contract that the calldata check is removed from
+    /// @param selector the function selector of the function that the calldata check is removed from
+    /// @param index the index of the calldata check to remove
+    function _removeCalldataCheck(
+        address contractAddress,
+        bytes4 selector,
+        uint256 index
+    ) private {
+        Index[] storage calldataChecks =
+            _calldataList[contractAddress][selector];
+        /// if no calldata checks are found, this check will fail because
+        /// calldataChecks.length will be 0, and no uint value can be lt 0
+        require(
+            index < calldataChecks.length,
+            "CalldataList: Calldata index out of bounds"
+        );
+
+        uint16 startIndex = calldataChecks[index].startIndex;
+        uint16 endIndex = calldataChecks[index].endIndex;
+        bytes32 dataHash = calldataChecks[index].dataHash;
+
+        calldataChecks[index] = calldataChecks[calldataChecks.length - 1];
+        calldataChecks.pop();
+
+        emit CalldataRemoved(
+            contractAddress, selector, startIndex, endIndex, dataHash
+        );
+    }
+
+    /// @notice remove all calldata checks for a given contract and selector
+    /// iterates over all checks for the given contract and selector and removes
+    /// them from the array.
+    /// @param contractAddress the address of the contract that the calldata
+    /// checks are removed from
+    /// @param selector the function selector of the function that the calldata
+    /// checks are removed from
+    function _removeAllCalldataChecks(address contractAddress, bytes4 selector)
+        private
+    {
+        Index[] storage calldataChecks =
+            _calldataList[contractAddress][selector];
+
+        require(
+            calldataChecks.length > 0,
+            "CalldataList: No calldata checks to remove"
+        );
+
+        /// delete all calldata in the list for the given contract and selector
+        while (calldataChecks.length != 0) {
+            emit CalldataRemoved(
+                contractAddress,
+                selector,
+                calldataChecks[0].startIndex,
+                calldataChecks[0].endIndex,
+                calldataChecks[0].dataHash
+            );
+            calldataChecks.pop();
+        }
+
+        /// delete the calldata list for the given contract and selector
+        delete _calldataList[contractAddress][selector];
     }
 
     /// ---------------------------------------------------------------
