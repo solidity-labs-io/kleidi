@@ -167,9 +167,17 @@ contract CalldataListUnitTest is Test {
 
     function testAddCalldataCheckFailsWhitelistedCalldataTimelock() public {
         vm.prank(address(timelock));
-        vm.expectRevert("CalldataList: Contract address cannot be this");
+        vm.expectRevert("CalldataList: Address cannot be this");
         timelock.addCalldataCheck(
             address(timelock), Timelock.schedule.selector, 4, 5, "", true
+        );
+    }
+
+    function testAddCalldataCheckFailsWhitelistedCalldataSafe() public {
+        vm.prank(address(timelock));
+        vm.expectRevert("CalldataList: Address cannot be safe");
+        timelock.addCalldataCheck(
+            address(safe), Timelock.schedule.selector, 4, 5, "", true
         );
     }
 }
