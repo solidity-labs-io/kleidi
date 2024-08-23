@@ -10,6 +10,7 @@ methods {
     function pauseDuration()                       external returns (uint128) envfree;
     function pauseGuardian()                       external returns (address) envfree;
     function isOperation(bytes32)                  external returns (bool)    envfree;
+    function timestamps(bytes32)                   external returns (uint256) envfree;
     function minDelay()                            external returns (uint256) envfree;
     function pauseUsed()                           external returns (bool)    envfree;
     function paused()                              external returns (bool)           ;
@@ -20,8 +21,20 @@ methods {
     function revokeHotSigner(address)              external                          ;
     function cleanup(bytes32)                      external                          ;
     function cancel(bytes32)                       external                          ;
+
+    /// proposal creation and execution
+    function hashOperationBatch(address[],uint256[],bytes[],bytes32) external returns (bytes32) envfree;
+    function hashOperation(address,uint256,bytes,bytes32)            external returns (bytes32) envfree;
+
+    function scheduleBatch(address[],uint256[],bytes[],bytes32,uint256) external     ;
+    function executeBatch(address[],uint256[],bytes[],bytes32) external              ;
+
+    function schedule(address,uint256,bytes,bytes32,uint256) external                ;
+    function execute(address,uint256,bytes,bytes32) external                         ;
 }
 
 definition oneDay() returns uint256 = 84600;
 definition oneMonth() returns uint256 = 2592000;
 definition timestampMax() returns uint256 = 2 ^ 128 - 1;
+definition doneTimestamp() returns uint256 = 1;
+definition uintMax() returns uint256 = 2 ^ 256 - 1;
