@@ -28,7 +28,7 @@ invariant setLengthInvariant()
 
 /// this will tell us definitively if direct storage lookups are allowed
 invariant timestampInvariant(bytes32 proposalId)
-    t.timestamps[proposalId] != timestamps(proposalId);
+    t.timestamps[proposalId] == timestamps(proposalId);
 
 invariant noSelfWhitelisting(bytes4 selector)
     t._calldataList[timelockAddress()][selector].length == 0;
