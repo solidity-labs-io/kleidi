@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "test/utils/SystemIntegrationFixture.sol";
+import "forge-std/console.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
@@ -676,6 +677,288 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce(),
             startingNonce + 1,
             "incorrect nonce, did not cancel original transaction"
+        );
+    }
+
+    function testRecoverySpellAfterPauseGaurdian() public {
+        /// safe owners enact malicious proposal to disable timelock module
+        bytes memory calldatas = abi.encodeWithSelector(
+            ModuleManager.execTransactionFromModule.selector,
+            address(safe),
+            0,
+            abi.encodeWithSelector(
+                ModuleManager.disableModule.selector,
+                recoverySpellAddress,
+                address(timelock)
+            ),
+            Enum.Operation.Call
+        );
+        bytes memory innerCalldatas = abi.encodeWithSelector(
+            Timelock.schedule.selector,
+            address(safe),
+            0,
+            calldatas,
+            /// salt
+            bytes32(0),
+            timelock.minDelay()
+        );
+
+        bytes32 transactionHash = safe.getTransactionHash(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+        safe.checkNSignatures(
+            transactionHash, innerCalldatas, collatedSignatures, 3
+        );
+
+        safe.execTransaction(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        /// guardian pauses timelock after 1 day passes
+        vm.warp(block.timestamp + timelock.minDelay() / 2);
+        vm.prank(guardian);
+        timelock.pause();
+
+        /// initiate recovery
+        RecoverySpell recovery = recoveryFactory.createRecoverySpell(
+            recoverySalt,
+            recoveryOwners,
+            address(safe),
+            recoveryThreshold,
+            RECOVERY_THRESHOLD_OWNERS,
+            recoveryDelay
+        );
+
+        assertEq(
+            recoverySpellAddress,
+            address(recovery),
+            "recovery spell address incorrect"
+        );
+        assertTrue(
+            address(recovery).code.length != 0, "recovery spell not created"
+        );
+
+        recovery.initiateRecovery();
+
+        assertEq(
+            recovery.recoveryInitiated(),
+            block.timestamp,
+            "recovery not initiated"
+        );
+
+        /// execute recovery
+        vm.warp(block.timestamp + recoveryDelay + 1);
+
+        {
+            /// sign recovery transaction
+            bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
+            bytes32[] memory s = new bytes32[](recoveryPrivateKeys.length);
+            uint8[] memory v = new uint8[](recoveryPrivateKeys.length);
+
+            bytes32 digest = recovery.getDigest();
+
+            for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
+                (v[i], r[i], s[i]) = vm.sign(recoveryPrivateKeys[i], digest);
+            }
+
+            /// execute recovery transaction
+            recovery.executeRecovery(address(1), v, r, s);
+        }
+        assertFalse(
+            safe.isModuleEnabled(recoverySpellAddress),
+            "recovery spell should be removed after execution"
+        );
+
+        for (uint256 i = 0; i < owners.length; i++) {
+            assertFalse(
+                safe.isOwner(owners[i]),
+                "owner should be removed after recovery"
+            );
+        }
+
+        for (uint256 i = 0; i < recoveryOwners.length; i++) {
+            assertTrue(
+                safe.isOwner(recoveryOwners[i]),
+                "recovery owner should be an owner"
+            );
+        }
+
+        assertEq(safe.getThreshold(), recoveryThreshold, "threshold incorrect");
+
+        /// skip the pause duration
+        vm.warp(block.timestamp + timelock.pauseDuration() + 1);
+
+        /// set old guardian again as guardian
+        calldatas = abi.encodeWithSelector(
+            Timelock.setGuardian.selector, address(guardian)
+        );
+
+        innerCalldatas = abi.encodeWithSelector(
+            Timelock.schedule.selector,
+            address(timelock),
+            0,
+            calldatas,
+            /// salt
+            bytes32(0),
+            timelock.minDelay()
+        );
+
+        transactionHash = safe.getTransactionHash(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        collatedSignatures = signTxAllOwners(
+            transactionHash,
+            recoveryPrivateKeys[1],
+            recoveryPrivateKeys[0],
+            recoveryPrivateKeys[2]
+        );
+
+        safe.checkNSignatures(
+            transactionHash, innerCalldatas, collatedSignatures, 3
+        );
+
+        safe.execTransaction(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        vm.warp(block.timestamp + timelock.minDelay());
+
+        timelock.execute(address(timelock), 0, calldatas, bytes32(0));
+
+        /// add a new recovery spell
+        uint256 newRecoveryOwnersLength = 3;
+        address[] memory newRecoveryOwners =
+            new address[](newRecoveryOwnersLength);
+
+        for (uint256 i = 0; i < newRecoveryOwnersLength; i++) {
+            newRecoveryOwners[i] =
+                makeAddr(string(abi.encodePacked("newRecoveryAddress", i)));
+        }
+
+        address newRecoverySpellAddress = recoveryFactory.calculateAddress(
+            recoverySalt,
+            newRecoveryOwners,
+            address(safe),
+            2,
+            RECOVERY_THRESHOLD_OWNERS,
+            recoveryDelay
+        );
+
+        calldatas = abi.encodeWithSelector(
+            ModuleManager.execTransactionFromModule.selector,
+            address(safe),
+            0,
+            abi.encodeWithSelector(
+                ModuleManager.enableModule.selector,
+                address(newRecoverySpellAddress)
+            ),
+            Enum.Operation.Call
+        );
+        innerCalldatas = abi.encodeWithSelector(
+            Timelock.schedule.selector,
+            address(safe),
+            0,
+            calldatas,
+            /// salt
+            bytes32(0),
+            timelock.minDelay()
+        );
+
+        transactionHash = safe.getTransactionHash(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        console.log(
+            "priv keys",
+            recoveryPrivateKeys[0],
+            recoveryPrivateKeys[1],
+            recoveryPrivateKeys[2]
+        );
+        console.log(
+            "addresses", recoveryOwners[0], recoveryOwners[1], recoveryOwners[2]
+        );
+
+        collatedSignatures = signTxAllOwners(
+            transactionHash,
+            recoveryPrivateKeys[1],
+            recoveryPrivateKeys[0],
+            recoveryPrivateKeys[2]
+        );
+
+        safe.checkNSignatures(
+            transactionHash, innerCalldatas, collatedSignatures, 3
+        );
+
+        safe.execTransaction(
+            address(timelock),
+            0,
+            innerCalldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        vm.warp(block.timestamp + timelock.minDelay());
+
+        timelock.execute(address(safe), 0, calldatas, bytes32(0));
+
+        assertTrue(
+            safe.isModuleEnabled(address(newRecoverySpellAddress)),
+            "new recovery spell is not a module"
         );
     }
 
