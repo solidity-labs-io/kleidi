@@ -369,6 +369,17 @@ contract Timelock is
         return _liveProposals.values();
     }
 
+    /// @notice returns the proposal id at the specified index in the set
+    function atIndex(uint256 index) external view returns (bytes32) {
+        return _liveProposals.at(index);
+    }
+    
+    /// @notice returns the current position of the proposal in the live
+    /// proposals set
+    function positionOf(bytes32 value) external view returns (uint256) {
+        return _liveProposals._inner._positions[value];
+    }
+
     /// @dev See {IERC165-supportsInterface}.
     /// @notice supports 1155 and 721 receiver
     /// also supports ERC165 interface id
