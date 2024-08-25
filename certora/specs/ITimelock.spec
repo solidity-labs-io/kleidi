@@ -21,6 +21,8 @@ methods {
     function revokeHotSigner(address)              external                          ;
     function cleanup(bytes32)                      external                          ;
     function cancel(bytes32)                       external                          ;
+    function atIndex(uint256)                      external returns (bytes32) envfree;
+    function positionOf(bytes32)                   external returns (uint256) envfree;
 
     /// proposal creation and execution
     function hashOperationBatch(address[],uint256[],bytes[],bytes32) external returns (bytes32) envfree;
