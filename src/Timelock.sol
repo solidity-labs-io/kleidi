@@ -373,7 +373,7 @@ contract Timelock is
     function atIndex(uint256 index) external view returns (bytes32) {
         return _liveProposals.at(index);
     }
-    
+
     /// @notice returns the current position of the proposal in the live
     /// proposals set
     function positionOf(bytes32 value) external view returns (uint256) {
