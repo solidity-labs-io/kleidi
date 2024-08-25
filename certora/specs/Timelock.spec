@@ -11,11 +11,11 @@ function contains(bytes32 key) returns bool {
 }
 
 function _positionOf(bytes32 key) returns uint256 {
-    return t._liveProposals._inner._positions[key];
+    return positionOf(key);
 }
 
 function at_(uint256 index) returns bytes32 {
-    return t._liveProposals._inner._values[index];
+    return atIndex(index);
 }
 
 function setLength() returns uint256 {
@@ -62,12 +62,11 @@ invariant timestampNotExecutedGtMinDelay(env e, bytes32 proposalId)
         }
         preserved schedule(address target, uint256 value, bytes data, bytes32 salt, uint256 delay) with (env e1) {
             require e1.block.timestamp == e.block.timestamp;
-            require delay == minDelay();
         }
         preserved scheduleBatch(address[] target, uint256[] value, bytes[] data, bytes32 salt, uint256 delay) with (env e1) {
             require e1.block.timestamp == e.block.timestamp;
-            require delay == minDelay();
         }
+
     }
 
 /// if the operation is expired, timestamp should be gt 1
@@ -128,11 +127,19 @@ invariant executedOperationNotInSet(bytes32 proposalId)
         }
     }
 
+/// check that operations in the set are not executed
+invariant operationInSetImpliesNotExecuted(bytes32 proposalId)
+    t.timestamps[proposalId] > 1 => contains(proposalId)
+    filtered {
+        f -> f.selector != sig:cleanup(bytes32).selector
+    } {
+        preserved {
+            require setLength() < uintMax();
+        }
+    }
+
 /// cancel decreases proposal length by one
 rule cancelEffects(env e, bytes32 proposalId) {
-    /// filter out impossible state
-    require e.block.timestamp <= timestampMax() && e.block.timestamp > 0;
-
     mathint len = getAllProposals().length;
 
     cancel(e, proposalId);
@@ -145,9 +152,6 @@ rule cancelEffects(env e, bytes32 proposalId) {
 
 /// cleanup decreases proposal length by one
 rule cleanupEffects(env e, bytes32 proposalId) {
-    /// filter out impossible state
-    require e.block.timestamp <= timestampMax() && e.block.timestamp > 0;
-
     mathint len = getAllProposals().length;
     mathint timestamp = t.timestamps[proposalId];
 
@@ -168,9 +172,6 @@ rule revokeHotSigner(env e, address signer) {
 
 /// removeAllCalldataChecks removes all calldata checks
 rule removeAllCalldataChecks(env e, address target, bytes4 selector, uint256 index) {
-    /// filter out impossible state
-    require e.block.timestamp <= timestampMax() && e.block.timestamp > 0;
-
     mathint len = t._calldataList[target][selector].length;
 
     removeCalldataCheck(e, target, selector, index);
@@ -181,9 +182,6 @@ rule removeAllCalldataChecks(env e, address target, bytes4 selector, uint256 ind
 
 /// post execute, proposal timestamp is set to 1
 rule executeSetsTimestamp(env e, address target,  uint256 value, bytes data, bytes32 salt) {
-    /// filter out impossible state
-    require e.block.timestamp <= timestampMax() && e.block.timestamp > 0;
-
     bytes32 proposalId = hashOperation(target, value, data, salt);
 
     execute(e, target, value, data, salt);
@@ -195,9 +193,6 @@ rule executeSetsTimestamp(env e, address target,  uint256 value, bytes data, byt
 }
 
 rule executeBatchSetsTimestamp(env e, address[] target, uint256[] value, bytes[] data, bytes32 salt) {
-    /// filter out impossible state
-    require e.block.timestamp <= timestampMax() && e.block.timestamp > 0;
-
     bytes32 proposalId = hashOperationBatch(target, value, data, salt);
 
     executeBatch(e, target, value, data, salt);
@@ -223,7 +218,7 @@ rule timestampChange(env e, method f, calldataarg args, bytes32 proposalId) {
     assert (timestampBefore != 0 && timestampAfter == 0) => (
         f.selector == sig:cancel(bytes32).selector ||
         f.selector == sig:pause().selector
-    ), "only cancel should set the timestamp to 0";
+    ), "only cancel or pause should set the timestamp to 0";
 
     assert (timestampBefore > timestampAfter && timestampAfter == doneTimestamp()) => (
         f.selector == sig:execute(address,uint256,bytes,bytes32).selector ||
