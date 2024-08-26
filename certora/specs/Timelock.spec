@@ -138,6 +138,32 @@ invariant operationInSetImpliesNotExecuted(bytes32 proposalId)
         }
     }
 
+invariant pauseImpliesEmptySet(env e)
+    paused(e) => getAllProposals().length == 0 {
+        preserved {
+            require e.block.timestamp > 1 && e.block.timestamp <= assert_uint256(timestampMax() - oneMonth());
+            requireInvariant minDelayInvariant();
+            requireInvariant expirationPeriod();
+            require to_mathint(pauseDuration()) >= to_mathint(oneDay()) &&
+             to_mathint(pauseDuration()) <= to_mathint(oneMonth());
+        }
+        preserved updatePauseDuration(uint128 newPauseDuration) with (env e1) {
+            require e1.block.timestamp == e.block.timestamp;
+        }
+        preserved cancel(bytes32 cancelProposalId) with (env e1) {
+            require e1.block.timestamp == e.block.timestamp;
+        }
+        preserved cleanup(bytes32 cleanupProposalId) with (env e1) {
+            require e1.block.timestamp == e.block.timestamp;
+        }
+        preserved schedule(address target, uint256 value, bytes data, bytes32 salt, uint256 delay) with (env e1) {
+            require e1.block.timestamp == e.block.timestamp;
+        }
+        preserved scheduleBatch(address[] target, uint256[] value, bytes[] data, bytes32 salt, uint256 delay) with (env e1) {
+            require e1.block.timestamp == e.block.timestamp;
+        }
+    }
+
 /// cancel decreases proposal length by one
 rule cancelEffects(env e, bytes32 proposalId) {
     mathint len = getAllProposals().length;
