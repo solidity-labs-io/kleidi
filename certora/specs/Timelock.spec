@@ -170,8 +170,8 @@ rule revokeHotSigner(env e, address signer) {
     assert !hasRole(HOT_SIGNER_ROLE(), signer), "signer should not have hot signer role";
 }
 
-/// removeAllCalldataChecks removes all calldata checks
-rule removeAllCalldataChecks(env e, address target, bytes4 selector, uint256 index) {
+/// removeCalldataCheck removes all calldata checks
+rule removeCalldataCheck(env e, address target, bytes4 selector, uint256 index) {
     mathint len = t._calldataList[target][selector].length;
 
     removeCalldataCheck(e, target, selector, index);
