@@ -919,6 +919,7 @@ contract Timelock is
     function updatePauseDuration(uint128 newPauseDuration)
         external
         onlyTimelock
+        whenNotPaused
     {
         /// min and max checks are done in the internal function
         _updatePauseDuration(newPauseDuration);

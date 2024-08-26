@@ -104,7 +104,8 @@ contract ConfigurablePauseGuardian {
 
     /// ------------- INTERNAL/PRIVATE HELPERS -------------
 
-    /// @notice helper function to update the pause duration once the contract is paused
+    /// @notice helper function to update the pause duration
+    /// should only be called when the contract is unpaused
     /// @param newPauseDuration new pause duration
     function _updatePauseDuration(uint128 newPauseDuration) internal {
         require(
@@ -112,6 +113,11 @@ contract ConfigurablePauseGuardian {
                 && newPauseDuration <= MAX_PAUSE_DURATION,
             "ConfigurablePause: pause duration out of bounds"
         );
+
+        /// if the contract was already paused, reset the pauseStartTime to 0
+        /// so that this function cannot pause the contract again
+        _setPauseTime(0);
+
         uint256 oldPauseDuration = pauseDuration;
         pauseDuration = newPauseDuration;
 
