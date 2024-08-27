@@ -1,0 +1,19 @@
+name: Contract Size Check
+
+on: [pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Check out the repo"
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Environment
+        uses: ./.github/actions
+
+      - name: Run contract size check
+        id: lint
+        run: forge build --sizes

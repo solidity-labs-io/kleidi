@@ -122,4 +122,18 @@ contract TimelockReceivingUnitTest is Test {
             "id does not have correct owner"
         );
     }
+
+    function testReceiveEth() public {
+        uint256 amount = 1 ether;
+        vm.deal(address(this), amount);
+
+        address payable timelockPayable = payable(address(timelock));
+        timelockPayable.transfer(amount);
+
+        assertEq(
+            address(timelock).balance,
+            amount,
+            "timelock does not have correct balance"
+        );
+    }
 }

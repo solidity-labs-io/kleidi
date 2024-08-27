@@ -72,6 +72,16 @@ contract TimelockUnitTest is TimelockUnitFixture {
             PAUSE_DURATION,
             new address[](0)
         );
+
+        vm.expectRevert("Timelock: expiration period too short");
+        new Timelock(
+            address(0),
+            MINIMUM_DELAY,
+            86399,
+            guardian,
+            PAUSE_DURATION,
+            new address[](0)
+        );
     }
 
     function testScheduleProposalSafeSucceeds() public returns (bytes32) {
@@ -277,6 +287,24 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.revokeHotSigner(address(this));
     }
 
+    function testRevokeRoleNotAdminFails() public {
+        bytes32 role = timelock.HOT_SIGNER_ROLE();
+        vm.expectRevert();
+        timelock.revokeRole(role, address(this));
+    }
+
+    function testRenounceRoleFails() public {
+        bytes32 role = timelock.HOT_SIGNER_ROLE();
+        vm.expectRevert();
+        timelock.renounceRole(role, address(1));
+    }
+
+    function testGrantRoleFails() public {
+        bytes32 role = timelock.HOT_SIGNER_ROLE();
+        vm.expectRevert();
+        timelock.grantRole(role, address(1));
+    }
+
     function testAddHotSignerFailsNotTimelock() public {
         bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
         vm.expectRevert(
@@ -294,6 +322,24 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
 
         timelock.grantRole(hotSignerRole, address(this));
+    }
+
+    function testGrantAdminRoleFails() public {
+        bytes32 adminRole = timelock.DEFAULT_ADMIN_ROLE();
+        vm.expectRevert("Timelock: cannot grant admin role");
+        timelock.grantRole(adminRole, address(this));
+    }
+
+    function testRevokeAdminRoleFails() public {
+        bytes32 adminRole = timelock.DEFAULT_ADMIN_ROLE();
+        vm.expectRevert("Timelock: cannot revoke admin role");
+        timelock.revokeRole(adminRole, address(this));
+    }
+
+    function testRenounceAdminRoleFails() public {
+        bytes32 adminRole = timelock.DEFAULT_ADMIN_ROLE();
+        vm.expectRevert("Timelock: cannot renounce admin role");
+        timelock.renounceRole(adminRole, address(this));
     }
 
     function testSetGuardianFailsNonTimelock() public {
@@ -322,7 +368,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
     function testRemoveCalldataChecksFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
-        timelock.removeCalldataChecks(address(this), bytes4(0xFFFFFFFF), 0);
+        timelock.removeCalldataCheck(address(this), bytes4(0xFFFFFFFF), 0);
     }
 
     function testRemoveAllCalldataChecksFailsNonTimelock() public {
@@ -1081,6 +1127,33 @@ contract TimelockUnitTest is TimelockUnitFixture {
         return address(lending);
     }
 
+    function testRevokeHotSignerSucceeds() public {
+        testWhitelistingBatchCalldataSucceeds();
+
+        bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
+
+        vm.prank(address(timelock));
+        timelock.revokeRole(hotSignerRole, address(this));
+
+        assertFalse(
+            timelock.hasRole(hotSignerRole, address(this)),
+            "hot signer not revoked"
+        );
+    }
+
+    function testRenounceHotSignerSucceeds() public {
+        testWhitelistingBatchCalldataSucceeds();
+
+        bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
+
+        timelock.renounceRole(hotSignerRole, address(this));
+
+        assertFalse(
+            timelock.hasRole(hotSignerRole, address(this)),
+            "hot signer not renounced"
+        );
+    }
+
     function testExecuteWhitelistedNotHotSignerFails() public {
         bytes32 hotSignerRole = timelock.HOT_SIGNER_ROLE();
         vm.expectRevert(
@@ -1254,14 +1327,14 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         vm.expectRevert("CalldataList: Calldata index out of bounds");
         vm.prank(address(timelock));
-        timelock.removeCalldataChecks(address(lending), bytes4(0xFFFFFFFF), 0);
+        timelock.removeCalldataCheck(address(lending), bytes4(0xFFFFFFFF), 0);
     }
 
     function testRemoveCalldataChecksWithChecksSucceeds() public {
         address lending = testWhitelistingCalldataSucceeds();
 
         vm.prank(address(timelock));
-        timelock.removeCalldataChecks(
+        timelock.removeCalldataCheck(
             address(lending), MockLending.deposit.selector, 0
         );
 
@@ -1511,6 +1584,43 @@ contract TimelockUnitTest is TimelockUnitFixture {
                 timelock.updateDelay.selector, MINIMUM_DELAY - 1
             ),
             bytes32(0)
+        );
+    }
+
+    function testScheduleBatchCallRevertsIfExpiredAndCleanedUp() public {
+        vm.prank(address(safe));
+        timelock.scheduleBatch(
+            new address[](0),
+            new uint256[](0),
+            new bytes[](0),
+            bytes32(0),
+            MINIMUM_DELAY
+        );
+
+        bytes32 id = timelock.hashOperationBatch(
+            new address[](0), new uint256[](0), new bytes[](0), bytes32(0)
+        );
+
+        vm.warp(
+            block.timestamp + timelock.expirationPeriod() + timelock.minDelay()
+        );
+
+        timelock.cleanup(id);
+
+        // Expect revert on second call with same parameters
+        vm.prank(address(safe));
+        vm.expectRevert("Timelock: operation already scheduled");
+        timelock.scheduleBatch(
+            new address[](0),
+            new uint256[](0),
+            new bytes[](0),
+            bytes32(0),
+            MINIMUM_DELAY
+        );
+
+        vm.expectRevert("Timelock: proposal does not exist");
+        timelock.executeBatch(
+            new address[](0), new uint256[](0), new bytes[](0), bytes32(0)
         );
     }
 

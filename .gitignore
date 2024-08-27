@@ -16,3 +16,5 @@ docs/
 lcov.info
 
 broadcast/*
+
+.certora_internal/

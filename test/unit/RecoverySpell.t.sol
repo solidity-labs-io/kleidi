@@ -109,7 +109,6 @@ contract RecoverySpellUnitTest is Test {
         );
     }
 
-    /// TODO test with recovery signatures
     function testRecoverySucceeds() public returns (RecoverySpell recovery) {
         recovery = testInitiateRecoverySucceedsOwner();
 
