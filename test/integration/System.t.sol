@@ -205,18 +205,18 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// 2). check the recipient of the funds is whitelisted whether withdrawing
             /// or depositing.
 
-            uint16[] memory startIndexes = new uint16[](8);
+            uint16[] memory startIndexes = new uint16[](9);
             /// morpho blue supply
             startIndexes[0] = 4;
-            /// only grab last twenty bytes of the 7th argument
+            /// only grab last twenty bytes of the 8th argument
             startIndexes[1] = 4 + 32 * 7 + 12;
             /// ethena usd approve morpho
             startIndexes[2] = 16;
-            /// only check last twenty bytes of the 1st argument
+            /// only check last twenty bytes of the 9th argument
             startIndexes[3] = 4 + 32 * 8 + 12;
             /// only grab last twenty bytes of the 8th argument
-            startIndexes[4] = 4 + 32 * 8 + 12;
-            /// only grab last twenty bytes of the 8th argument
+            startIndexes[4] = 4 + 32 * 7 + 12;
+            /// only grab last twenty bytes of the 9th argument
             startIndexes[5] = 4 + 32 * 8 + 12;
 
             /// check last twenty bytes of the 7th argument
@@ -225,7 +225,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// check last twenty bytes of the 8th argument
             startIndexes[7] = 4 + 32 * 7 + 12;
 
-            uint16[] memory endIndexes = new uint16[](8);
+            startIndexes[8] = 16;
+
+            uint16[] memory endIndexes = new uint16[](9);
             /// morpho blue supply
             endIndexes[0] = startIndexes[0] + 32 * 5;
             /// last twenty bytes represents who supplying on behalf of
@@ -243,9 +245,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             endIndexes[6] = startIndexes[6] + 20;
             /// last twenty bytes represents asset receiver
             endIndexes[7] = startIndexes[7] + 20;
-            /// last twenty bytes represents asset receiver
+            /// dai approve morpho
+            endIndexes[8] = startIndexes[8] + 20;
 
-            bytes4[] memory selectors = new bytes4[](8);
+            bytes4[] memory selectors = new bytes4[](9);
             selectors[0] = IMorphoBase.supply.selector;
             selectors[1] = IMorphoBase.supply.selector;
             selectors[2] = IERC20.approve.selector;
@@ -258,8 +261,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// collateral is not borrowed
             selectors[6] = IMorphoBase.supplyCollateral.selector;
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
+            selectors[8] = IERC20.approve.selector;
 
-            bytes[] memory calldatas = new bytes[](8);
+            bytes[] memory calldatas = new bytes[](9);
             /// can only deposit to dai/eusd pool
             calldatas[0] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
 
@@ -272,10 +276,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// can only borrow to timelock
             calldatas[3] = "";
 
-            /// can only deposit to timelock
+            /// can only repay on behalf of timelock
             calldatas[4] = "";
 
-            /// can only repay on behalf of timelock
+            /// only withdraw asset back to timelock
             calldatas[5] = "";
 
             /// can only supply collateral on behalf of timelock
@@ -284,7 +288,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// can only withdraw collateral back to timelock
             calldatas[7] = "";
 
-            address[] memory targets = new address[](8);
+            /// morpho blue address can be approved to spend Dai
+            calldatas[8] = abi.encodePacked(morphoBlue);
+
+            address[] memory targets = new address[](9);
             targets[0] = morphoBlue;
             targets[1] = morphoBlue;
             targets[2] = ethenaUsd;
@@ -293,8 +300,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             targets[5] = morphoBlue;
             targets[6] = morphoBlue;
             targets[7] = morphoBlue;
+            targets[8] = dai;
 
-            bool[] memory isSelfAddressCheck = new bool[](8);
+            bool[] memory isSelfAddressCheck = new bool[](9);
             isSelfAddressCheck[0] = false;
             isSelfAddressCheck[1] = true;
             isSelfAddressCheck[2] = false;
@@ -303,6 +311,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             isSelfAddressCheck[5] = true;
             isSelfAddressCheck[6] = true;
             isSelfAddressCheck[7] = true;
+            isSelfAddressCheck[8] = false;
 
             contractCall = abi.encodeWithSelector(
                 Timelock.addCalldataChecks.selector,
@@ -962,7 +971,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
     }
 
-    function testExecuteWhitelistedCalldataSucceedsSupplyCollateral() public {
+    function testExecuteWhitelistedCalldataSucceedsSupplyWithdrawCollateral() public {
         testTransactionAddingWhitelistedCalldataSucced();
 
         /// warp to current timestamp to prevent math underflow
@@ -1052,7 +1061,39 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         }
     }
 
-    function testWithdrawToNonWhitelistedAddressFails() public {
+    function testSupplyCollateralOnBehalfNonWhitelistedAddressFails() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 supplyAmount = 100000;
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(morphoBlue);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(
+            IMorphoBase.supplyCollateral.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            supplyAmount,
+            address(this),
+            ""
+        );
+
+        vm.prank(HOT_SIGNER_THREE);
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+    }
+
+    function testWithdrawCollateralToNonWhitelistedAddressFails() public {
         testTransactionAddingWhitelistedCalldataSucced();
 
         /// warp to current timestamp to prevent math underflow
@@ -1082,5 +1123,537 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.prank(HOT_SIGNER_THREE);
         vm.expectRevert("CalldataList: Calldata does not match expected value");
         timelock.executeWhitelistedBatch(targets, values, calldatas);
+    }
+
+    function testExecuteWhitelistedCalldataSucceedsSupplyWithdrawAsset() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 supplyAmount = 100000;
+        uint256 supplyShares = 1000;
+
+        {
+            address[] memory targets = new address[](2);
+            targets[0] = address(dai);
+            targets[1] = address(morphoBlue);
+
+            uint256[] memory values = new uint256[](2);
+
+            bytes[] memory calldatas = new bytes[](2);
+
+            deal(dai, address(timelock), supplyAmount);
+
+            console.log("morpho", morphoBlue);
+            console.log("timelock", address(timelock));
+
+            calldatas[0] = abi.encodeWithSelector(
+                IERC20.approve.selector, morphoBlue, supplyAmount
+            );
+
+            calldatas[1] = abi.encodeWithSelector(
+                IMorphoBase.supply.selector,
+                dai,
+                ethenaUsd,
+                oracle,
+                irm,
+                lltv,
+                0,
+                supplyShares,
+                address(timelock),
+                ""
+            );
+
+            IMorphoBase(morphoBlue).accrueInterest(
+                MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+        }
+
+        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+
+        Position memory position =
+            IMorpho(morphoBlue).position(marketId, address(timelock));
+
+        assertEq(position.supplyShares, supplyShares, "incorrect supply shares");
+        assertEq(position.borrowShares, 0, "incorrect borrow shares");
+        assertEq(position.collateral, 0, "incorrect collateral");
+
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(morphoBlue);
+
+            uint256[] memory values = new uint256[](1);
+            values[0] = 0;
+
+            bytes[] memory calldatas = new bytes[](1);
+            calldatas[0] = abi.encodeWithSelector(
+                IMorphoBase.withdraw.selector,
+                dai,
+                ethenaUsd,
+                oracle,
+                irm,
+                lltv,
+                0,
+                supplyShares,
+                address(timelock),
+                address(timelock)
+            );
+
+            vm.prank(HOT_SIGNER_TWO);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            position = IMorpho(morphoBlue).position(marketId, address(timelock));
+
+            assertEq(position.supplyShares, 0, "incorrect supply shares");
+            assertEq(position.borrowShares, 0, "incorrect borrow shares");
+            assertEq(position.collateral, 0, "incorrect collateral");
+        }
+    }
+
+    function testSupplyAssetOnBehalfNonWhitelistedAddressFails() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 supplyShares = 1000;
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(morphoBlue);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(
+            IMorphoBase.supply.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            0,
+            supplyShares,
+            address(this),
+            ""
+        );
+
+        vm.prank(HOT_SIGNER_THREE);
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+    }
+
+    function testWithdrawAssetToNonWhitelistedAddressFails() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 supplyShares = 1000;
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(morphoBlue);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(
+            IMorphoBase.withdraw.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            0,
+            supplyShares,
+            address(timelock),
+            address(this)
+        );
+
+        vm.prank(HOT_SIGNER_THREE);
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+    }
+
+    function testExecuteWhitelistedCalldataSucceedsBorrowRepay() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 supplyAmount = 100000;
+        address[] memory targets = new address[](2);
+        uint256[] memory values = new uint256[](2);
+        bytes[] memory calldatas = new bytes[](2);
+
+        targets[0] = address(dai);
+        targets[1] = address(morphoBlue);
+
+        deal(dai, address(timelock), supplyAmount);
+
+        calldatas[0] = abi.encodeWithSelector(
+            IERC20.approve.selector, morphoBlue, supplyAmount
+        );
+
+        calldatas[1] = abi.encodeWithSelector(
+            IMorphoBase.supply.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            supplyAmount,
+            0,
+            address(timelock),
+            ""
+        );
+
+        IMorphoBase(morphoBlue).accrueInterest(
+            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+        );
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+
+        Position memory position =
+            IMorpho(morphoBlue).position(marketId, address(timelock));
+
+        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
+        assertEq(position.borrowShares, 0, "incorrect borrow shares");
+        assertEq(position.collateral, 0, "incorrect collateral");
+
+        assertEq(
+            IERC20(dai).balanceOf(address(timelock)),
+            0,
+            "incorrect dai balance post supply"
+        );
+
+        targets[0] = address(ethenaUsd);
+        targets[1] = address(morphoBlue);
+
+        deal(ethenaUsd, address(timelock), supplyAmount);
+
+        calldatas[0] = abi.encodeWithSelector(
+            IERC20.approve.selector, morphoBlue, supplyAmount
+        );
+
+        calldatas[1] = abi.encodeWithSelector(
+            IMorphoBase.supplyCollateral.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            supplyAmount, /// supply supplyAmount of eUSD
+            address(timelock),
+            ""
+        );
+
+        IMorphoBase(morphoBlue).accrueInterest(
+            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+        );
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+        position = IMorpho(morphoBlue).position(marketId, address(timelock));
+        
+        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
+        assertEq(position.borrowShares, 0, "incorrect borrow shares");
+        assertEq(position.collateral, supplyAmount, "incorrect collateral");
+
+        assertEq(
+            IERC20(ethenaUsd).balanceOf(address(timelock)),
+            0,
+            "incorrect eUSD balance post supply"
+        );
+
+        targets = new address[](1);
+        values = new uint256[](1);
+        calldatas = new bytes[](1);
+
+        targets[0] = address(morphoBlue);
+
+        calldatas[0] = abi.encodeWithSelector(
+            IMorphoBase.borrow.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            supplyAmount / 2,
+            0,
+            address(timelock),
+            address(timelock)
+        );
+
+        IMorphoBase(morphoBlue).accrueInterest(
+            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+        );
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+        position = IMorpho(morphoBlue).position(marketId, address(timelock));
+        
+        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
+        assertNotEq(position.borrowShares, 0, "incorrect borrow shares");
+        assertEq(position.collateral, supplyAmount, "incorrect collateral");
+
+        assertEq(
+            IERC20(dai).balanceOf(address(timelock)),
+            supplyAmount / 2,
+            "incorrect dai balance post borrow"
+        );
+
+        targets = new address[](2);
+        values = new uint256[](2);
+        calldatas = new bytes[](2);
+
+        targets[0] = address(dai);
+        targets[1] = address(morphoBlue);
+
+        calldatas[0] = abi.encodeWithSelector(
+            IERC20.approve.selector, morphoBlue, supplyAmount / 2
+        );
+        calldatas[1] = abi.encodeWithSelector(
+            IMorphoBase.repay.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            supplyAmount / 2,
+            0,
+            address(timelock),
+            ""
+        );
+
+        IMorphoBase(morphoBlue).accrueInterest(
+            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+        );
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+        position = IMorpho(morphoBlue).position(marketId, address(timelock));
+        
+        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
+        /// borrow shares decrease to 1 and not 0 due to rounding
+        assertEq(position.borrowShares, 1, "incorrect borrow shares");
+        assertEq(position.collateral, supplyAmount, "incorrect collateral");
+
+        assertEq(
+            IERC20(dai).balanceOf(address(timelock)),
+            0,
+            "incorrect dai balance post borrow"
+        );
+    }
+
+    function testBorrowToNonWhitelistedAddressFails() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 borrowAmount = 1000;
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(morphoBlue);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(
+            IMorphoBase.borrow.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            borrowAmount,
+            0,
+            address(timelock),
+            address(this)
+        );
+
+        vm.prank(HOT_SIGNER_THREE);
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+    }
+
+    function testRepayOnBehalfNonWhitelistedAddressFails() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 repayAmount = 1000;
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(morphoBlue);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(
+            IMorphoBase.repay.selector,
+            dai,
+            ethenaUsd,
+            oracle,
+            irm,
+            lltv,
+            repayAmount,
+            0,
+            address(this),
+            ""
+        );
+
+        vm.prank(HOT_SIGNER_THREE);
+        vm.expectRevert("CalldataList: Calldata does not match expected value");
+        timelock.executeWhitelistedBatch(targets, values, calldatas);
+    }
+
+    function testSafeRevokeHotSignerSucceed() public {
+        bytes memory calldatas = abi.encodeWithSelector(
+            Timelock.revokeHotSigner.selector,
+            HOT_SIGNER_ONE
+        );
+        uint256 value = 0;
+
+        bytes32 transactionHash = safe.getTransactionHash(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        assertFalse(
+            timelock.hasRole(timelock.HOT_SIGNER_ROLE(), HOT_SIGNER_ONE),
+            "Hot signer one should not have role"
+        );
+    }
+
+    function testWhenPausedMutativeFunctionsFail() public {
+        vm.prank(guardian);
+        timelock.pause();
+
+        uint256 value = 0;
+
+        bytes memory calldatas = abi.encodeWithSelector(
+            Timelock.schedule.selector,
+            address(timelock),
+            value,
+            "",
+            bytes32(0),
+            timelock.minDelay()
+        );
+
+        bytes32 transactionHash = safe.getTransactionHash(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+        vm.expectRevert("GS013");
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+        
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory payloads = new bytes[](1);
+
+        calldatas = abi.encodeWithSelector(
+            Timelock.scheduleBatch.selector,
+            targets,
+            values,
+            payloads,
+            bytes32(0),
+            timelock.minDelay()
+        );
+
+        transactionHash = safe.getTransactionHash(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+        vm.expectRevert("GS013");
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
     }
 }
