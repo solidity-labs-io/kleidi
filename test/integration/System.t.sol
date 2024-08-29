@@ -971,7 +971,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
     }
 
-    function testExecuteWhitelistedCalldataSucceedsSupplyWithdrawCollateral() public {
+    function testExecuteWhitelistedCalldataSucceedsSupplyWithdrawCollateral()
+        public
+    {
         testTransactionAddingWhitelistedCalldataSucced();
 
         /// warp to current timestamp to prevent math underflow
@@ -1125,7 +1127,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         timelock.executeWhitelistedBatch(targets, values, calldatas);
     }
 
-    function testExecuteWhitelistedCalldataSucceedsSupplyWithdrawAsset() public {
+    function testExecuteWhitelistedCalldataSucceedsSupplyWithdrawAsset()
+        public
+    {
         testTransactionAddingWhitelistedCalldataSucced();
 
         /// warp to current timestamp to prevent math underflow
@@ -1351,7 +1355,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             oracle,
             irm,
             lltv,
-            supplyAmount, /// supply supplyAmount of eUSD
+            supplyAmount,
+            /// supply supplyAmount of eUSD
             address(timelock),
             ""
         );
@@ -1364,7 +1369,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         timelock.executeWhitelistedBatch(targets, values, calldatas);
 
         position = IMorpho(morphoBlue).position(marketId, address(timelock));
-        
+
         assertNotEq(position.supplyShares, 0, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
@@ -1402,7 +1407,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         timelock.executeWhitelistedBatch(targets, values, calldatas);
 
         position = IMorpho(morphoBlue).position(marketId, address(timelock));
-        
+
         assertNotEq(position.supplyShares, 0, "incorrect supply shares");
         assertNotEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
@@ -1444,7 +1449,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         timelock.executeWhitelistedBatch(targets, values, calldatas);
 
         position = IMorpho(morphoBlue).position(marketId, address(timelock));
-        
+
         assertNotEq(position.supplyShares, 0, "incorrect supply shares");
         /// borrow shares decrease to 1 and not 0 due to rounding
         assertEq(position.borrowShares, 1, "incorrect borrow shares");
@@ -1525,8 +1530,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
     function testSafeRevokeHotSignerSucceed() public {
         bytes memory calldatas = abi.encodeWithSelector(
-            Timelock.revokeHotSigner.selector,
-            HOT_SIGNER_ONE
+            Timelock.revokeHotSigner.selector, HOT_SIGNER_ONE
         );
         uint256 value = 0;
 
@@ -1545,7 +1549,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         bytes memory collatedSignatures =
             signTxAllOwners(transactionHash, pk1, pk2, pk3);
-
 
         safe.execTransaction(
             address(timelock),
@@ -1613,7 +1616,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         address[] memory targets = new address[](1);
         targets[0] = address(timelock);
-        
+
         uint256[] memory values = new uint256[](1);
         bytes[] memory payloads = new bytes[](1);
 
@@ -1639,8 +1642,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        collatedSignatures =
-            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+        collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         vm.expectRevert("GS013");
         safe.execTransaction(
