@@ -62,6 +62,7 @@ contract TimelockReceivingUnitTest is Test {
         timelock.initialize(
             new address[](0), // targets
             new bytes4[](0), // selectors
+            new bool[](0), // allowAllCalls
             new uint16[](0), // startIndexes
             new uint16[](0), // endIndexes
             new bytes[](0), // datas

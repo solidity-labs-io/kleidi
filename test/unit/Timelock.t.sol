@@ -55,6 +55,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.initialize(
             new address[](0),
             new bytes4[](0),
+            new bool[](0),
             new uint16[](0),
             new uint16[](0),
             new bytes[](0),
@@ -350,7 +351,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
     function testAddCalldataCheckFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.addCalldataCheck(
-            address(0), bytes4(0xFFFFFFFF), 0, 1, "", true
+            address(0), bytes4(0xFFFFFFFF), false, 0, 1, "", true
         );
     }
 
@@ -359,6 +360,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataChecks(
             new address[](0),
             new bytes4[](0),
+            new bool[](0),
             new uint16[](0),
             new uint16[](0),
             new bytes[](0),
@@ -399,6 +401,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
+            false,
             10,
             30,
             hex"1234",
@@ -412,6 +415,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
+            false,
             10,
             13,
             hex"1234",
@@ -423,6 +427,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
+            false,
             9,
             28,
             hex"1234",
@@ -434,13 +439,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, 10, 29, "", true
+            address(10000), timelock.addCalldataCheck.selector, false, 10, 29, "", true
         );
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, 10, 31, "", true
+            address(10000), timelock.addCalldataCheck.selector, false, 10, 31, "", true
         );
 
         vm.prank(address(timelock));
@@ -448,6 +453,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
+            false,
             10,
             3129,
             "",
@@ -823,6 +829,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataChecks.selector,
             targetAddresses,
             selectors,
+            new bool[](2),
             startIndexes,
             endIndexes,
             checkedCalldata,
@@ -1031,11 +1038,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
         isSelfAddressCheck[0] = true;
         isSelfAddressCheck[1] = true;
 
+
         bytes[] memory datas = new bytes[](1);
         datas[0] = abi.encodeWithSelector(
             timelock.addCalldataChecks.selector,
             targetAddresses,
             selectors,
+            new bool[](2),
             startIndexes,
             endIndexes,
             checkedCalldata,

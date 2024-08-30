@@ -34,18 +34,20 @@ import "src/utils/Constants.sol";
 
 import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
-import {SigHelper} from "test/utils/SigHelper.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
-import {SystemDeploy} from "src/deploy/SystemDeploy.s.sol";
+import {SigHelper} from "test/utils/SigHelper.sol";
 import {RecoverySpell} from "src/RecoverySpell.sol";
-import {AddressCalculation} from "src/views/AddressCalculation.sol";
+import {SystemDeploy} from "src/deploy/SystemDeploy.s.sol";
+import {CErc20Interface} from "src/interface/CErc20Interface.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
+import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 import {
     InstanceDeployer,
     NewInstance,
     SystemInstance
 } from "src/InstanceDeployer.sol";
+
 
 contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     using BytesHelper for bytes;
@@ -152,6 +154,9 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// @notice the multicall contract
     address public multicall;
 
+    /// @notice cDAI contract
+    address public cDai;
+
     /// @notice time the test started
     uint256 public startTimestamp;
 
@@ -202,6 +207,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         irm = addresses.getAddress("MORPHO_BLUE_IRM");
         oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
         multicall = addresses.getAddress("MULTICALL3");
+        cDai = addresses.getAddress("C_DAI");
 
         owners.push(vm.addr(pk1));
         owners.push(vm.addr(pk2));
@@ -243,6 +249,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
                 hotSigners,
                 new address[](0),
                 new bytes4[](0),
+                new bool[](0),
                 new uint16[](0),
                 new uint16[](0),
                 new bytes[](0),

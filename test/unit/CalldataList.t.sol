@@ -86,6 +86,7 @@ contract CalldataListUnitTest is Test {
         timelock.initialize(
             new address[](0),
             new bytes4[](0),
+            new bool[](0),
             new uint16[](0),
             new uint16[](0),
             new bytes[](0),
@@ -125,11 +126,16 @@ contract CalldataListUnitTest is Test {
         isSelfAddressCheck[0] = true;
         isSelfAddressCheck[1] = true;
 
+        bool[] memory allowAllCalls = new bool[](2);
+        allowAllCalls[0] = false;
+        allowAllCalls[1] = false;
+
         vm.expectRevert("CalldataList: Array lengths must be equal");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
             targetAddresses,
             selectors,
+            allowAllCalls,
             startIndexes,
             endIndexes,
             checkedCalldata,
@@ -141,7 +147,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 3, 4, "", true
+            address(lending), MockLending.deposit.selector, false, 3, 4, "", true
         );
     }
 
@@ -151,7 +157,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 4, "", true
+            address(lending), MockLending.deposit.selector, false, 4, 4, "", true
         );
     }
 
@@ -161,7 +167,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 3, "", true
+            address(lending), MockLending.deposit.selector, false, 4, 3, "", true
         );
     }
 
@@ -169,7 +175,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be this");
         timelock.addCalldataCheck(
-            address(timelock), Timelock.schedule.selector, 4, 5, "", true
+            address(timelock), Timelock.schedule.selector, false, 4, 5, "", true
         );
     }
 
@@ -177,7 +183,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be safe");
         timelock.addCalldataCheck(
-            address(safe), Timelock.schedule.selector, 4, 5, "", true
+            address(safe), Timelock.schedule.selector, false, 4, 5, "", true
         );
     }
 }

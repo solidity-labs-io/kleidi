@@ -256,6 +256,16 @@ contract DeploymentMultichainTest is SystemDeploy {
             isSelfAddressCheck[6] = true;
             isSelfAddressCheck[7] = true;
 
+            bool[] memory allowAllCalls = new bool[](8);
+            allowAllCalls[0] = false;
+            allowAllCalls[1] = false;
+            allowAllCalls[2] = false;
+            allowAllCalls[3] = false;
+            allowAllCalls[4] = false;
+            allowAllCalls[5] = false;
+            allowAllCalls[6] = false;
+            allowAllCalls[7] = false;
+
             instance = NewInstance(
                 owners,
                 2,
@@ -271,6 +281,7 @@ contract DeploymentMultichainTest is SystemDeploy {
                     hotSigners,
                     targets,
                     selectors,
+                    allowAllCalls,
                     startIndexes,
                     endIndexes,
                     calldatas,
@@ -516,6 +527,16 @@ contract DeploymentMultichainTest is SystemDeploy {
             isSelfAddressCheck[6] = true;
             isSelfAddressCheck[7] = true;
 
+            bool[] memory allowAllCalls = new bool[](8);
+            allowAllCalls[0] = false;
+            allowAllCalls[1] = false;
+            allowAllCalls[2] = false;
+            allowAllCalls[3] = false;
+            allowAllCalls[4] = false;
+            allowAllCalls[5] = false;
+            allowAllCalls[6] = false;
+            allowAllCalls[7] = false;
+
             instance = NewInstance(
                 owners,
                 2,
@@ -531,6 +552,7 @@ contract DeploymentMultichainTest is SystemDeploy {
                     hotSigners,
                     targets,
                     selectors,
+                    allowAllCalls,
                     startIndexes,
                     endIndexes,
                     calldatas,
