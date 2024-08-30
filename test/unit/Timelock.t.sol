@@ -439,13 +439,25 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, false, 10, 29, "", true
+            address(10000),
+            timelock.addCalldataCheck.selector,
+            false,
+            10,
+            29,
+            "",
+            true
         );
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, false, 10, 31, "", true
+            address(10000),
+            timelock.addCalldataCheck.selector,
+            false,
+            10,
+            31,
+            "",
+            true
         );
 
         vm.prank(address(timelock));
@@ -1037,7 +1049,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bool[] memory isSelfAddressCheck = new bool[](2);
         isSelfAddressCheck[0] = true;
         isSelfAddressCheck[1] = true;
-
 
         bytes[] memory datas = new bytes[](1);
         datas[0] = abi.encodeWithSelector(

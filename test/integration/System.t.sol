@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "test/utils/SystemIntegrationFixture.sol";
-import "forge-std/console.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
@@ -227,7 +226,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             startIndexes[8] = 0;
             startIndexes[9] = 0;
 
-
             uint16[] memory endIndexes = new uint16[](10);
             /// morpho blue supply
             endIndexes[0] = startIndexes[0] + 32 * 5;
@@ -295,7 +293,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             calldatas[8] = "";
 
             calldatas[9] = "";
-
 
             address[] memory targets = new address[](10);
             targets[0] = morphoBlue;
@@ -948,16 +945,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        console.log(
-            "priv keys",
-            recoveryPrivateKeys[0],
-            recoveryPrivateKeys[1],
-            recoveryPrivateKeys[2]
-        );
-        console.log(
-            "addresses", recoveryOwners[0], recoveryOwners[1], recoveryOwners[2]
-        );
-
         collatedSignatures = signTxAllOwners(
             transactionHash,
             recoveryPrivateKeys[1],
@@ -1169,9 +1156,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bytes[] memory calldatas = new bytes[](2);
 
             deal(dai, address(timelock), supplyAmount);
-
-            console.log("morpho", morphoBlue);
-            console.log("timelock", address(timelock));
 
             calldatas[0] = abi.encodeWithSelector(
                 IERC20.approve.selector, morphoBlue, supplyAmount
@@ -1617,7 +1601,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         bytes memory collatedSignatures =
             signTxAllOwners(transactionHash, pk1, pk2, pk3);
-        
+
         /// create snapshot when unpaused
         uint256 snapshot = vm.snapshot();
 
@@ -1722,8 +1706,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
 
         calldatas = abi.encodeWithSelector(
-            Timelock.updateDelay.selector,
-            MINIMUM_DELAY * 2
+            Timelock.updateDelay.selector, MINIMUM_DELAY * 2
         );
 
         calldatas = abi.encodeWithSelector(
@@ -1748,9 +1731,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        collatedSignatures =
-            signTxAllOwners(transactionHash, pk1, pk2, pk3);
-        
+        collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
         /// unpause
         vm.revertTo(snapshot);
 
@@ -1778,8 +1760,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 address(timelock),
                 value,
                 abi.encodeWithSelector(
-                    Timelock.updateDelay.selector,
-                    MINIMUM_DELAY * 2
+                    Timelock.updateDelay.selector, MINIMUM_DELAY * 2
                 ),
                 bytes32(0)
             )
@@ -1798,9 +1779,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        collatedSignatures =
-            signTxAllOwners(transactionHash, pk1, pk2, pk3);
-        
+        collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
         /// cancel scheduled operation
         safe.execTransaction(
             address(timelock),
@@ -1830,13 +1810,12 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        collatedSignatures =
-            signTxAllOwners(transactionHash, pk1, pk2, pk3);
-        
+        collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
         /// pause
         vm.prank(guardian);
         timelock.pause();
-        
+
         /// cancel reverts as paused
         vm.expectRevert("GS013");
         safe.execTransaction(
@@ -1855,15 +1834,14 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.revertTo(snapshot);
 
         calldatas = abi.encodeWithSelector(
-            Timelock.updateDelay.selector,
-            MINIMUM_DELAY * 2
+            Timelock.updateDelay.selector, MINIMUM_DELAY * 2
         );
 
         vm.warp(block.timestamp + timelock.minDelay());
 
         /// executing updateDelay succeeds
         timelock.execute(address(timelock), value, calldatas, bytes32(0));
-        
+
         assertEq(timelock.minDelay(), MINIMUM_DELAY * 2, "delay not updated");
 
         vm.revertTo(snapshot);
@@ -1875,7 +1853,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         vm.expectRevert("Pausable: paused");
         timelock.execute(address(timelock), value, calldatas, bytes32(0));
-
     }
 
     function testMoveDaiFromMorphoToCompoundSucceed() public {
@@ -1923,12 +1900,15 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+            bytes32 marketId =
+                id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
 
             Position memory position =
                 IMorpho(morphoBlue).position(marketId, address(timelock));
 
-            assertEq(position.supplyShares, supplyShares, "incorrect supply shares");
+            assertEq(
+                position.supplyShares, supplyShares, "incorrect supply shares"
+            );
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
             assertEq(position.collateral, 0, "incorrect collateral");
 
@@ -1964,7 +1944,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_TWO);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+            bytes32 marketId =
+                id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
 
             Position memory position =
                 IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -1995,8 +1976,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             );
 
             calldatas[1] = abi.encodeWithSelector(
-                CErc20Interface.mint.selector,
-                supplyAmount / 2
+                CErc20Interface.mint.selector, supplyAmount / 2
             );
 
             vm.prank(HOT_SIGNER_ONE);
@@ -2005,7 +1985,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// Todo: debug why balance not fixed
             assertGt(
                 IERC20(cDai).balanceOf(address(timelock)),
-                0,  
+                0,
                 "cDai balance should increase post mint"
             );
 

@@ -991,13 +991,11 @@ contract Timelock is
         bytes32 dataHash;
 
         if (allowAllCalls) {
-            _calldataList[contractAddress][selector].push(
-                Index(true, 0, 0, "")
-            );
-        }
-        else {
+            _calldataList[contractAddress][selector].push(Index(true, 0, 0, ""));
+        } else {
             require(
-                startIndex >= 4, "CalldataList: Start index must be greater than 3"
+                startIndex >= 4,
+                "CalldataList: Start index must be greater than 3"
             );
             require(
                 endIndex > startIndex,
@@ -1010,7 +1008,9 @@ contract Timelock is
                 contractAddress != address(this),
                 "CalldataList: Address cannot be this"
             );
-            require(contractAddress != safe, "CalldataList: Address cannot be safe");
+            require(
+                contractAddress != safe, "CalldataList: Address cannot be safe"
+            );
 
             if (isSelfAddressCheck) {
                 /// self address check, data must be empty
@@ -1030,8 +1030,7 @@ contract Timelock is
                 );
             }
 
-            dataHash =
-                isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
+            dataHash = isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
 
             _calldataList[contractAddress][selector].push(
                 Index(false, startIndex, endIndex, dataHash)
@@ -1039,7 +1038,12 @@ contract Timelock is
         }
 
         emit CalldataAdded(
-            contractAddress, selector, allowAllCalls, startIndex, endIndex, dataHash
+            contractAddress,
+            selector,
+            allowAllCalls,
+            startIndex,
+            endIndex,
+            dataHash
         );
     }
 

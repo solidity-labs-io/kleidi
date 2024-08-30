@@ -48,7 +48,6 @@ import {
     SystemInstance
 } from "src/InstanceDeployer.sol";
 
-
 contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     using BytesHelper for bytes;
 
