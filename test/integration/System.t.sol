@@ -1329,7 +1329,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         Position memory position =
             IMorpho(morphoBlue).position(marketId, address(timelock));
 
-        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
+        assertEq(position.supplyShares, 92402669110, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, 0, "incorrect collateral");
 
@@ -1370,7 +1370,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         position = IMorpho(morphoBlue).position(marketId, address(timelock));
 
-        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
+        assertEq(position.supplyShares, 92402669110, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
 
@@ -1408,8 +1408,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         position = IMorpho(morphoBlue).position(marketId, address(timelock));
 
-        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
-        assertNotEq(position.borrowShares, 0, "incorrect borrow shares");
+        assertEq(position.supplyShares, 92402669110, "incorrect supply shares");
+        assertEq(position.borrowShares, 45673279908, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
 
         assertEq(
@@ -1450,7 +1450,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         position = IMorpho(morphoBlue).position(marketId, address(timelock));
 
-        assertNotEq(position.supplyShares, 0, "incorrect supply shares");
+        assertEq(position.supplyShares, 92402669110, "incorrect supply shares");
         /// borrow shares decrease to 1 and not 0 due to rounding
         assertEq(position.borrowShares, 1, "incorrect borrow shares");
         assertEq(position.collateral, supplyAmount, "incorrect collateral");
