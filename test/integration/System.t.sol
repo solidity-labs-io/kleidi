@@ -1570,9 +1570,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
     }
 
     function testWhenPausedMutativeFunctionsFail() public {
-        vm.prank(guardian);
-        timelock.pause();
-
         uint256 value = 0;
 
         bytes memory calldatas = abi.encodeWithSelector(
@@ -1599,7 +1596,30 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         bytes memory collatedSignatures =
             signTxAllOwners(transactionHash, pk1, pk2, pk3);
+        
+        /// create snapshot when unpaused
+        uint256 snapshot = vm.snapshot();
 
+        /// schedule succeeds when unpaused
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        vm.revertTo(snapshot);
+
+        vm.prank(guardian);
+        timelock.pause();
+
+        /// schedule reverts when paused
         vm.expectRevert("GS013");
         safe.execTransaction(
             address(timelock),
@@ -1644,6 +1664,28 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
+        /// unpause
+        vm.revertTo(snapshot);
+
+        /// batch schedule succeeds when unpaused
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        vm.revertTo(snapshot);
+        vm.prank(guardian);
+        timelock.pause();
+
+        ///batch schedule reverts when paused
         vm.expectRevert("GS013");
         safe.execTransaction(
             address(timelock),
@@ -1657,5 +1699,161 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             payable(address(0)),
             collatedSignatures
         );
+
+        calldatas = abi.encodeWithSelector(
+            Timelock.updateDelay.selector,
+            MINIMUM_DELAY * 2
+        );
+
+        calldatas = abi.encodeWithSelector(
+            Timelock.schedule.selector,
+            address(timelock),
+            value,
+            calldatas,
+            bytes32(0),
+            timelock.minDelay()
+        );
+
+        transactionHash = safe.getTransactionHash(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+        
+        /// unpause
+        vm.revertTo(snapshot);
+
+        /// schedule an operation
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        /// snapshot state when unpaused
+        /// and updateDelay operation scheduled
+        snapshot = vm.snapshot();
+
+        calldatas = abi.encodeWithSelector(
+            Timelock.cancel.selector,
+            timelock.hashOperation(
+                address(timelock),
+                value,
+                abi.encodeWithSelector(
+                    Timelock.updateDelay.selector,
+                    MINIMUM_DELAY * 2
+                ),
+                bytes32(0)
+            )
+        );
+
+        transactionHash = safe.getTransactionHash(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+        
+        /// cancel scheduled operation
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        vm.revertTo(snapshot);
+
+        transactionHash = safe.getTransactionHash(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safe.nonce()
+        );
+
+        collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
+        
+        /// pause
+        vm.prank(guardian);
+        timelock.pause();
+        
+        /// cancel reverts as paused
+        vm.expectRevert("GS013");
+        safe.execTransaction(
+            address(timelock),
+            value,
+            calldatas,
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            collatedSignatures
+        );
+
+        vm.revertTo(snapshot);
+
+        calldatas = abi.encodeWithSelector(
+            Timelock.updateDelay.selector,
+            MINIMUM_DELAY * 2
+        );
+
+        vm.warp(block.timestamp + timelock.minDelay());
+
+        /// executing updateDelay succeeds
+        timelock.execute(address(timelock), value, calldatas, bytes32(0));
+        
+        assertEq(timelock.minDelay(), MINIMUM_DELAY * 2, "delay not updated");
+
+        vm.revertTo(snapshot);
+
+        vm.prank(guardian);
+        timelock.pause();
+
+        vm.warp(block.timestamp + timelock.minDelay());
+
+        vm.expectRevert("Pausable: paused");
+        timelock.execute(address(timelock), value, calldatas, bytes32(0));
+
     }
 }
