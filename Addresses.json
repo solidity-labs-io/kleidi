@@ -82,5 +82,11 @@
         "name": "MORPHO_BLUE_ORACLE",
         "chainId": 1,
         "isContract": true
+    },
+    {
+        "addr": "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+        "name": "C_DAI",
+        "chainId": 1,
+        "isContract": true
     }
 ]
