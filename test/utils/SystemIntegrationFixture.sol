@@ -191,7 +191,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         hotSigners.push(HOT_SIGNER_TWO);
         hotSigners.push(HOT_SIGNER_THREE);
 
-        startTimestamp = 1725024563;
+        startTimestamp = block.timestamp;
 
         /// set addresses object in msig proposal
         addresses = new Addresses("./Addresses.json");
