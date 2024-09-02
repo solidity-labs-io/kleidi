@@ -350,6 +350,8 @@ contract DeploymentMultichainTest is SystemDeploy {
 
         instance.timelockParams.isSelfAddressCheck = new bool[](1);
 
+        instance.timelockParams.allowAllCalls = new bool[](1);
+
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
             deployer.createSystemInstance(instance);
