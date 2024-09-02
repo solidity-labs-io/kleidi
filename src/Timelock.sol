@@ -123,6 +123,13 @@ contract Timelock is
             => mapping(bytes4 selector => Index[] calldataChecks)
     ) private _calldataList;
 
+    /// @notice mapping of contract address to function selector to boolean
+    /// allow all calls if true
+    mapping(
+        address contractAddress
+            => mapping(bytes4 selector => bool allowAllCalls)
+    ) private allowAllSelectorCalls;
+
     /// minDelay >= MIN_DELAY && minDelay <= MAX_DELAY
 
     /// 1. proposed and not ready for execution
@@ -258,7 +265,6 @@ contract Timelock is
     /// Once the calldata is stored, it can be used to check if the calldata
     /// conforms to the expected values.
     struct Index {
-        bool allowAllCalls;
         uint16 startIndex;
         uint16 endIndex;
         bytes32 dataHash;
@@ -481,6 +487,10 @@ contract Timelock is
     {
         bytes4 selector = data.getFunctionSignature();
 
+        if (allowAllSelectorCalls[contractAddress][selector]) {
+            return;
+        }
+
         Index[] storage calldataChecks =
             _calldataList[contractAddress][selector];
 
@@ -490,9 +500,7 @@ contract Timelock is
 
         for (uint256 i = 0; i < calldataChecks.length; i++) {
             Index storage calldataCheck = calldataChecks[i];
-            if (calldataCheck.allowAllCalls) {
-                return;
-            }
+
             require(
                 data.getSlicedBytesHash(
                     calldataCheck.startIndex, calldataCheck.endIndex
@@ -976,6 +984,7 @@ contract Timelock is
     /// @param contractAddress the address of the contract that the calldata check is added to
     /// @param selector the function selector of the function that the calldata check is added to
     /// @param startIndex the start index of the calldata
+    /// @param allowAllCalls allow all calls for the selector at the contract address
     /// @param endIndex the end index of the calldata
     /// @param data the calldata that is stored
     /// @param isSelfAddressCheck whether or not this is a self address check
@@ -991,7 +1000,7 @@ contract Timelock is
         bytes32 dataHash;
 
         if (allowAllCalls) {
-            _calldataList[contractAddress][selector].push(Index(true, 0, 0, ""));
+            allowAllSelectorCalls[contractAddress][selector] = true;
         } else {
             require(
                 startIndex >= 4,
@@ -1033,7 +1042,7 @@ contract Timelock is
             dataHash = isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
 
             _calldataList[contractAddress][selector].push(
-                Index(false, startIndex, endIndex, dataHash)
+                Index(startIndex, endIndex, dataHash)
             );
         }
 
