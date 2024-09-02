@@ -1639,71 +1639,132 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             collatedSignatures
         );
 
-        address[] memory targets = new address[](1);
-        targets[0] = address(timelock);
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(timelock);
 
-        uint256[] memory values = new uint256[](1);
-        bytes[] memory payloads = new bytes[](1);
+            uint256[] memory values = new uint256[](1);
+            bytes[] memory payloads = new bytes[](1);
+            payloads[0] = abi.encodeWithSelector(
+                Timelock.updateDelay.selector, MINIMUM_DELAY * 2
+            );
 
-        calldatas = abi.encodeWithSelector(
-            Timelock.scheduleBatch.selector,
-            targets,
-            values,
-            payloads,
-            bytes32(0),
-            timelock.minDelay()
-        );
+            calldatas = abi.encodeWithSelector(
+                Timelock.scheduleBatch.selector,
+                targets,
+                values,
+                payloads,
+                bytes32(0),
+                timelock.minDelay()
+            );
 
-        transactionHash = safe.getTransactionHash(
-            address(timelock),
-            value,
-            calldatas,
-            Enum.Operation.Call,
-            0,
-            0,
-            0,
-            address(0),
-            address(0),
-            safe.nonce()
-        );
+            transactionHash = safe.getTransactionHash(
+                address(timelock),
+                value,
+                calldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                address(0),
+                safe.nonce()
+            );
 
-        collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
+            collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+            /// unpause
+            vm.revertTo(snapshot);
+
+            /// batch schedule succeeds when unpaused
+            safe.execTransaction(
+                address(timelock),
+                value,
+                calldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                collatedSignatures
+            );
+
+            vm.revertTo(snapshot);
+            vm.prank(guardian);
+            timelock.pause();
+
+            ///batch schedule reverts when paused
+            vm.expectRevert("GS013");
+            safe.execTransaction(
+                address(timelock),
+                value,
+                calldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                collatedSignatures
+            );
+
+            /// unpause
+            vm.revertTo(snapshot);
+
+            /// schedule a batch transaction
+            safe.execTransaction(
+                address(timelock),
+                value,
+                calldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                collatedSignatures
+            );
+
+            vm.warp(block.timestamp + timelock.minDelay());
+
+            /// batch execute succeeds when not paused
+            timelock.executeBatch(targets, values, payloads, bytes32(0));
+
+            assertEq(
+                timelock.minDelay(), MINIMUM_DELAY * 2, "delay not updated"
+            );
+
+            /// unpause
+            vm.revertTo(snapshot);
+
+            /// schedule a batch transaction
+            safe.execTransaction(
+                address(timelock),
+                value,
+                calldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                collatedSignatures
+            );
+
+            vm.warp(block.timestamp + timelock.minDelay());
+
+            /// pause
+            vm.prank(guardian);
+            timelock.pause();
+
+            /// batch execute reverts when paused
+            vm.expectRevert("Pausable: paused");
+            timelock.executeBatch(targets, values, payloads, bytes32(0));
+        }
 
         /// unpause
         vm.revertTo(snapshot);
-
-        /// batch schedule succeeds when unpaused
-        safe.execTransaction(
-            address(timelock),
-            value,
-            calldatas,
-            Enum.Operation.Call,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(0)),
-            collatedSignatures
-        );
-
-        vm.revertTo(snapshot);
-        vm.prank(guardian);
-        timelock.pause();
-
-        ///batch schedule reverts when paused
-        vm.expectRevert("GS013");
-        safe.execTransaction(
-            address(timelock),
-            value,
-            calldatas,
-            Enum.Operation.Call,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(0)),
-            collatedSignatures
-        );
 
         calldatas = abi.encodeWithSelector(
             Timelock.updateDelay.selector, MINIMUM_DELAY * 2
@@ -1733,9 +1794,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
-        /// unpause
-        vm.revertTo(snapshot);
-
         /// schedule an operation
         safe.execTransaction(
             address(timelock),
@@ -1754,17 +1812,16 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         /// and updateDelay operation scheduled
         snapshot = vm.snapshot();
 
-        calldatas = abi.encodeWithSelector(
-            Timelock.cancel.selector,
-            timelock.hashOperation(
-                address(timelock),
-                value,
-                abi.encodeWithSelector(
-                    Timelock.updateDelay.selector, MINIMUM_DELAY * 2
-                ),
-                bytes32(0)
-            )
+        bytes32 proposalId = timelock.hashOperation(
+            address(timelock),
+            value,
+            abi.encodeWithSelector(
+                Timelock.updateDelay.selector, MINIMUM_DELAY * 2
+            ),
+            bytes32(0)
         );
+
+        calldatas = abi.encodeWithSelector(Timelock.cancel.selector, proposalId);
 
         transactionHash = safe.getTransactionHash(
             address(timelock),
@@ -1851,8 +1908,55 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         vm.warp(block.timestamp + timelock.minDelay());
 
+        /// executing updateDelay reverts when paused
         vm.expectRevert("Pausable: paused");
         timelock.execute(address(timelock), value, calldatas, bytes32(0));
+
+        vm.revertTo(snapshot);
+
+        /// warp to expiration timestamp
+        vm.warp(timelock.timestamps(proposalId) + timelock.expirationPeriod());
+
+        /// cleanup updateDelay succeeds
+        timelock.cleanup(proposalId);
+
+        vm.revertTo(snapshot);
+
+        vm.prank(guardian);
+        timelock.pause();
+
+        vm.warp(timelock.timestamps(proposalId) + timelock.expirationPeriod());
+
+        /// cleanup reverts when paused
+        vm.expectRevert("Pausable: paused");
+        timelock.cleanup(proposalId);
+
+        /// unpause
+        vm.revertTo(snapshot);
+
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        vm.prank(guardian);
+        timelock.pause();
+
+        calldatas =
+            abi.encodeWithSelector(IERC20.approve.selector, morphoBlue, 1000);
+
+        /// executeWhitelisted reverts when paused
+        vm.prank(HOT_SIGNER_ONE);
+        vm.expectRevert("Pausable: paused");
+        timelock.executeWhitelisted(address(ethenaUsd), value, calldatas);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(ethenaUsd);
+
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = calldatas;
+
+        /// batch executeWhitelisted reverts when paused
+        vm.prank(HOT_SIGNER_ONE);
+        vm.expectRevert("Pausable: paused");
+        timelock.executeWhitelistedBatch(targets, new uint256[](1), payloads);
     }
 
     function testMoveDaiFromMorphoToCompoundSucceed() public {

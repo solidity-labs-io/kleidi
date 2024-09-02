@@ -13,10 +13,10 @@
     - [x] supply borrow asset
     - [x] withdraw borrow asset
 - [x] deploy safe with timelock, guard, and recovery spell, safe owners enact malicious proposal, guardian pauses, recovery spell rotates signers, new transactions are sent
-- [ ] hot signers move funds from one DeFi protocol to another
+- [x] hot signers move funds from one DeFi protocol to another
 - [x] hot signers get revoked by the Safe
 - [ ] privilege escalation impossible by hot signers
-- [ ] mutative functions cannot be called while paused
+- [x] mutative functions cannot be called while paused
 
 # Formal Verification
 
