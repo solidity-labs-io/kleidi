@@ -123,13 +123,6 @@ contract Timelock is
             => mapping(bytes4 selector => Index[] calldataChecks)
     ) private _calldataList;
 
-    /// @notice mapping of contract address to function selector to boolean
-    /// allow all calls if true
-    mapping(
-        address contractAddress
-            => mapping(bytes4 selector => bool allowAllCalls)
-    ) private allowAllSelectorCalls;
-
     /// minDelay >= MIN_DELAY && minDelay <= MAX_DELAY
 
     /// 1. proposed and not ready for execution
@@ -240,7 +233,6 @@ contract Timelock is
     event CalldataAdded(
         address indexed contractAddress,
         bytes4 indexed selector,
-        bool allowAllCalls,
         uint16 startIndex,
         uint16 endIndex,
         bytes32 dataHash
@@ -326,7 +318,6 @@ contract Timelock is
     function initialize(
         address[] memory contractAddresses,
         bytes4[] memory selectors,
-        bool[] memory allowAllCalls,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
         bytes[] memory datas,
@@ -338,7 +329,6 @@ contract Timelock is
         _addCalldataChecks(
             contractAddresses,
             selectors,
-            allowAllCalls,
             startIndexes,
             endIndexes,
             datas,
@@ -486,10 +476,6 @@ contract Timelock is
         view
     {
         bytes4 selector = data.getFunctionSignature();
-
-        if (allowAllSelectorCalls[contractAddress][selector]) {
-            return;
-        }
 
         Index[] storage calldataChecks =
             _calldataList[contractAddress][selector];
@@ -830,7 +816,6 @@ contract Timelock is
     function addCalldataChecks(
         address[] memory contractAddresses,
         bytes4[] memory selectors,
-        bool[] memory allowAllCalls,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
         bytes[] memory datas,
@@ -839,7 +824,6 @@ contract Timelock is
         _addCalldataChecks(
             contractAddresses,
             selectors,
-            allowAllCalls,
             startIndexes,
             endIndexes,
             datas,
@@ -857,7 +841,6 @@ contract Timelock is
     function addCalldataCheck(
         address contractAddress,
         bytes4 selector,
-        bool allowAllCalls,
         uint16 startIndex,
         uint16 endIndex,
         bytes memory data,
@@ -866,7 +849,6 @@ contract Timelock is
         _addCalldataCheck(
             contractAddress,
             selector,
-            allowAllCalls,
             startIndex,
             endIndex,
             data,
@@ -984,72 +966,64 @@ contract Timelock is
     /// @param contractAddress the address of the contract that the calldata check is added to
     /// @param selector the function selector of the function that the calldata check is added to
     /// @param startIndex the start index of the calldata
-    /// @param allowAllCalls allow all calls for the selector at the contract address
     /// @param endIndex the end index of the calldata
     /// @param data the calldata that is stored
     /// @param isSelfAddressCheck whether or not this is a self address check
     function _addCalldataCheck(
         address contractAddress,
         bytes4 selector,
-        bool allowAllCalls,
         uint16 startIndex,
         uint16 endIndex,
         bytes memory data,
         bool isSelfAddressCheck
     ) private {
-        bytes32 dataHash;
 
-        if (allowAllCalls) {
-            allowAllSelectorCalls[contractAddress][selector] = true;
+        require(
+            startIndex >= 4,
+            "CalldataList: Start index must be greater than 3"
+        );
+        require(
+            endIndex > startIndex,
+            "CalldataList: End index must be greater than start index"
+        );
+
+        /// prevent misconfiguration where a hot signer could change timelock
+        /// or safe parameters
+        require(
+            contractAddress != address(this),
+            "CalldataList: Address cannot be this"
+        );
+        require(
+            contractAddress != safe, "CalldataList: Address cannot be safe"
+        );
+
+        if (isSelfAddressCheck) {
+            /// self address check, data must be empty
+            require(
+                data.length == 0,
+                "CalldataList: Data must be empty for self address check"
+            );
+            require(
+                endIndex - startIndex == 20,
+                "CalldataList: Self address check must be 20 bytes"
+            );
         } else {
+            /// not self address check, data length must equal delta index
             require(
-                startIndex >= 4,
-                "CalldataList: Start index must be greater than 3"
-            );
-            require(
-                endIndex > startIndex,
-                "CalldataList: End index must be greater than start index"
-            );
-
-            /// prevent misconfiguration where a hot signer could change timelock
-            /// or safe parameters
-            require(
-                contractAddress != address(this),
-                "CalldataList: Address cannot be this"
-            );
-            require(
-                contractAddress != safe, "CalldataList: Address cannot be safe"
-            );
-
-            if (isSelfAddressCheck) {
-                /// self address check, data must be empty
-                require(
-                    data.length == 0,
-                    "CalldataList: Data must be empty for self address check"
-                );
-                require(
-                    endIndex - startIndex == 20,
-                    "CalldataList: Self address check must be 20 bytes"
-                );
-            } else {
-                /// not self address check, data length must equal delta index
-                require(
-                    data.length == endIndex - startIndex,
-                    "CalldataList: Data length mismatch"
-                );
-            }
-
-            dataHash = isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
-
-            _calldataList[contractAddress][selector].push(
-                Index(startIndex, endIndex, dataHash)
+                data.length == endIndex - startIndex,
+                "CalldataList: Data length mismatch"
             );
         }
+
+        bytes32 dataHash = isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
+
+        _calldataList[contractAddress][selector].push(
+            Index(startIndex, endIndex, dataHash)
+        );
 
         emit CalldataAdded(
             contractAddress,
             selector,
-            allowAllCalls,
             startIndex,
             endIndex,
             dataHash
@@ -1065,7 +1039,6 @@ contract Timelock is
     function _addCalldataChecks(
         address[] memory contractAddresses,
         bytes4[] memory selectors,
-        bool[] memory allowAllCalls,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
         bytes[] memory datas,
@@ -1073,8 +1046,7 @@ contract Timelock is
     ) private {
         require(
             contractAddresses.length == selectors.length
-                && selectors.length == allowAllCalls.length
-                && allowAllCalls.length == startIndexes.length
+                && selectors.length == startIndexes.length
                 && startIndexes.length == endIndexes.length
                 && endIndexes.length == datas.length
                 && datas.length == isSelfAddressCheck.length,
@@ -1085,7 +1057,6 @@ contract Timelock is
             _addCalldataCheck(
                 contractAddresses[i],
                 selectors[i],
-                allowAllCalls[i],
                 startIndexes[i],
                 endIndexes[i],
                 datas[i],

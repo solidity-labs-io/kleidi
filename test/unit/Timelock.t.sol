@@ -55,7 +55,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.initialize(
             new address[](0),
             new bytes4[](0),
-            new bool[](0),
             new uint16[](0),
             new uint16[](0),
             new bytes[](0),
@@ -351,7 +350,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
     function testAddCalldataCheckFailsNonTimelock() public {
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.addCalldataCheck(
-            address(0), bytes4(0xFFFFFFFF), false, 0, 1, "", true
+            address(0), bytes4(0xFFFFFFFF), 0, 1, "", true
         );
     }
 
@@ -360,7 +359,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataChecks(
             new address[](0),
             new bytes4[](0),
-            new bool[](0),
             new uint16[](0),
             new uint16[](0),
             new bytes[](0),
@@ -401,7 +399,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
-            false,
             10,
             30,
             hex"1234",
@@ -415,7 +412,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
-            false,
             10,
             13,
             hex"1234",
@@ -427,7 +423,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
-            false,
             9,
             28,
             hex"1234",
@@ -441,7 +436,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
-            false,
             10,
             29,
             "",
@@ -453,7 +447,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
-            false,
             10,
             31,
             "",
@@ -465,7 +458,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.addCalldataCheck(
             address(10000),
             timelock.addCalldataCheck.selector,
-            false,
             10,
             3129,
             "",
@@ -841,7 +833,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataChecks.selector,
             targetAddresses,
             selectors,
-            new bool[](2),
             startIndexes,
             endIndexes,
             checkedCalldata,
@@ -1055,7 +1046,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataChecks.selector,
             targetAddresses,
             selectors,
-            new bool[](2),
             startIndexes,
             endIndexes,
             checkedCalldata,

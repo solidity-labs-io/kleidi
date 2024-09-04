@@ -88,7 +88,6 @@ contract TimelockUnitFixture is CallHelper {
                         hotSigners,
                         new address[](0),
                         new bytes4[](0),
-                        new bool[](0),
                         new uint16[](0),
                         new uint16[](0),
                         new bytes[](0),
@@ -102,7 +101,6 @@ contract TimelockUnitFixture is CallHelper {
         timelock.initialize(
             new address[](0),
             new bytes4[](0),
-            new bool[](0),
             new uint16[](0),
             new uint16[](0),
             new bytes[](0),

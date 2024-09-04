@@ -13,7 +13,6 @@ struct DeploymentParams {
     address[] hotSigners;
     address[] contractAddresses;
     bytes4[] selectors;
-    bool[] allowAllCalls;
     uint16[] startIndexes;
     uint16[] endIndexes;
     bytes[] datas;

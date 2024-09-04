@@ -236,7 +236,6 @@ contract InstanceDeployer {
         walletInstance.timelock.initialize(
             instance.timelockParams.contractAddresses,
             instance.timelockParams.selectors,
-            instance.timelockParams.allowAllCalls,
             instance.timelockParams.startIndexes,
             instance.timelockParams.endIndexes,
             instance.timelockParams.datas,
