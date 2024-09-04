@@ -487,6 +487,10 @@ contract Timelock is
         for (uint256 i = 0; i < calldataChecks.length; i++) {
             Index storage calldataCheck = calldataChecks[i];
 
+            if (calldataCheck.startIndex == calldataCheck.endIndex) {
+                return;
+            }
+
             require(
                 data.getSlicedBytesHash(
                     calldataCheck.startIndex, calldataCheck.endIndex
@@ -980,10 +984,33 @@ contract Timelock is
         require(
             startIndex >= 4, "CalldataList: Start index must be greater than 3"
         );
-        require(
-            endIndex > startIndex,
-            "CalldataList: End index must be greater than start index"
-        );
+
+        Index[] storage calldataChecks =
+            _calldataList[contractAddress][selector];
+        uint256 listLength = calldataChecks.length;
+
+        if (listLength == 1) {
+            require(
+                calldataChecks[0].startIndex != calldataChecks[0].endIndex,
+                "CalldataList: Cannot add check if wildcard added"
+            );
+        }
+
+        if (startIndex == endIndex) {
+            require(
+                startIndex == 4,
+                "CalldataList: End index eqauls start index only when 4"
+            );
+            require(
+                listLength == 0,
+                "CalldataList: Add wildcard only if no existing check"
+            );
+        } else {
+            require(
+                endIndex > startIndex,
+                "CalldataList: End index must be greater than start index"
+            );
+        }
 
         /// prevent misconfiguration where a hot signer could change timelock
         /// or safe parameters
