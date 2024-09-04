@@ -434,23 +434,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            10,
-            29,
-            "",
-            true
+            address(10000), timelock.addCalldataCheck.selector, 10, 29, "", true
         );
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            10,
-            31,
-            "",
-            true
+            address(10000), timelock.addCalldataCheck.selector, 10, 31, "", true
         );
 
         vm.prank(address(timelock));

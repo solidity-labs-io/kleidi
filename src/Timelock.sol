@@ -977,10 +977,8 @@ contract Timelock is
         bytes memory data,
         bool isSelfAddressCheck
     ) private {
-
         require(
-            startIndex >= 4,
-            "CalldataList: Start index must be greater than 3"
+            startIndex >= 4, "CalldataList: Start index must be greater than 3"
         );
         require(
             endIndex > startIndex,
@@ -993,9 +991,7 @@ contract Timelock is
             contractAddress != address(this),
             "CalldataList: Address cannot be this"
         );
-        require(
-            contractAddress != safe, "CalldataList: Address cannot be safe"
-        );
+        require(contractAddress != safe, "CalldataList: Address cannot be safe");
 
         if (isSelfAddressCheck) {
             /// self address check, data must be empty
@@ -1015,18 +1011,15 @@ contract Timelock is
             );
         }
 
-        bytes32 dataHash = isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
+        bytes32 dataHash =
+            isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
 
         _calldataList[contractAddress][selector].push(
             Index(startIndex, endIndex, dataHash)
         );
 
         emit CalldataAdded(
-            contractAddress,
-            selector,
-            startIndex,
-            endIndex,
-            dataHash
+            contractAddress, selector, startIndex, endIndex, dataHash
         );
     }
 

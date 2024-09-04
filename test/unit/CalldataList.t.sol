@@ -141,12 +141,7 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            3,
-            4,
-            "",
-            true
+            address(lending), MockLending.deposit.selector, 3, 4, "", true
         );
     }
 
@@ -156,12 +151,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            4,
-            "",
-            true
+            address(lending), MockLending.deposit.selector, 4, 4, "", true
         );
     }
 
@@ -171,12 +161,7 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            3,
-            "",
-            true
+            address(lending), MockLending.deposit.selector, 4, 3, "", true
         );
     }
 

@@ -259,7 +259,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             selectors[6] = IMorphoBase.supplyCollateral.selector;
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
             selectors[8] = IERC20.approve.selector;
-            
 
             bytes[] memory calldatas = new bytes[](9);
             /// can only deposit to dai/eusd pool
