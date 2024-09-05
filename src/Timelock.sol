@@ -235,7 +235,7 @@ contract Timelock is
         bytes4 indexed selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes32 dataHash
+        bytes32[] dataHash
     );
 
     /// @notice event emitted when a calldata check is removed
@@ -249,7 +249,7 @@ contract Timelock is
         bytes4 indexed selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes32 dataHash
+        bytes32[] dataHash
     );
 
     /// @notice struct used to store the start and end index of the calldata
@@ -259,7 +259,14 @@ contract Timelock is
     struct Index {
         uint16 startIndex;
         uint16 endIndex;
-        bytes32 dataHash;
+        EnumerableSet.Bytes32Set dataHashes;
+    }
+
+    /// @notice struct used to return Index data
+    struct IndexData {
+        uint16 startIndex;
+        uint16 endIndex;
+        bytes32[] dataHashes;
     }
 
     /// @notice Initializes the contract with the following parameters:
@@ -320,8 +327,8 @@ contract Timelock is
         bytes4[] memory selectors,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
-        bytes[] memory datas,
-        bool[] memory isSelfAddressCheck
+        bytes[][] memory datas,
+        bool[][] memory isSelfAddressCheck
     ) external {
         require(!initialized, "Timelock: already initialized");
         initialized = true;
@@ -461,9 +468,14 @@ contract Timelock is
     function getCalldataChecks(address contractAddress, bytes4 selector)
         public
         view
-        returns (Index[] memory)
+        returns (IndexData[] memory indexDatas)
     {
-        return _calldataList[contractAddress][selector];
+        Index[] storage indexes = _calldataList[contractAddress][selector];
+
+        indexDatas = new IndexData[](indexes.length);
+        for (uint256 i = 0; i < indexes.length; i++) {
+            indexDatas[i] = IndexData(indexes[i].startIndex, indexes[i].endIndex, indexes[i].dataHashes.values());
+        }
     }
 
     /// @notice check if the calldata conforms to the expected values
@@ -488,9 +500,11 @@ contract Timelock is
             Index storage calldataCheck = calldataChecks[i];
 
             require(
-                data.getSlicedBytesHash(
-                    calldataCheck.startIndex, calldataCheck.endIndex
-                ) == calldataCheck.dataHash,
+                calldataCheck.dataHashes.contains(
+                    data.getSlicedBytesHash(
+                        calldataCheck.startIndex, calldataCheck.endIndex
+                    )
+                ),
                 "CalldataList: Calldata does not match expected value"
             );
         }
@@ -818,8 +832,8 @@ contract Timelock is
         bytes4[] memory selectors,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
-        bytes[] memory datas,
-        bool[] memory isSelfAddressCheck
+        bytes[][] memory datas,
+        bool[][] memory isSelfAddressCheck
     ) external onlyTimelock {
         _addCalldataChecks(
             contractAddresses,
@@ -843,8 +857,8 @@ contract Timelock is
         bytes4 selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes memory data,
-        bool isSelfAddressCheck
+        bytes[] memory data,
+        bool[] memory isSelfAddressCheck
     ) external onlyTimelock {
         _addCalldataCheck(
             contractAddress,
@@ -861,7 +875,7 @@ contract Timelock is
     /// calldata checks are removed from
     /// @param selector the function selector of the function that the
     /// checks will be removed from
-    /// @param index the starting index of the calldata check to remove
+    /// @param index the index of the calldata check to remove
     function removeCalldataCheck(
         address contractAddress,
         bytes4 selector,
@@ -974,8 +988,8 @@ contract Timelock is
         bytes4 selector,
         uint16 startIndex,
         uint16 endIndex,
-        bytes memory data,
-        bool isSelfAddressCheck
+        bytes[] memory data,
+        bool[] memory isSelfAddressCheck
     ) private {
         require(
             startIndex >= 4, "CalldataList: Start index must be greater than 3"
@@ -984,6 +998,7 @@ contract Timelock is
             endIndex > startIndex,
             "CalldataList: End index must be greater than start index"
         );
+        require( data.length == isSelfAddressCheck.length, "CalldataList: Array lengths must be equal");
 
         /// prevent misconfiguration where a hot signer could change timelock
         /// or safe parameters
@@ -993,33 +1008,40 @@ contract Timelock is
         );
         require(contractAddress != safe, "CalldataList: Address cannot be safe");
 
-        if (isSelfAddressCheck) {
-            /// self address check, data must be empty
-            require(
-                data.length == 0,
-                "CalldataList: Data must be empty for self address check"
-            );
-            require(
-                endIndex - startIndex == 20,
-                "CalldataList: Self address check must be 20 bytes"
-            );
-        } else {
-            /// not self address check, data length must equal delta index
-            require(
-                data.length == endIndex - startIndex,
-                "CalldataList: Data length mismatch"
-            );
+        Index[] storage indexes =  _calldataList[contractAddress][selector];
+        uint256 indexLength = indexes.length;
+        
+        indexes.push();
+        indexes[indexLength].startIndex = startIndex;
+        indexes[indexLength].endIndex = endIndex;
+
+        for (uint256 i = 0; i < data.length; i++) {
+            if (isSelfAddressCheck[i]) {
+                /// self address check, data must be empty
+                require(
+                    data[i].length == 0,
+                    "CalldataList: Data must be empty for self address check"
+                );
+                require(
+                    endIndex - startIndex == 20,
+                    "CalldataList: Self address check must be 20 bytes"
+                );
+            } else {
+                /// not self address check, data length must equal delta index
+                require(
+                    data[i].length == endIndex - startIndex,
+                    "CalldataList: Data length mismatch"
+                );
+            }
+
+            bytes32 dataHash =
+                isSelfAddressCheck[i] ? ADDRESS_THIS_HASH : keccak256(data[i]);
+            
+            indexes[indexLength].dataHashes.add(dataHash);
         }
 
-        bytes32 dataHash =
-            isSelfAddressCheck ? ADDRESS_THIS_HASH : keccak256(data);
-
-        _calldataList[contractAddress][selector].push(
-            Index(startIndex, endIndex, dataHash)
-        );
-
         emit CalldataAdded(
-            contractAddress, selector, startIndex, endIndex, dataHash
+            contractAddress, selector, startIndex, endIndex, indexes[indexLength].dataHashes.values()
         );
     }
 
@@ -1034,8 +1056,8 @@ contract Timelock is
         bytes4[] memory selectors,
         uint16[] memory startIndexes,
         uint16[] memory endIndexes,
-        bytes[] memory datas,
-        bool[] memory isSelfAddressCheck
+        bytes[][] memory datas,
+        bool[][] memory isSelfAddressCheck
     ) private {
         require(
             contractAddresses.length == selectors.length
@@ -1076,15 +1098,30 @@ contract Timelock is
             "CalldataList: Calldata index out of bounds"
         );
 
-        uint16 startIndex = calldataChecks[index].startIndex;
-        uint16 endIndex = calldataChecks[index].endIndex;
-        bytes32 dataHash = calldataChecks[index].dataHash;
+        Index storage indexCheck = calldataChecks[index];
+        Index storage lastIndexCheck = calldataChecks[calldataChecks.length - 1];
 
-        calldataChecks[index] = calldataChecks[calldataChecks.length - 1];
+        uint16 removedStartIndex = indexCheck.startIndex;
+        uint16 removedEndIndex = indexCheck.endIndex;
+        bytes32[] memory removedDataHashes = indexCheck.dataHashes.values();
+
+        for (uint256 i = 0; i < removedDataHashes.length; i++) {
+            indexCheck.dataHashes.remove(removedDataHashes[i]);
+        }
+
+        indexCheck.startIndex = lastIndexCheck.startIndex;
+        indexCheck.endIndex = lastIndexCheck.endIndex;
+        bytes32[] memory dataHashes = lastIndexCheck.dataHashes.values();
+
+        for (uint256 i = 0; i < dataHashes.length; i++) {
+            indexCheck.dataHashes.add(dataHashes[i]);
+            lastIndexCheck.dataHashes.remove(dataHashes[i]);
+        }
+        
         calldataChecks.pop();
 
         emit CalldataRemoved(
-            contractAddress, selector, startIndex, endIndex, dataHash
+            contractAddress, selector, removedStartIndex, removedEndIndex, removedDataHashes
         );
     }
 
@@ -1100,22 +1137,32 @@ contract Timelock is
     {
         Index[] storage calldataChecks =
             _calldataList[contractAddress][selector];
+        
+        uint256 checksLength = calldataChecks.length;
 
         require(
-            calldataChecks.length > 0,
+            checksLength > 0,
             "CalldataList: No calldata checks to remove"
         );
 
         /// delete all calldata in the list for the given contract and selector
-        while (calldataChecks.length != 0) {
+        while (checksLength != 0) {
+            Index storage removedCalldataCheck = calldataChecks[checksLength - 1];
+
+            bytes32[] memory dataHashes = removedCalldataCheck.dataHashes.values();
+
             emit CalldataRemoved(
                 contractAddress,
                 selector,
-                calldataChecks[0].startIndex,
-                calldataChecks[0].endIndex,
-                calldataChecks[0].dataHash
+                removedCalldataCheck.startIndex,
+                removedCalldataCheck.endIndex,
+                dataHashes
             );
+            for (uint i = 0; i < dataHashes.length; i++) {
+                removedCalldataCheck.dataHashes.remove(dataHashes[i]);
+            }
             calldataChecks.pop();
+            checksLength--;
         }
 
         /// delete the calldata list for the given contract and selector
