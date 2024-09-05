@@ -145,13 +145,18 @@ contract CalldataListUnitTest is Test {
         );
     }
 
-    function testAddCalldataCheckFailsStartIndexEqEndIndex() public {
+    function testAddCalldataCheckFailsStartIndexEqEndIndexAlreadyExistingCheck()
+        public
+    {
         vm.prank(address(timelock));
-        vm.expectRevert(
-            "CalldataList: End index must be greater than start index"
-        );
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 4, "", true
+            address(lending), MockLending.deposit.selector, 4, 5, hex"12", false
+        );
+
+        vm.prank(address(timelock));
+        vm.expectRevert("CalldataList: Add wildcard only if no existing check");
+        timelock.addCalldataCheck(
+            address(lending), MockLending.deposit.selector, 4, 4, "", false
         );
     }
 
@@ -178,6 +183,29 @@ contract CalldataListUnitTest is Test {
         vm.expectRevert("CalldataList: Address cannot be safe");
         timelock.addCalldataCheck(
             address(safe), Timelock.schedule.selector, 4, 5, "", true
+        );
+    }
+
+    function testAddCalldataCheckFailsStartIndexEqEndIndexNotEq4() public {
+        vm.prank(address(timelock));
+        vm.expectRevert(
+            "CalldataList: End index eqauls start index only when 4"
+        );
+        timelock.addCalldataCheck(
+            address(lending), MockLending.deposit.selector, 5, 5, "", false
+        );
+    }
+
+    function testAddCalldataCheckFailsWildcardAlreadyAdded() public {
+        vm.prank(address(timelock));
+        timelock.addCalldataCheck(
+            address(lending), MockLending.deposit.selector, 4, 4, "", false
+        );
+
+        vm.prank(address(timelock));
+        vm.expectRevert("CalldataList: Cannot add check with wildcard");
+        timelock.addCalldataCheck(
+            address(lending), MockLending.deposit.selector, 4, 5, hex"12", false
         );
     }
 }
