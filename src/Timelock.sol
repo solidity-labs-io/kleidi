@@ -992,7 +992,7 @@ contract Timelock is
         if (listLength == 1) {
             require(
                 calldataChecks[0].startIndex != calldataChecks[0].endIndex,
-                "CalldataList: Cannot add check if wildcard added"
+                "CalldataList: Cannot add check with wildcard"
             );
         }
 

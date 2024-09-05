@@ -203,7 +203,7 @@ contract CalldataListUnitTest is Test {
         );
 
         vm.prank(address(timelock));
-        vm.expectRevert("CalldataList: Cannot add check if wildcard added");
+        vm.expectRevert("CalldataList: Cannot add check with wildcard");
         timelock.addCalldataCheck(
             address(lending), MockLending.deposit.selector, 4, 5, hex"12", false
         );
