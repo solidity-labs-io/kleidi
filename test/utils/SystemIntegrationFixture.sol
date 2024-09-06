@@ -245,8 +245,8 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
                 new bytes4[](0),
                 new uint16[](0),
                 new uint16[](0),
-                new bytes[](0),
-                new bool[](0),
+                new bytes[][](0),
+                new bool[][](0),
                 bytes32(0)
             )
         );

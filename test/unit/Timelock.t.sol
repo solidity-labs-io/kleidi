@@ -57,8 +57,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             new bytes4[](0),
             new uint16[](0),
             new uint16[](0),
-            new bytes[](0),
-            new bool[](0)
+            new bytes[][](0),
+            new bool[][](0)
         );
     }
 
@@ -348,9 +348,14 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testAddCalldataCheckFailsNonTimelock() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = true;
+
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.addCalldataCheck(
-            address(0), bytes4(0xFFFFFFFF), 0, 1, "", true
+            address(0), bytes4(0xFFFFFFFF), 0, 1, datas, selfAddressChecks
         );
     }
 
@@ -361,8 +366,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             new bytes4[](0),
             new uint16[](0),
             new uint16[](0),
-            new bytes[](0),
-            new bool[](0)
+            new bytes[][](0),
+            new bool[][](0)
         );
     }
 
@@ -392,6 +397,11 @@ contract TimelockUnitTest is TimelockUnitFixture {
     }
 
     function testAddCalldataChecksFailsSelfCheckWithCalldata() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = hex"1234";
+        selfAddressChecks[0] = true;
+
         vm.prank(address(timelock));
         vm.expectRevert(
             "CalldataList: Data must be empty for self address check"
@@ -401,12 +411,17 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataCheck.selector,
             10,
             30,
-            hex"1234",
-            true
+            datas,
+            selfAddressChecks
         );
     }
 
     function testAddCalldataChecksFailsLengthMismatch() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = hex"1234";
+        selfAddressChecks[0] = false;
+
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Data length mismatch");
         timelock.addCalldataCheck(
@@ -414,8 +429,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataCheck.selector,
             10,
             13,
-            hex"1234",
-            false
+            datas,
+            selfAddressChecks
         );
 
         vm.prank(address(timelock));
@@ -425,22 +440,27 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataCheck.selector,
             9,
             28,
-            hex"1234",
-            false
+            datas,
+            selfAddressChecks
         );
     }
 
     function testAddCalldataChecksFailsSelfCheckDeltaNotTwenty() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = true;
+
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, 10, 29, "", true
+            address(10000), timelock.addCalldataCheck.selector, 10, 29, datas, selfAddressChecks
         );
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, 10, 31, "", true
+            address(10000), timelock.addCalldataCheck.selector, 10, 31, datas, selfAddressChecks
         );
 
         vm.prank(address(timelock));
@@ -450,8 +470,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataCheck.selector,
             10,
             3129,
-            "",
-            true
+            datas,
+            selfAddressChecks
         );
     }
 
@@ -790,6 +810,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             });
         }
 
+
         MockLending lending = new MockLending();
 
         address[] memory targetAddresses = new address[](2);
@@ -809,14 +830,17 @@ contract TimelockUnitTest is TimelockUnitFixture {
         endIndexes[0] = 36;
         endIndexes[1] = 36;
 
-        /// can only withdraw and deposit to timelock
-        bytes[] memory checkedCalldata = new bytes[](2);
+        bytes[][] memory checkedCalldatas = new bytes[][](2);
+        bytes[] memory checkedCalldata = new bytes[](1);
         checkedCalldata[0] = "";
-        checkedCalldata[1] = "";
-
-        bool[] memory isSelfAddressCheck = new bool[](2);
+        checkedCalldatas[0] = checkedCalldata;
+        checkedCalldatas[1] = checkedCalldata;
+        
+        bool[][] memory isSelfAddressChecks = new bool[][](2);
+        bool[] memory isSelfAddressCheck = new bool[](1);
         isSelfAddressCheck[0] = true;
-        isSelfAddressCheck[1] = true;
+        isSelfAddressChecks[0] = isSelfAddressCheck;
+        isSelfAddressChecks[1] = isSelfAddressCheck;
 
         bytes[] memory datas = new bytes[](1);
         datas[0] = abi.encodeWithSelector(
@@ -825,8 +849,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldata,
-            isSelfAddressCheck
+            checkedCalldatas,
+            isSelfAddressChecks
         );
 
         _scheduleBatch({
@@ -927,7 +951,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             abi.encodeWithSelector(lending.deposit.selector, address(safe), 100)
         );
 
-        Timelock.Index[] memory calldataDepositChecks = timelock
+        Timelock.IndexData[] memory calldataDepositChecks = timelock
             .getCalldataChecks(address(lending), MockLending.deposit.selector);
 
         assertEq(
@@ -940,12 +964,12 @@ contract TimelockUnitTest is TimelockUnitFixture {
             calldataDepositChecks[0].endIndex, 36, "startIndex should be 16"
         );
         assertEq(
-            calldataDepositChecks[0].dataHash,
+            calldataDepositChecks[0].dataHashes[0],
             keccak256(abi.encodePacked(address(timelock))),
             "data should be correct"
         );
 
-        Timelock.Index[] memory calldataWithdrawChecks = timelock
+        Timelock.IndexData[] memory calldataWithdrawChecks = timelock
             .getCalldataChecks(address(lending), MockLending.withdraw.selector);
 
         assertEq(
@@ -958,7 +982,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             calldataWithdrawChecks[0].endIndex, 36, "startIndex should be 16"
         );
         assertEq(
-            calldataWithdrawChecks[0].dataHash,
+            calldataWithdrawChecks[0].dataHashes[0],
             keccak256(abi.encodePacked(address(timelock))),
             "data hash should match"
         );
@@ -1002,89 +1026,96 @@ contract TimelockUnitTest is TimelockUnitFixture {
                 salt: bytes32(0)
             });
         }
-
+            
         MockLending lending = new MockLending();
 
-        address[] memory targetAddresses = new address[](2);
-        targetAddresses[0] = address(lending);
-        targetAddresses[1] = address(lending);
+        {
+            address[] memory targetAddresses = new address[](2);
+            targetAddresses[0] = address(lending);
+            targetAddresses[1] = address(lending);
 
-        bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = MockLending.deposit.selector;
-        selectors[1] = MockLending.withdraw.selector;
+            bytes4[] memory selectors = new bytes4[](2);
+            selectors[0] = MockLending.deposit.selector;
+            selectors[1] = MockLending.withdraw.selector;
 
-        /// compare first 20 bytes
-        uint16[] memory startIndexes = new uint16[](2);
-        startIndexes[0] = 16;
-        startIndexes[1] = 16;
+            /// compare first 20 bytes
+            uint16[] memory startIndexes = new uint16[](2);
+            startIndexes[0] = 16;
+            startIndexes[1] = 16;
 
-        uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+            uint16[] memory endIndexes = new uint16[](2);
+            endIndexes[0] = 36;
+            endIndexes[1] = 36;
 
-        /// can only withdraw and deposit to timelock
-        bytes[] memory checkedCalldata = new bytes[](2);
-        checkedCalldata[0] = "";
-        checkedCalldata[1] = "";
+            bytes[][] memory checkedCalldatas = new bytes[][](2);
+            bytes[] memory checkedCalldata = new bytes[](1);
+            checkedCalldata[0] = "";
+            checkedCalldatas[0] = checkedCalldata;
+            checkedCalldatas[1] = checkedCalldata;
 
-        bool[] memory isSelfAddressCheck = new bool[](2);
-        isSelfAddressCheck[0] = true;
-        isSelfAddressCheck[1] = true;
+            bool[][] memory isSelfAddressChecks = new bool[][](2);
+            bool[] memory isSelfAddressCheck = new bool[](1);
+            isSelfAddressCheck[0] = true;
+            isSelfAddressChecks[0] = isSelfAddressCheck;
+            isSelfAddressChecks[1] = isSelfAddressCheck;
 
-        bytes[] memory datas = new bytes[](1);
-        datas[0] = abi.encodeWithSelector(
-            timelock.addCalldataChecks.selector,
-            targetAddresses,
-            selectors,
-            startIndexes,
-            endIndexes,
-            checkedCalldata,
-            isSelfAddressCheck
-        );
 
-        _scheduleBatch({
-            caller: address(safe),
-            timelock: address(timelock),
-            targets: targets,
-            values: values,
-            payloads: datas,
-            salt: bytes32(0),
-            delay: MINIMUM_DELAY
-        });
+            bytes[] memory datas = new bytes[](1);
+            datas[0] = abi.encodeWithSelector(
+                timelock.addCalldataChecks.selector,
+                targetAddresses,
+                selectors,
+                startIndexes,
+                endIndexes,
+                checkedCalldatas,
+                isSelfAddressChecks
+            );
 
-        bytes32 id =
-            timelock.hashOperationBatch(targets, values, datas, bytes32(0));
+            _scheduleBatch({
+                caller: address(safe),
+                timelock: address(timelock),
+                targets: targets,
+                values: values,
+                payloads: datas,
+                salt: bytes32(0),
+                delay: MINIMUM_DELAY
+            });
 
-        assertEq(
-            timelock.timestamps(id),
-            block.timestamp + MINIMUM_DELAY,
-            "operation should be scheduled"
-        );
-        assertTrue(timelock.isOperation(id), "operation should be present");
-        assertFalse(
-            timelock.isOperationReady(id), "operation should not be ready"
-        );
-        assertFalse(
-            timelock.isOperationDone(id), "operation should not be done"
-        );
+            bytes32 id =
+                timelock.hashOperationBatch(targets, values, datas, bytes32(0));
+            
 
-        assertEq(
-            timelock.getAllProposals()[0], id, "proposal should be in proposals"
-        );
-        assertEq(
-            timelock.getAllProposals().length, 1, "proposal length incorrect"
-        );
+            assertEq(
+                timelock.timestamps(id),
+                block.timestamp + MINIMUM_DELAY,
+                "operation should be scheduled"
+            );
+            assertTrue(timelock.isOperation(id), "operation should be present");
+            assertFalse(
+                timelock.isOperationReady(id), "operation should not be ready"
+            );
+            assertFalse(
+                timelock.isOperationDone(id), "operation should not be done"
+            );
 
-        vm.warp(block.timestamp + MINIMUM_DELAY);
+            assertEq(
+                timelock.getAllProposals()[0], id, "proposal should be in proposals"
+            );
+            assertEq(
+                timelock.getAllProposals().length, 1, "proposal length incorrect"
+            );
 
-        _executeBatch({
-            caller: address(this),
-            timelock: address(timelock),
-            targets: targets,
-            values: values,
-            payloads: datas,
-            salt: bytes32(0)
-        });
+            vm.warp(block.timestamp + MINIMUM_DELAY);
+
+            _executeBatch({
+                caller: address(this),
+                timelock: address(timelock),
+                targets: targets,
+                values: values,
+                payloads: datas,
+                salt: bytes32(0)
+            });
+        }
 
         address[] memory safeSigner = new address[](1);
         safeSigner[0] = address(this);
@@ -1111,7 +1142,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             payloads: lendingPayloads
         });
 
-        Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
+        Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
             address(lending), MockLending.deposit.selector
         );
 
@@ -1119,7 +1150,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertEq(calldataChecks[0].startIndex, 16, "startIndex should be 16");
         assertEq(calldataChecks[0].endIndex, 36, "startIndex should be 16");
         assertEq(
-            calldataChecks[0].dataHash,
+            calldataChecks[0].dataHashes[0],
             keccak256(abi.encodePacked(address(timelock))),
             "data should be correct"
         );
@@ -1338,7 +1369,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             address(lending), MockLending.deposit.selector, 0
         );
 
-        Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
+        Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
             address(lending), MockLending.deposit.selector
         );
 
@@ -1363,7 +1394,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.removeAllCalldataChecks(targets, selectors);
 
         {
-            Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
+            Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
                 address(lending), MockLending.deposit.selector
             );
 
@@ -1372,7 +1403,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             );
         }
         {
-            Timelock.Index[] memory calldataChecks = timelock.getCalldataChecks(
+            Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
                 address(lending), MockLending.withdraw.selector
             );
 

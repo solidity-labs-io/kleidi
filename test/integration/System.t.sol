@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "test/utils/SystemIntegrationFixture.sol";
+import {generateCalldatas, generateSelfAddressChecks} from "test/utils/NestedArrayHelper.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
@@ -260,25 +261,44 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
             selectors[8] = IERC20.approve.selector;
 
-            bytes[] memory calldatas = new bytes[](9);
+            bytes[][] memory calldatas = new bytes[][](9);
+            bytes memory singleCalldata;
+
             /// can only deposit to dai/eusd pool
-            calldatas[0] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            singleCalldata = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 0);
+
             /// can only deposit to timelock
-            calldatas[1] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 1);
+
             /// morpho blue address can be approved to spend eUSD
-            calldatas[2] = abi.encodePacked(morphoBlue);
+            singleCalldata = abi.encodePacked(morphoBlue);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 2);
+
             /// can only borrow to timelock
-            calldatas[3] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 3);
+
             /// can only repay on behalf of timelock
-            calldatas[4] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 4);
+
             /// only withdraw asset back to timelock
-            calldatas[5] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 5);
+
             /// can only supply collateral on behalf of timelock
-            calldatas[6] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 6);
+
             /// can only withdraw collateral back to timelock
-            calldatas[7] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 7);
+
             /// morpho blue address can be approved to spend dai
-            calldatas[8] = abi.encodePacked(morphoBlue);
+            singleCalldata = abi.encodePacked(morphoBlue);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 8);
 
             address[] memory targets = new address[](9);
             targets[0] = morphoBlue;
@@ -291,16 +311,19 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             targets[7] = morphoBlue;
             targets[8] = dai;
 
-            bool[] memory isSelfAddressCheck = new bool[](9);
-            isSelfAddressCheck[0] = false;
-            isSelfAddressCheck[1] = true;
-            isSelfAddressCheck[2] = false;
-            isSelfAddressCheck[3] = true;
-            isSelfAddressCheck[4] = true;
-            isSelfAddressCheck[5] = true;
-            isSelfAddressCheck[6] = true;
-            isSelfAddressCheck[7] = true;
-            isSelfAddressCheck[8] = false;
+            bool[][] memory isSelfAddressChecks = new bool[][](9);
+            bool isSelfAddressCheck = false;
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 0);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 2);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 8);
+
+            isSelfAddressCheck = true;
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 1);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 3);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 4);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 5);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 6);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 7);
 
             contractCall = abi.encodeWithSelector(
                 Timelock.addCalldataChecks.selector,
@@ -309,7 +332,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 startIndexes,
                 endIndexes,
                 calldatas,
-                isSelfAddressCheck
+                isSelfAddressChecks
             );
 
             /// inner calldata

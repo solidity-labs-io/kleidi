@@ -88,8 +88,8 @@ contract CalldataListUnitTest is Test {
             new bytes4[](0),
             new uint16[](0),
             new uint16[](0),
-            new bytes[](0),
-            new bool[](0)
+            new bytes[][](0),
+            new bool[][](0)
         );
     }
 
@@ -117,13 +117,16 @@ contract CalldataListUnitTest is Test {
         endIndexes[0] = 36;
         endIndexes[1] = 36;
 
-        /// can only deposit to timelock
+        bytes[][] memory checkedCalldatas = new bytes[][](1);
         bytes[] memory checkedCalldata = new bytes[](1);
-        checkedCalldata[0] = abi.encodePacked(address(timelock));
-
-        bool[] memory isSelfAddressCheck = new bool[](2);
+        checkedCalldata[0] = "";
+        checkedCalldatas[0] = checkedCalldata;
+        
+        bool[][] memory isSelfAddressChecks = new bool[][](2);
+        bool[] memory isSelfAddressCheck = new bool[](1);
         isSelfAddressCheck[0] = true;
-        isSelfAddressCheck[1] = true;
+        isSelfAddressChecks[0] = isSelfAddressCheck;
+        isSelfAddressChecks[1] = isSelfAddressCheck;
 
         vm.expectRevert("CalldataList: Array lengths must be equal");
         vm.prank(address(timelock));
@@ -132,80 +135,119 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldata,
-            isSelfAddressCheck
+            checkedCalldatas,
+            isSelfAddressChecks
         );
     }
 
     function testAddCalldataCheckFailsStartIndexLt4() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = true;
+
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 3, 4, "", true
+            address(lending), MockLending.deposit.selector, 3, 4, datas, selfAddressChecks
         );
     }
 
     function testAddCalldataCheckFailsStartIndexEqEndIndexAlreadyExistingCheck()
         public
     {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = hex"12";
+        selfAddressChecks[0] = false;
+
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 5, hex"12", false
+            address(lending), MockLending.deposit.selector, 4, 5, datas, selfAddressChecks
         );
+
+        datas[0] = "";
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Add wildcard only if no existing check");
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 4, "", false
+            address(lending), MockLending.deposit.selector, 4, 4, datas, selfAddressChecks
         );
     }
 
     function testAddCalldataCheckFailsStartIndexGtEndIndex() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = true;
+
         vm.prank(address(timelock));
         vm.expectRevert(
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 3, "", true
+            address(lending), MockLending.deposit.selector, 4, 3, datas, selfAddressChecks
         );
     }
 
     function testAddCalldataCheckFailsWhitelistedCalldataTimelock() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = true;
+
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be this");
         timelock.addCalldataCheck(
-            address(timelock), Timelock.schedule.selector, 4, 5, "", true
+            address(timelock), Timelock.schedule.selector, 4, 5, datas, selfAddressChecks
         );
     }
 
     function testAddCalldataCheckFailsWhitelistedCalldataSafe() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = true;
+
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be safe");
         timelock.addCalldataCheck(
-            address(safe), Timelock.schedule.selector, 4, 5, "", true
+            address(safe), Timelock.schedule.selector, 4, 5, datas, selfAddressChecks
         );
     }
 
     function testAddCalldataCheckFailsStartIndexEqEndIndexNotEq4() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = false;
+
         vm.prank(address(timelock));
         vm.expectRevert(
             "CalldataList: End index eqauls start index only when 4"
         );
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 5, 5, "", false
+            address(lending), MockLending.deposit.selector, 5, 5, datas, selfAddressChecks
         );
     }
 
     function testAddCalldataCheckFailsWildcardAlreadyAdded() public {
+        bytes[] memory datas = new bytes[](1);
+        bool[] memory selfAddressChecks = new bool[](1);
+        datas[0] = "";
+        selfAddressChecks[0] = false;
+
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 4, "", false
+            address(lending), MockLending.deposit.selector, 4, 4, datas, selfAddressChecks
         );
+
+        datas[0] = hex"12";
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Cannot add check with wildcard");
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 5, hex"12", false
+            address(lending), MockLending.deposit.selector, 4, 5, datas, selfAddressChecks
         );
     }
 }
