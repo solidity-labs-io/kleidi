@@ -3,7 +3,10 @@ pragma solidity ^0.8.0;
 
 import "test/utils/SystemIntegrationFixture.sol";
 import {CErc20Interface} from "src/interface/CErc20Interface.sol";
-import {generateCalldatas, generateSelfAddressChecks} from "test/utils/NestedArrayHelper.sol";
+import {
+    generateCalldatas,
+    generateSelfAddressChecks
+} from "test/utils/NestedArrayHelper.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
@@ -320,23 +323,40 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             bool[][] memory isSelfAddressChecks = new bool[][](10);
             bool isSelfAddressCheck = false;
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 0);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 2);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 9);
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 0
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 2
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 9
+            );
 
             isSelfAddressCheck = true;
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 1);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 3);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 4);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 5);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 6);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 7);
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 1
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 3
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 4
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 5
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 6
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 7
+            );
 
             bool[] memory approveSelfAddressChecks = new bool[](2);
             approveSelfAddressChecks[0] = false;
             approveSelfAddressChecks[1] = false;
             isSelfAddressChecks[8] = approveSelfAddressChecks;
-
 
             contractCall = abi.encodeWithSelector(
                 Timelock.addCalldataChecks.selector,
@@ -2011,12 +2031,15 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+            bytes32 marketId =
+                id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
 
             Position memory position =
                 IMorpho(morphoBlue).position(marketId, address(timelock));
 
-            assertEq(position.supplyShares, supplyShares, "incorrect supply shares");
+            assertEq(
+                position.supplyShares, supplyShares, "incorrect supply shares"
+            );
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
             assertEq(position.collateral, 0, "incorrect collateral");
 
@@ -2053,7 +2076,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_TWO);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+            bytes32 marketId =
+                id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
 
             Position memory position =
                 IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -2084,8 +2108,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             );
 
             calldatas[1] = abi.encodeWithSelector(
-                CErc20Interface.mint.selector,
-                supplyAmount / 2
+                CErc20Interface.mint.selector, supplyAmount / 2
             );
 
             vm.prank(HOT_SIGNER_ONE);
@@ -2093,7 +2116,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             assertGt(
                 IERC20(cDai).balanceOf(address(timelock)),
-                0,  
+                0,
                 "cDai balance should increase post mint"
             );
 

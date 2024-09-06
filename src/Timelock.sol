@@ -1041,7 +1041,6 @@ contract Timelock is
             );
         }
 
-
         Index[] storage indexes = _calldataList[contractAddress][selector];
         uint256 indexLength = indexes.length;
 

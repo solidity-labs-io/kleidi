@@ -189,7 +189,7 @@ contract CallHelper is Test {
         vm.prank(caller);
         Timelock(payable(timelock)).executeBatch(
             targets, values, payloads, salt
-        );  
+        );
     }
 
     function _executeWhiteListed(

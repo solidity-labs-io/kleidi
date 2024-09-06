@@ -17,13 +17,15 @@ import {RecoverySpell} from "src/RecoverySpell.sol";
 import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
-import {generateCalldatas, generateSelfAddressChecks} from "test/utils/NestedArrayHelper.sol";
+import {
+    generateCalldatas,
+    generateSelfAddressChecks
+} from "test/utils/NestedArrayHelper.sol";
 import {
     InstanceDeployer,
     NewInstance,
     SystemInstance
 } from "src/InstanceDeployer.sol";
-
 
 contract DeploymentMultichainTest is SystemDeploy {
     /// @notice reference to the Guard contract
@@ -260,16 +262,32 @@ contract DeploymentMultichainTest is SystemDeploy {
 
             bool[][] memory isSelfAddressChecks = new bool[][](8);
             bool isSelfAddressCheck = false;
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 0);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 2);
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 0
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 2
+            );
 
             isSelfAddressCheck = true;
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 1);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 3);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 4);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 5);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 6);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 7);
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 1
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 3
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 4
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 5
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 6
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 7
+            );
 
             instance = NewInstance(
                 owners,
@@ -348,7 +366,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         instance.timelockParams.endIndexes[0] = 10;
 
         instance.timelockParams.datas = new bytes[][](1);
-        bytes[] memory data = new bytes[](1); 
+        bytes[] memory data = new bytes[](1);
         data[0] = new bytes(6);
         instance.timelockParams.datas[0] = data;
 
@@ -536,16 +554,32 @@ contract DeploymentMultichainTest is SystemDeploy {
 
             bool[][] memory isSelfAddressChecks = new bool[][](8);
             bool isSelfAddressCheck = false;
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 0);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 2);
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 0
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 2
+            );
 
             isSelfAddressCheck = true;
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 1);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 3);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 4);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 5);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 6);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 7);
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 1
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 3
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 4
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 5
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 6
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 7
+            );
 
             instance = NewInstance(
                 owners,

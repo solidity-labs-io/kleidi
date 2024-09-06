@@ -454,13 +454,23 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, 10, 29, datas, selfAddressChecks
+            address(10000),
+            timelock.addCalldataCheck.selector,
+            10,
+            29,
+            datas,
+            selfAddressChecks
         );
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Self address check must be 20 bytes");
         timelock.addCalldataCheck(
-            address(10000), timelock.addCalldataCheck.selector, 10, 31, datas, selfAddressChecks
+            address(10000),
+            timelock.addCalldataCheck.selector,
+            10,
+            31,
+            datas,
+            selfAddressChecks
         );
 
         vm.prank(address(timelock));
@@ -810,7 +820,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             });
         }
 
-
         MockLending lending = new MockLending();
 
         address[] memory targetAddresses = new address[](2);
@@ -835,7 +844,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         checkedCalldata[0] = "";
         checkedCalldatas[0] = checkedCalldata;
         checkedCalldatas[1] = checkedCalldata;
-        
+
         bool[][] memory isSelfAddressChecks = new bool[][](2);
         bool[] memory isSelfAddressCheck = new bool[](1);
         isSelfAddressCheck[0] = true;
@@ -1026,7 +1035,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
                 salt: bytes32(0)
             });
         }
-            
+
         MockLending lending = new MockLending();
 
         {
@@ -1059,7 +1068,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             isSelfAddressChecks[0] = isSelfAddressCheck;
             isSelfAddressChecks[1] = isSelfAddressCheck;
 
-
             bytes[] memory datas = new bytes[](1);
             datas[0] = abi.encodeWithSelector(
                 timelock.addCalldataChecks.selector,
@@ -1083,7 +1091,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
             bytes32 id =
                 timelock.hashOperationBatch(targets, values, datas, bytes32(0));
-            
 
             assertEq(
                 timelock.timestamps(id),
@@ -1099,10 +1106,14 @@ contract TimelockUnitTest is TimelockUnitFixture {
             );
 
             assertEq(
-                timelock.getAllProposals()[0], id, "proposal should be in proposals"
+                timelock.getAllProposals()[0],
+                id,
+                "proposal should be in proposals"
             );
             assertEq(
-                timelock.getAllProposals().length, 1, "proposal length incorrect"
+                timelock.getAllProposals().length,
+                1,
+                "proposal length incorrect"
             );
 
             vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -1394,18 +1405,16 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.removeAllCalldataChecks(targets, selectors);
 
         {
-            Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
-                address(lending), MockLending.deposit.selector
-            );
+            Timelock.IndexData[] memory calldataChecks = timelock
+                .getCalldataChecks(address(lending), MockLending.deposit.selector);
 
             assertEq(
                 calldataChecks.length, 0, "calldata checks should be removed"
             );
         }
         {
-            Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
-                address(lending), MockLending.withdraw.selector
-            );
+            Timelock.IndexData[] memory calldataChecks = timelock
+                .getCalldataChecks(address(lending), MockLending.withdraw.selector);
 
             assertEq(
                 calldataChecks.length, 0, "calldata checks should be removed"

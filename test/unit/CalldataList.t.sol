@@ -121,7 +121,7 @@ contract CalldataListUnitTest is Test {
         bytes[] memory checkedCalldata = new bytes[](1);
         checkedCalldata[0] = "";
         checkedCalldatas[0] = checkedCalldata;
-        
+
         bool[][] memory isSelfAddressChecks = new bool[][](2);
         bool[] memory isSelfAddressCheck = new bool[](1);
         isSelfAddressCheck[0] = true;
@@ -149,7 +149,12 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 3, 4, datas, selfAddressChecks
+            address(lending),
+            MockLending.deposit.selector,
+            3,
+            4,
+            datas,
+            selfAddressChecks
         );
     }
 
@@ -163,7 +168,12 @@ contract CalldataListUnitTest is Test {
 
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 5, datas, selfAddressChecks
+            address(lending),
+            MockLending.deposit.selector,
+            4,
+            5,
+            datas,
+            selfAddressChecks
         );
 
         datas[0] = "";
@@ -171,7 +181,12 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Add wildcard only if no existing check");
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 4, datas, selfAddressChecks
+            address(lending),
+            MockLending.deposit.selector,
+            4,
+            4,
+            datas,
+            selfAddressChecks
         );
     }
 
@@ -186,7 +201,12 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 3, datas, selfAddressChecks
+            address(lending),
+            MockLending.deposit.selector,
+            4,
+            3,
+            datas,
+            selfAddressChecks
         );
     }
 
@@ -199,7 +219,12 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be this");
         timelock.addCalldataCheck(
-            address(timelock), Timelock.schedule.selector, 4, 5, datas, selfAddressChecks
+            address(timelock),
+            Timelock.schedule.selector,
+            4,
+            5,
+            datas,
+            selfAddressChecks
         );
     }
 
@@ -212,7 +237,12 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be safe");
         timelock.addCalldataCheck(
-            address(safe), Timelock.schedule.selector, 4, 5, datas, selfAddressChecks
+            address(safe),
+            Timelock.schedule.selector,
+            4,
+            5,
+            datas,
+            selfAddressChecks
         );
     }
 
@@ -227,7 +257,12 @@ contract CalldataListUnitTest is Test {
             "CalldataList: End index eqauls start index only when 4"
         );
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 5, 5, datas, selfAddressChecks
+            address(lending),
+            MockLending.deposit.selector,
+            5,
+            5,
+            datas,
+            selfAddressChecks
         );
     }
 
@@ -239,7 +274,12 @@ contract CalldataListUnitTest is Test {
 
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 4, datas, selfAddressChecks
+            address(lending),
+            MockLending.deposit.selector,
+            4,
+            4,
+            datas,
+            selfAddressChecks
         );
 
         datas[0] = hex"12";
@@ -247,7 +287,12 @@ contract CalldataListUnitTest is Test {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Cannot add check with wildcard");
         timelock.addCalldataCheck(
-            address(lending), MockLending.deposit.selector, 4, 5, datas, selfAddressChecks
+            address(lending),
+            MockLending.deposit.selector,
+            4,
+            5,
+            datas,
+            selfAddressChecks
         );
     }
 }
