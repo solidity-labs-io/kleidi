@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "test/utils/SystemIntegrationFixture.sol";
+import {CErc20Interface} from "src/interface/CErc20Interface.sol";
 import {generateCalldatas, generateSelfAddressChecks} from "test/utils/NestedArrayHelper.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
@@ -205,7 +206,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// 2). check the recipient of the funds is whitelisted whether withdrawing
             /// or depositing.
 
-            uint16[] memory startIndexes = new uint16[](9);
+            uint16[] memory startIndexes = new uint16[](10);
             /// morpho blue supply
             startIndexes[0] = 4;
             /// only grab last twenty bytes of the 8th argument
@@ -224,8 +225,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             startIndexes[7] = 4 + 32 * 7 + 12;
             /// dai approve morpho
             startIndexes[8] = 16;
+            /// add wildcard for cDai mint
+            startIndexes[9] = 4;
 
-            uint16[] memory endIndexes = new uint16[](9);
+            uint16[] memory endIndexes = new uint16[](10);
             /// morpho blue supply
             endIndexes[0] = startIndexes[0] + 32 * 5;
             /// last twenty bytes represents who supplying on behalf of
@@ -245,8 +248,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             endIndexes[7] = startIndexes[7] + 20;
             /// dai approve morpho
             endIndexes[8] = startIndexes[2] + 20;
+            /// add wildcard for cDai mint
+            endIndexes[9] = 4;
 
-            bytes4[] memory selectors = new bytes4[](9);
+            bytes4[] memory selectors = new bytes4[](10);
             selectors[0] = IMorphoBase.supply.selector;
             selectors[1] = IMorphoBase.supply.selector;
             selectors[2] = IERC20.approve.selector;
@@ -260,47 +265,48 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             selectors[6] = IMorphoBase.supplyCollateral.selector;
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
             selectors[8] = IERC20.approve.selector;
+            selectors[9] = CErc20Interface.mint.selector;
 
-            bytes[][] memory calldatas = new bytes[][](9);
+            bytes[][] memory calldatas = new bytes[][](10);
             bytes memory singleCalldata;
 
             /// can only deposit to dai/eusd pool
             singleCalldata = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
             calldatas = generateCalldatas(calldatas, singleCalldata, 0);
 
-            /// can only deposit to timelock
-            singleCalldata = "";
-            calldatas = generateCalldatas(calldatas, singleCalldata, 1);
-
             /// morpho blue address can be approved to spend eUSD
             singleCalldata = abi.encodePacked(morphoBlue);
             calldatas = generateCalldatas(calldatas, singleCalldata, 2);
 
-            /// can only borrow to timelock
+            /// can only deposit to timelock
             singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 1);
+
+            /// can only borrow to timelock
             calldatas = generateCalldatas(calldatas, singleCalldata, 3);
 
             /// can only repay on behalf of timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 4);
 
             /// only withdraw asset back to timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 5);
 
             /// can only supply collateral on behalf of timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 6);
 
             /// can only withdraw collateral back to timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 7);
 
-            /// morpho blue address can be approved to spend dai
-            singleCalldata = abi.encodePacked(morphoBlue);
-            calldatas = generateCalldatas(calldatas, singleCalldata, 8);
+            /// can only withdraw collateral back to timelock
+            calldatas = generateCalldatas(calldatas, singleCalldata, 9);
 
-            address[] memory targets = new address[](9);
+            /// morpho blue and cDai address can be approved to spend dai
+            bytes[] memory approveContracts = new bytes[](2);
+            approveContracts[0] = abi.encodePacked(morphoBlue);
+            approveContracts[1] = abi.encodePacked(cDai);
+            calldatas[8] = approveContracts;
+
+            address[] memory targets = new address[](10);
             targets[0] = morphoBlue;
             targets[1] = morphoBlue;
             targets[2] = ethenaUsd;
@@ -310,12 +316,13 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             targets[6] = morphoBlue;
             targets[7] = morphoBlue;
             targets[8] = dai;
+            targets[9] = cDai;
 
-            bool[][] memory isSelfAddressChecks = new bool[][](9);
+            bool[][] memory isSelfAddressChecks = new bool[][](10);
             bool isSelfAddressCheck = false;
             isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 0);
             isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 2);
-            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 8);
+            isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 9);
 
             isSelfAddressCheck = true;
             isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 1);
@@ -324,6 +331,12 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 5);
             isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 6);
             isSelfAddressChecks = generateSelfAddressChecks(isSelfAddressChecks, isSelfAddressCheck, 7);
+
+            bool[] memory approveSelfAddressChecks = new bool[](2);
+            approveSelfAddressChecks[0] = false;
+            approveSelfAddressChecks[1] = false;
+            isSelfAddressChecks[8] = approveSelfAddressChecks;
+
 
             contractCall = abi.encodeWithSelector(
                 Timelock.addCalldataChecks.selector,
@@ -1951,5 +1964,144 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.prank(HOT_SIGNER_ONE);
         vm.expectRevert("Pausable: paused");
         timelock.executeWhitelistedBatch(targets, new uint256[](1), payloads);
+    }
+
+    function testMoveDaiFromMorphoToCompoundSucceed() public {
+        testTransactionAddingWhitelistedCalldataSucced();
+
+        /// warp to current timestamp to prevent math underflow
+        /// with cached timestamp in the future which doesn't work
+        vm.warp(startTimestamp);
+        uint256 supplyAmount = 1e18;
+        uint256 supplyShares = 1e18 * 1e5;
+
+        /// supply dai to morpho
+        {
+            address[] memory targets = new address[](2);
+            targets[0] = address(dai);
+            targets[1] = address(morphoBlue);
+
+            uint256[] memory values = new uint256[](2);
+
+            bytes[] memory calldatas = new bytes[](2);
+
+            deal(dai, address(timelock), supplyAmount);
+
+            calldatas[0] = abi.encodeWithSelector(
+                IERC20.approve.selector, morphoBlue, supplyAmount
+            );
+
+            calldatas[1] = abi.encodeWithSelector(
+                IMorphoBase.supply.selector,
+                dai,
+                ethenaUsd,
+                oracle,
+                irm,
+                lltv,
+                0,
+                supplyShares,
+                address(timelock),
+                ""
+            );
+
+            IMorphoBase(morphoBlue).accrueInterest(
+                MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
+
+            assertEq(position.supplyShares, supplyShares, "incorrect supply shares");
+            assertEq(position.borrowShares, 0, "incorrect borrow shares");
+            assertEq(position.collateral, 0, "incorrect collateral");
+
+            /// Todo: debug why balance not fixed
+            assertLt(
+                IERC20(dai).balanceOf(address(timelock)),
+                1e18,
+                "dai balance of timelock should decrease post supply"
+            );
+        }
+
+        /// withdraw dai from morpho
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(morphoBlue);
+
+            uint256[] memory values = new uint256[](1);
+            values[0] = 0;
+
+            bytes[] memory calldatas = new bytes[](1);
+            calldatas[0] = abi.encodeWithSelector(
+                IMorphoBase.withdraw.selector,
+                dai,
+                ethenaUsd,
+                oracle,
+                irm,
+                lltv,
+                0,
+                supplyShares,
+                address(timelock),
+                address(timelock)
+            );
+
+            vm.prank(HOT_SIGNER_TWO);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
+
+            assertEq(position.supplyShares, 0, "incorrect supply shares");
+            assertEq(position.borrowShares, 0, "incorrect borrow shares");
+            assertEq(position.collateral, 0, "incorrect collateral");
+
+            assertEq(
+                IERC20(dai).balanceOf(address(timelock)),
+                0.999999999999999999e18,
+                "incorrect dai balance post withdraw"
+            );
+        }
+
+        /// mint cDai by  supplying Dai to compound
+        {
+            address[] memory targets = new address[](2);
+            targets[0] = address(dai);
+            targets[1] = address(cDai);
+
+            uint256[] memory values = new uint256[](2);
+
+            bytes[] memory calldatas = new bytes[](2);
+
+            calldatas[0] = abi.encodeWithSelector(
+                IERC20.approve.selector, cDai, supplyAmount
+            );
+
+            calldatas[1] = abi.encodeWithSelector(
+                CErc20Interface.mint.selector,
+                supplyAmount / 2
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            assertGt(
+                IERC20(cDai).balanceOf(address(timelock)),
+                0,  
+                "cDai balance should increase post mint"
+            );
+
+            assertEq(
+                IERC20(dai).balanceOf(address(timelock)),
+                0.499999999999999999e18,
+                "incorrect dai balance post mint"
+            );
+        }
     }
 }

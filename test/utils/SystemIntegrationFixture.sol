@@ -143,6 +143,9 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// @notice DAI contract
     address public dai;
 
+    /// @notice cDAI contract
+    address public cDai;
+
     /// @notice morpho blue irm contract
     address public irm;
 
@@ -202,6 +205,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         irm = addresses.getAddress("MORPHO_BLUE_IRM");
         oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
         multicall = addresses.getAddress("MULTICALL3");
+        cDai = addresses.getAddress("C_DAI");
 
         owners.push(vm.addr(pk1));
         owners.push(vm.addr(pk2));
