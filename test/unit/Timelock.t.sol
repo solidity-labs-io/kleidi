@@ -121,6 +121,12 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertEq(
             timelock.getAllProposals().length, 1, "proposal length incorrect"
         );
+        assertEq(
+            timelock.positionOf(id),
+            1,
+            "incorrect position of the proposal in live proposal set"
+        );
+        assertEq(timelock.atIndex(0), id, "incorrect proposal at index 0");
 
         return id;
     }

@@ -93,6 +93,101 @@ contract CalldataListUnitTest is Test {
         );
     }
 
+    function testAddCalldataCheckAndRemoveCalldataCheckSucceeds() public {
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        address[] memory targetAddresses = new address[](2);
+        targetAddresses[0] = address(lending);
+        targetAddresses[1] = address(lending);
+
+        bytes4[] memory selectors = new bytes4[](2);
+        selectors[0] = MockLending.deposit.selector;
+        selectors[1] = MockLending.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](2);
+        startIndexes[0] = 12;
+        startIndexes[1] = 16;
+
+        uint16[] memory endIndexes = new uint16[](2);
+        endIndexes[0] = 32;
+        endIndexes[1] = 36;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](2);
+        bytes[] memory checkedCalldata = new bytes[](1);
+        checkedCalldata[0] = "";
+        checkedCalldatas[0] = checkedCalldata;
+        checkedCalldatas[1] = checkedCalldata;
+
+        bool[][] memory isSelfAddressChecks = new bool[][](2);
+        bool[] memory isSelfAddressCheck = new bool[](1);
+        isSelfAddressCheck[0] = true;
+        isSelfAddressChecks[0] = isSelfAddressCheck;
+        isSelfAddressChecks[1] = isSelfAddressCheck;
+
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas,
+            isSelfAddressChecks
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            2,
+            "calldata checks not added"
+        );
+
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheck(
+            address(lending), MockLending.deposit.selector, 0
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            1,
+            "calldata check not removed"
+        );
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            )[0].startIndex,
+            16,
+            "calldata check not removed"
+        );
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            )[0].endIndex,
+            36,
+            "calldata check not removed"
+        );
+
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheck(
+            address(lending), MockLending.deposit.selector, 0
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            0,
+            "calldata check not removed"
+        );
+    }
+
     function testArityMismatchAddCalldataChecks() public {
         address[] memory targets = new address[](1);
         targets[0] = address(timelock);
@@ -118,15 +213,18 @@ contract CalldataListUnitTest is Test {
         endIndexes[1] = 36;
 
         bytes[][] memory checkedCalldatas = new bytes[][](1);
-        bytes[] memory checkedCalldata = new bytes[](1);
-        checkedCalldata[0] = "";
-        checkedCalldatas[0] = checkedCalldata;
+        bytes[] memory checkedCalldata1 = new bytes[](1);
+        checkedCalldata1[0] = "";
+        checkedCalldatas[0] = checkedCalldata1;
 
         bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = true;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
+        bool[] memory isSelfAddressCheck1 = new bool[](1);
+        bool[] memory isSelfAddressCheck2 = new bool[](2);
+        isSelfAddressCheck1[0] = true;
+        isSelfAddressCheck2[0] = true;
+        isSelfAddressCheck2[1] = true;
+        isSelfAddressChecks[0] = isSelfAddressCheck1;
+        isSelfAddressChecks[1] = isSelfAddressCheck2;
 
         vm.expectRevert("CalldataList: Array lengths must be equal");
         vm.prank(address(timelock));
@@ -137,6 +235,51 @@ contract CalldataListUnitTest is Test {
             endIndexes,
             checkedCalldatas,
             isSelfAddressChecks
+        );
+
+        checkedCalldatas = new bytes[][](2);
+        checkedCalldatas[0] = checkedCalldata1;
+        checkedCalldatas[1] = checkedCalldata1;
+
+        vm.expectRevert("CalldataList: Array lengths must be equal");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas,
+            isSelfAddressChecks
+        );
+
+        bytes[] memory checkedCalldata2 = new bytes[](2);
+        checkedCalldata2[0] = "";
+        checkedCalldata2[1] = "";
+        checkedCalldatas[1] = checkedCalldata2;
+
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas,
+            isSelfAddressChecks
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            1,
+            "calldata check for deposit not added"
+        );
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.withdraw.selector
+            ).length,
+            1,
+            "calldata check for withdraw not added"
         );
     }
 
