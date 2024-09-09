@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "test/utils/SystemIntegrationFixture.sol";
-import {WETH9} from "src/interface/WETH9.sol";  
+import {WETH9} from "src/interface/WETH9.sol";
 import {CErc20Interface} from "src/interface/CErc20Interface.sol";
 import {CEtherInterface} from "src/interface/CEtherInterface.sol";
 import {
@@ -297,8 +297,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             /// can only deposit to dai/eusd pool
             bytes[] memory approvedPools = new bytes[](2);
-            approvedPools[0] = abi.encode(dai, ethenaUsd, oracleEusdDai, irm, lltv);
-            approvedPools[1] = abi.encode(weth, wbtc, oracleWbtcdWeth, irm, lltv);
+            approvedPools[0] =
+                abi.encode(dai, ethenaUsd, oracleEusdDai, irm, lltv);
+            approvedPools[1] =
+                abi.encode(weth, wbtc, oracleWbtcdWeth, irm, lltv);
             calldatas[0] = approvedPools;
 
             /// morpho blue address can be approved to spend eUSD and weth
@@ -1100,7 +1102,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             timelock.executeWhitelistedBatch(targets, values, calldatas);
         }
 
-        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
+        bytes32 marketId =
+            id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
         Position memory position =
             IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -1257,7 +1260,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             timelock.executeWhitelistedBatch(targets, values, calldatas);
         }
 
-        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
+        bytes32 marketId =
+            id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
         Position memory position =
             IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -1404,7 +1408,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.prank(HOT_SIGNER_ONE);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
+        bytes32 marketId =
+            id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
         Position memory position =
             IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -2187,9 +2192,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             deal(address(timelock), supplyAmount);
 
-            calldatas[0] = abi.encodeWithSelector(
-                WETH9.deposit.selector
-            );
+            calldatas[0] = abi.encodeWithSelector(WETH9.deposit.selector);
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -2305,8 +2308,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bytes[] memory calldatas = new bytes[](1);
 
             calldatas[0] = abi.encodeWithSelector(
-                WETH9.withdraw.selector,
-                0.999999999999999999e18
+                WETH9.withdraw.selector, 0.999999999999999999e18
             );
 
             vm.prank(HOT_SIGNER_ONE);
@@ -2335,9 +2337,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             bytes[] memory calldatas = new bytes[](1);
 
-            calldatas[0] = abi.encodeWithSelector(
-                CEtherInterface.mint.selector
-            );
+            calldatas[0] = abi.encodeWithSelector(CEtherInterface.mint.selector);
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -2354,6 +2354,5 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 "incorrect timelock ether balance post mint"
             );
         }
-        
     }
 }
