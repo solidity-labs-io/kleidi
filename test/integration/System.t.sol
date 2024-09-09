@@ -2,7 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "test/utils/SystemIntegrationFixture.sol";
+import {WETH9} from "src/interface/WETH9.sol";  
 import {CErc20Interface} from "src/interface/CErc20Interface.sol";
+import {CEtherInterface} from "src/interface/CEtherInterface.sol";
 import {
     generateCalldatas,
     generateSelfAddressChecks
@@ -209,7 +211,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// 2). check the recipient of the funds is whitelisted whether withdrawing
             /// or depositing.
 
-            uint16[] memory startIndexes = new uint16[](10);
+            uint16[] memory startIndexes = new uint16[](14);
             /// morpho blue supply
             startIndexes[0] = 4;
             /// only grab last twenty bytes of the 8th argument
@@ -230,8 +232,16 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             startIndexes[8] = 16;
             /// add wildcard for cDai mint
             startIndexes[9] = 4;
+            /// deposit ETH to get WETH
+            startIndexes[10] = 4;
+            /// withdraw ETH from WETH
+            startIndexes[11] = 4;
+            /// weth approve morpho
+            startIndexes[12] = 16;
+            /// mint CEther
+            startIndexes[13] = 4;
 
-            uint16[] memory endIndexes = new uint16[](10);
+            uint16[] memory endIndexes = new uint16[](14);
             /// morpho blue supply
             endIndexes[0] = startIndexes[0] + 32 * 5;
             /// last twenty bytes represents who supplying on behalf of
@@ -250,11 +260,19 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// last twenty bytes represents asset receiver
             endIndexes[7] = startIndexes[7] + 20;
             /// dai approve morpho
-            endIndexes[8] = startIndexes[2] + 20;
+            endIndexes[8] = startIndexes[8] + 20;
             /// add wildcard for cDai mint
             endIndexes[9] = 4;
+            /// deposit ETH to get WETH
+            endIndexes[10] = 4;
+            /// withdraw ETH from WETH
+            endIndexes[11] = 4;
+            /// weth approve morpho
+            endIndexes[12] = startIndexes[12] + 20;
+            /// mint CEther
+            endIndexes[13] = 4;
 
-            bytes4[] memory selectors = new bytes4[](10);
+            bytes4[] memory selectors = new bytes4[](14);
             selectors[0] = IMorphoBase.supply.selector;
             selectors[1] = IMorphoBase.supply.selector;
             selectors[2] = IERC20.approve.selector;
@@ -269,17 +287,24 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
             selectors[8] = IERC20.approve.selector;
             selectors[9] = CErc20Interface.mint.selector;
+            selectors[10] = WETH9.deposit.selector;
+            selectors[11] = WETH9.withdraw.selector;
+            selectors[12] = IERC20.approve.selector;
+            selectors[13] = CEtherInterface.mint.selector;
 
-            bytes[][] memory calldatas = new bytes[][](10);
+            bytes[][] memory calldatas = new bytes[][](14);
             bytes memory singleCalldata;
 
             /// can only deposit to dai/eusd pool
-            singleCalldata = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
-            calldatas = generateCalldatas(calldatas, singleCalldata, 0);
+            bytes[] memory approvedPools = new bytes[](2);
+            approvedPools[0] = abi.encode(dai, ethenaUsd, oracleEusdDai, irm, lltv);
+            approvedPools[1] = abi.encode(weth, wbtc, oracleWbtcdWeth, irm, lltv);
+            calldatas[0] = approvedPools;
 
-            /// morpho blue address can be approved to spend eUSD
+            /// morpho blue address can be approved to spend eUSD and weth
             singleCalldata = abi.encodePacked(morphoBlue);
             calldatas = generateCalldatas(calldatas, singleCalldata, 2);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 12);
 
             /// can only deposit to timelock
             singleCalldata = "";
@@ -300,16 +325,25 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// can only withdraw collateral back to timelock
             calldatas = generateCalldatas(calldatas, singleCalldata, 7);
 
-            /// can only withdraw collateral back to timelock
+            /// wildcard for cDai mint
             calldatas = generateCalldatas(calldatas, singleCalldata, 9);
 
-            /// morpho blue and cDai address can be approved to spend dai
-            bytes[] memory approveContracts = new bytes[](2);
-            approveContracts[0] = abi.encodePacked(morphoBlue);
-            approveContracts[1] = abi.encodePacked(cDai);
-            calldatas[8] = approveContracts;
+            /// wildcard for deposit to WETH
+            calldatas = generateCalldatas(calldatas, singleCalldata, 10);
 
-            address[] memory targets = new address[](10);
+            /// wildcard for withdraw from WETH
+            calldatas = generateCalldatas(calldatas, singleCalldata, 11);
+
+            /// wildcard for cEther mint
+            calldatas = generateCalldatas(calldatas, singleCalldata, 13);
+
+            /// morpho blue and cDai address can be approved to spend dai
+            bytes[] memory approvedContractsDai = new bytes[](2);
+            approvedContractsDai[0] = abi.encodePacked(morphoBlue);
+            approvedContractsDai[1] = abi.encodePacked(cDai);
+            calldatas[8] = approvedContractsDai;
+
+            address[] memory targets = new address[](14);
             targets[0] = morphoBlue;
             targets[1] = morphoBlue;
             targets[2] = ethenaUsd;
@@ -320,17 +354,30 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             targets[7] = morphoBlue;
             targets[8] = dai;
             targets[9] = cDai;
+            targets[10] = weth;
+            targets[11] = weth;
+            targets[12] = weth;
+            targets[13] = cEther;
 
-            bool[][] memory isSelfAddressChecks = new bool[][](10);
+            bool[][] memory isSelfAddressChecks = new bool[][](14);
             bool isSelfAddressCheck = false;
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 0
-            );
             isSelfAddressChecks = generateSelfAddressChecks(
                 isSelfAddressChecks, isSelfAddressCheck, 2
             );
             isSelfAddressChecks = generateSelfAddressChecks(
                 isSelfAddressChecks, isSelfAddressCheck, 9
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 10
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 11
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 12
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 13
             );
 
             isSelfAddressCheck = true;
@@ -356,6 +403,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bool[] memory approveSelfAddressChecks = new bool[](2);
             approveSelfAddressChecks[0] = false;
             approveSelfAddressChecks[1] = false;
+            isSelfAddressChecks[0] = approveSelfAddressChecks;
             isSelfAddressChecks[8] = approveSelfAddressChecks;
 
             contractCall = abi.encodeWithSelector(
@@ -1035,7 +1083,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 IMorphoBase.supplyCollateral.selector,
                 dai,
                 ethenaUsd,
-                oracle,
+                oracleEusdDai,
                 irm,
                 lltv,
                 supplyAmount,
@@ -1045,14 +1093,14 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             );
 
             IMorphoBase(morphoBlue).accrueInterest(
-                MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
             );
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
         }
 
-        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
         Position memory position =
             IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -1073,7 +1121,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 IMorphoBase.withdrawCollateral.selector,
                 dai,
                 ethenaUsd,
-                oracle,
+                oracleEusdDai,
                 irm,
                 lltv,
                 supplyAmount,
@@ -1117,7 +1165,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.supplyCollateral.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             supplyAmount,
@@ -1149,7 +1197,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.withdrawCollateral.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             supplyAmount,
@@ -1192,7 +1240,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 IMorphoBase.supply.selector,
                 dai,
                 ethenaUsd,
-                oracle,
+                oracleEusdDai,
                 irm,
                 lltv,
                 0,
@@ -1202,14 +1250,14 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             );
 
             IMorphoBase(morphoBlue).accrueInterest(
-                MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
             );
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
         }
 
-        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
         Position memory position =
             IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -1230,7 +1278,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 IMorphoBase.withdraw.selector,
                 dai,
                 ethenaUsd,
-                oracle,
+                oracleEusdDai,
                 irm,
                 lltv,
                 0,
@@ -1269,7 +1317,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.supply.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             0,
@@ -1302,7 +1350,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.withdraw.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             0,
@@ -1340,7 +1388,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.supply.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             supplyAmount,
@@ -1350,13 +1398,13 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
 
         IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
         );
 
         vm.prank(HOT_SIGNER_ONE);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+        bytes32 marketId = id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
         Position memory position =
             IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -1384,7 +1432,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.supplyCollateral.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             supplyAmount,
@@ -1394,7 +1442,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
 
         IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
         );
 
         vm.prank(HOT_SIGNER_ONE);
@@ -1422,7 +1470,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.borrow.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             supplyAmount / 2,
@@ -1432,7 +1480,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
 
         IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
         );
 
         vm.prank(HOT_SIGNER_ONE);
@@ -1464,7 +1512,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.repay.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             supplyAmount / 2,
@@ -1474,7 +1522,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
 
         IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
         );
 
         vm.prank(HOT_SIGNER_ONE);
@@ -1513,7 +1561,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.borrow.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             borrowAmount,
@@ -1546,7 +1594,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             IMorphoBase.repay.selector,
             dai,
             ethenaUsd,
-            oracle,
+            oracleEusdDai,
             irm,
             lltv,
             repayAmount,
@@ -2015,7 +2063,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 IMorphoBase.supply.selector,
                 dai,
                 ethenaUsd,
-                oracle,
+                oracleEusdDai,
                 irm,
                 lltv,
                 0,
@@ -2025,14 +2073,14 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             );
 
             IMorphoBase(morphoBlue).accrueInterest(
-                MarketParams(dai, ethenaUsd, oracle, irm, lltv)
+                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
             );
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
             bytes32 marketId =
-                id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+                id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
             Position memory position =
                 IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -2064,7 +2112,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 IMorphoBase.withdraw.selector,
                 dai,
                 ethenaUsd,
-                oracle,
+                oracleEusdDai,
                 irm,
                 lltv,
                 0,
@@ -2077,7 +2125,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
             bytes32 marketId =
-                id(MarketParams(dai, ethenaUsd, oracle, irm, lltv));
+                id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
             Position memory position =
                 IMorpho(morphoBlue).position(marketId, address(timelock));
@@ -2126,5 +2174,186 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 "incorrect dai balance post mint"
             );
         }
+
+        /// deposit in WETH
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(weth);
+
+            uint256[] memory values = new uint256[](1);
+            values[0] = 1 ether;
+
+            bytes[] memory calldatas = new bytes[](1);
+
+            deal(address(timelock), supplyAmount);
+
+            calldatas[0] = abi.encodeWithSelector(
+                WETH9.deposit.selector
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            assertEq(
+                IERC20(weth).balanceOf(address(timelock)),
+                1e18,
+                "incorrect weth balance of timelock post deposit"
+            );
+        }
+
+        /// supply weth to morpho
+        {
+            address[] memory targets = new address[](2);
+            targets[0] = address(weth);
+            targets[1] = address(morphoBlue);
+
+            uint256[] memory values = new uint256[](2);
+
+            bytes[] memory calldatas = new bytes[](2);
+
+            calldatas[0] = abi.encodeWithSelector(
+                IERC20.approve.selector, morphoBlue, supplyAmount
+            );
+
+            calldatas[1] = abi.encodeWithSelector(
+                IMorphoBase.supply.selector,
+                weth,
+                wbtc,
+                oracleWbtcdWeth,
+                irm,
+                lltv,
+                0,
+                supplyShares,
+                address(timelock),
+                ""
+            );
+
+            IMorphoBase(morphoBlue).accrueInterest(
+                MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv)
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            bytes32 marketId =
+                id(MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv));
+
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
+
+            assertEq(
+                position.supplyShares, supplyShares, "incorrect supply shares"
+            );
+            assertEq(position.borrowShares, 0, "incorrect borrow shares");
+            assertEq(position.collateral, 0, "incorrect collateral");
+
+            assertLt(
+                IERC20(weth).balanceOf(address(timelock)),
+                1e18,
+                "weth balance of timelock should decrease post supply"
+            );
+        }
+
+        /// withdraw weth from morpho
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(morphoBlue);
+
+            uint256[] memory values = new uint256[](1);
+
+            bytes[] memory calldatas = new bytes[](1);
+            calldatas[0] = abi.encodeWithSelector(
+                IMorphoBase.withdraw.selector,
+                weth,
+                wbtc,
+                oracleWbtcdWeth,
+                irm,
+                lltv,
+                0,
+                supplyShares,
+                address(timelock),
+                address(timelock)
+            );
+
+            vm.prank(HOT_SIGNER_TWO);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            bytes32 marketId =
+                id(MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv));
+
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
+
+            assertEq(position.supplyShares, 0, "incorrect supply shares");
+            assertEq(position.borrowShares, 0, "incorrect borrow shares");
+            assertEq(position.collateral, 0, "incorrect collateral");
+
+            assertEq(
+                IERC20(weth).balanceOf(address(timelock)),
+                0.999999999999999999e18,
+                "incorrect weth balance post withdraw"
+            );
+        }
+
+        /// withdraw from WETH
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(weth);
+
+            uint256[] memory values = new uint256[](1);
+
+            bytes[] memory calldatas = new bytes[](1);
+
+            calldatas[0] = abi.encodeWithSelector(
+                WETH9.withdraw.selector,
+                0.999999999999999999e18
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            assertEq(
+                IERC20(weth).balanceOf(address(timelock)),
+                0,
+                "incorrect weth balance of timelock post withdraw"
+            );
+
+            assertEq(
+                address(timelock).balance,
+                0.999999999999999999e18,
+                "incorrect Ether balance of timelock post withdraw"
+            );
+        }
+
+        /// mint cEther by  supplying Ether to compound
+        {
+            address[] memory targets = new address[](1);
+            targets[0] = address(cEther);
+
+            uint256[] memory values = new uint256[](1);
+            values[0] = 0.5e18;
+
+            bytes[] memory calldatas = new bytes[](1);
+
+            calldatas[0] = abi.encodeWithSelector(
+                CEtherInterface.mint.selector
+            );
+
+            vm.prank(HOT_SIGNER_ONE);
+            timelock.executeWhitelistedBatch(targets, values, calldatas);
+
+            assertGt(
+                IERC20(cEther).balanceOf(address(timelock)),
+                0,
+                "cEther balance should increase post mint"
+            );
+
+            assertEq(
+                address(timelock).balance,
+                0.499999999999999999e18,
+                "incorrect timelock ether balance post mint"
+            );
+        }
+        
     }
 }

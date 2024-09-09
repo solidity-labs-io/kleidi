@@ -91,7 +91,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         ethenaUsd = addresses.getAddress("ETHENA_USD");
         dai = addresses.getAddress("DAI");
         irm = addresses.getAddress("MORPHO_BLUE_IRM");
-        oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
+        oracle = addresses.getAddress("MORPHO_BLUE_EUSD_DAI_ORACLE");
         multicall = addresses.getAddress("MULTICALL3");
         morphoBlue = addresses.getAddress("MORPHO_BLUE");
 
