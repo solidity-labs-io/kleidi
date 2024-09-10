@@ -1070,7 +1070,7 @@ contract Timelock is
             bytes32 dataHash =
                 isSelfAddressCheck[i] ? ADDRESS_THIS_HASH : keccak256(data[i]);
 
-            indexes[indexLength].dataHashes.add(dataHash);
+            assert(indexes[indexLength].dataHashes.add(dataHash));
         }
 
         emit CalldataAdded(
@@ -1135,24 +1135,31 @@ contract Timelock is
             "CalldataList: Calldata index out of bounds"
         );
 
+        /// index check to remove by overwriting with ending list element
         Index storage indexCheck = calldataChecks[index];
-        Index storage lastIndexCheck = calldataChecks[calldataChecks.length - 1];
 
         uint16 removedStartIndex = indexCheck.startIndex;
         uint16 removedEndIndex = indexCheck.endIndex;
         bytes32[] memory removedDataHashes = indexCheck.dataHashes.values();
 
         for (uint256 i = 0; i < removedDataHashes.length; i++) {
-            indexCheck.dataHashes.remove(removedDataHashes[i]);
+            assert(indexCheck.dataHashes.remove(removedDataHashes[i]));
         }
 
-        indexCheck.startIndex = lastIndexCheck.startIndex;
-        indexCheck.endIndex = lastIndexCheck.endIndex;
-        bytes32[] memory dataHashes = lastIndexCheck.dataHashes.values();
+        /// pop the index without swap if index is same as last index
+        if (calldataChecks.length > 1) {
+            /// index check to overwrite the specified index check with
+            Index storage lastIndexCheck =
+                calldataChecks[calldataChecks.length - 1];
 
-        for (uint256 i = 0; i < dataHashes.length; i++) {
-            indexCheck.dataHashes.add(dataHashes[i]);
-            lastIndexCheck.dataHashes.remove(dataHashes[i]);
+            indexCheck.startIndex = lastIndexCheck.startIndex;
+            indexCheck.endIndex = lastIndexCheck.endIndex;
+            bytes32[] memory dataHashes = lastIndexCheck.dataHashes.values();
+
+            for (uint256 i = 0; i < dataHashes.length; i++) {
+                assert(indexCheck.dataHashes.add(dataHashes[i]));
+                assert(lastIndexCheck.dataHashes.remove(dataHashes[i]));
+            }
         }
 
         calldataChecks.pop();
@@ -1199,7 +1206,7 @@ contract Timelock is
                 dataHashes
             );
             for (uint256 i = 0; i < dataHashes.length; i++) {
-                removedCalldataCheck.dataHashes.remove(dataHashes[i]);
+                assert(removedCalldataCheck.dataHashes.remove(dataHashes[i]));
             }
             calldataChecks.pop();
             checksLength--;

@@ -2027,16 +2027,16 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.expectRevert("Pausable: paused");
         timelock.executeWhitelisted(address(ethenaUsd), value, calldatas);
 
-        address[] memory targets = new address[](1);
-        targets[0] = address(ethenaUsd);
+        address[] memory targets1 = new address[](1);
+        targets1[0] = address(ethenaUsd);
 
-        bytes[] memory payloads = new bytes[](1);
-        payloads[0] = calldatas;
+        bytes[] memory payloads1 = new bytes[](1);
+        payloads1[0] = calldatas;
 
         /// batch executeWhitelisted reverts when paused
         vm.prank(HOT_SIGNER_ONE);
         vm.expectRevert("Pausable: paused");
-        timelock.executeWhitelistedBatch(targets, new uint256[](1), payloads);
+        timelock.executeWhitelistedBatch(targets1, new uint256[](1), payloads1);
     }
 
     function testMoveDaiFromMorphoToCompoundSucceed() public {
