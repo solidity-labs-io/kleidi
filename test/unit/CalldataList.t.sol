@@ -222,7 +222,7 @@ contract CalldataListUnitTest is Test {
         bool[] memory isSelfAddressCheck2 = new bool[](2);
         isSelfAddressCheck1[0] = true;
         isSelfAddressCheck2[0] = true;
-        isSelfAddressCheck2[1] = true;
+        isSelfAddressCheck2[1] = false;
         isSelfAddressChecks[0] = isSelfAddressCheck1;
         isSelfAddressChecks[1] = isSelfAddressCheck2;
 
@@ -254,7 +254,7 @@ contract CalldataListUnitTest is Test {
 
         bytes[] memory checkedCalldata2 = new bytes[](2);
         checkedCalldata2[0] = "";
-        checkedCalldata2[1] = "";
+        checkedCalldata2[1] = abi.encodePacked(address(lending));
         checkedCalldatas[1] = checkedCalldata2;
 
         vm.prank(address(timelock));
