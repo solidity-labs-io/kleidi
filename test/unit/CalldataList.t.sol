@@ -17,6 +17,15 @@ import {MockSafe} from "test/mock/MockSafe.sol";
 import {MockLending} from "test/mock/MockLending.sol";
 
 contract CalldataListUnitTest is Test {
+    struct CheckData {
+        address[] targets;
+        bytes4[] selectors;
+        uint16[] startIndexes;
+        uint16[] endIndexes;
+        bytes[][] calldatas;
+        bool[][] isSelfAddressChecks;
+    }
+
     /// @notice reference to the Timelock contract
     Timelock private timelock;
 
@@ -28,21 +37,6 @@ contract CalldataListUnitTest is Test {
 
     /// @notice the 3 hot signers that can execute whitelisted actions
     address[] public hotSigners;
-
-    /// @notice empty for now, will change once tests progress
-    address[] public contractAddresses;
-
-    /// @notice empty for now, will change once tests progress
-    bytes4[] public selector;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public startIndex;
-
-    /// @notice empty for now, will change once tests progress
-    uint16[] public endIndex;
-
-    /// @notice empty for now, will change once tests progress
-    bytes[] public data;
 
     /// @notice address of the guardian that can pause and break glass in case of emergency
     address public guardian = address(0x11111);
@@ -60,6 +54,9 @@ contract CalldataListUnitTest is Test {
     address public constant HOT_SIGNER_ONE = address(0x11111);
     address public constant HOT_SIGNER_TWO = address(0x22222);
     address public constant HOT_SIGNER_THREE = address(0x33333);
+
+    // nonce for generating random numbers
+    uint256 internal _nonce = 0;
 
     function setUp() public {
         hotSigners.push(HOT_SIGNER_ONE);
@@ -186,6 +183,118 @@ contract CalldataListUnitTest is Test {
             0,
             "calldata check not removed"
         );
+    }
+
+    function testAddAndRemoveCalldataFuzzy(
+        address[] memory fuzzyTargets,
+        bytes4[] memory fuzzySelectors,
+        uint16[] memory fuzzyStartIndexes,
+        bytes[] memory fuzzyCalldatas
+    ) public {
+        uint256 minLength;
+        {
+            // find min length among all fuzzed arrays
+            minLength = fuzzyStartIndexes.length;
+            minLength = minLength > fuzzyTargets.length
+                ? fuzzyTargets.length
+                : minLength;
+            minLength = minLength > fuzzySelectors.length
+                ? fuzzySelectors.length
+                : minLength;
+            minLength = minLength > fuzzyCalldatas.length
+                ? fuzzyCalldatas.length
+                : minLength;
+
+            vm.assume(minLength > 0);
+
+            // number of checks for each contract address and function selector pair
+            uint256 checkCount = bound(fuzzyStartIndexes[0], 1, 10);
+            // total length of all the checks
+            uint256 length = checkCount * minLength;
+
+            CheckData memory checkData = _initializeCheckData(length);
+
+            // generate checkCount number of checks for each contract address and function selector pair
+            for (uint256 i = 0; i < minLength; i++) {
+                // target should not be safe or timelock address
+                vm.assume(
+                    fuzzyTargets[i] != address(safe)
+                        && fuzzyTargets[i] != address(timelock)
+                );
+
+                // generate checkCount number of checks
+                for (uint256 j = 0; j < checkCount; j++) {
+                    // index where the new check is added
+                    uint256 index = i * checkCount + j;
+
+                    checkData.targets[index] = fuzzyTargets[i];
+                    checkData.selectors[index] = fuzzySelectors[i];
+                    checkData.startIndexes[index] =
+                        uint16(bound(fuzzyStartIndexes[i] + j, 4, 100));
+                    checkData.calldatas = generateCalldatas(
+                        checkData.calldatas,
+                        abi.encodePacked(fuzzyCalldatas[i], j),
+                        fuzzyStartIndexes[i] + j,
+                        index
+                    );
+                    // set end index to start index + calldata length
+                    checkData.endIndexes[index] = checkData.startIndexes[index]
+                        + uint16(checkData.calldatas[index][0].length);
+                    checkData.isSelfAddressChecks = generateSelfAddressChecks(
+                        checkData.isSelfAddressChecks,
+                        checkData.calldatas[index].length,
+                        index
+                    );
+                }
+            }
+
+            vm.prank(address(timelock));
+            timelock.addCalldataChecks(
+                checkData.targets,
+                checkData.selectors,
+                checkData.startIndexes,
+                checkData.endIndexes,
+                checkData.calldatas,
+                checkData.isSelfAddressChecks
+            );
+
+            // assert calldata checks were added
+            for (uint256 i = 0; i < minLength; i++) {
+                uint256 finalCheckLength = timelock.getCalldataChecks(
+                    fuzzyTargets[i], fuzzySelectors[i]
+                ).length;
+                // finalCheckLength % checkCount to cover case where a pair of
+                // contract address and selector is repeated in fuzzed array
+                assertTrue(
+                    finalCheckLength != 0 && finalCheckLength % checkCount == 0
+                );
+            }
+        }
+
+        {
+            for (uint256 i = 0; i < minLength; i++) {
+                uint256 checksLength = timelock.getCalldataChecks(
+                    fuzzyTargets[i], fuzzySelectors[i]
+                ).length;
+                uint256 index;
+                while (checksLength > 0) {
+                    index = randomInRange(0, checksLength - 1, false);
+                    vm.prank(address(timelock));
+                    timelock.removeCalldataCheck(
+                        fuzzyTargets[i], fuzzySelectors[i], index
+                    );
+                    checksLength--;
+                }
+                // assert calldata checks removed
+                assertEq(
+                    timelock.getCalldataChecks(
+                        fuzzyTargets[i], fuzzySelectors[i]
+                    ).length,
+                    0,
+                    "all checks not removed"
+                );
+            }
+        }
     }
 
     function testArityMismatchAddCalldataChecks() public {
@@ -437,5 +546,84 @@ contract CalldataListUnitTest is Test {
             datas,
             selfAddressChecks
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                HELPERS
+    //////////////////////////////////////////////////////////////*/
+
+    function sliceBytes32(bytes32 data, uint256 length)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes memory slicedData = new bytes(length);
+        for (uint256 i = 0; i < length; i++) {
+            slicedData[i] = data[i];
+        }
+        return slicedData;
+    }
+
+    function generateCalldatas(
+        bytes[][] memory calldatas,
+        bytes memory data,
+        uint256 count,
+        uint256 index
+    ) internal pure returns (bytes[][] memory) {
+        // length of each calldata for a check
+        uint256 calldataLength = bound(count, 4, 32);
+        // number of calldatas for each check
+        count = bound(count, 1, 10);
+
+        bytes32 dataHash = keccak256(data);
+        bytes[] memory singleCheckCalldata = new bytes[](count);
+
+        // generate count number of calldatas from passed data
+        for (uint256 i = 0; i < count; i++) {
+            singleCheckCalldata[i] = sliceBytes32(dataHash, calldataLength);
+            dataHash = keccak256(abi.encode(dataHash));
+        }
+        calldatas[index] = singleCheckCalldata;
+        return calldatas;
+    }
+
+    function generateSelfAddressChecks(
+        bool[][] memory selfAddressChecks,
+        uint256 length,
+        uint256 index
+    ) internal pure returns (bool[][] memory) {
+        bool[] memory checkArray = new bool[](length);
+        selfAddressChecks[index] = checkArray;
+        return selfAddressChecks;
+    }
+
+    function _initializeCheckData(uint256 length)
+        internal
+        pure
+        returns (CheckData memory)
+    {
+        return CheckData({
+            targets: new address[](length),
+            selectors: new bytes4[](length),
+            startIndexes: new uint16[](length),
+            endIndexes: new uint16[](length),
+            calldatas: new bytes[][](length),
+            isSelfAddressChecks: new bool[][](length)
+        });
+    }
+
+    function getNextNonce() internal returns (uint256) {
+        return _nonce == type(uint256).max ? 0 : ++_nonce;
+    }
+
+    function randomInRange(uint256 min, uint256 max, bool nonZero)
+        internal
+        returns (uint256)
+    {
+        require(min <= max, "randomInRange bad inputs");
+        if (max == 0 && nonZero) return 1;
+        else if (max == min) return max;
+        return uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
+            % (max - min + 1) + min;
     }
 }
