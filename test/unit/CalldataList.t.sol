@@ -26,6 +26,13 @@ contract CalldataListUnitTest is Test {
         bool[][] isSelfAddressChecks;
     }
 
+    struct CheckDataFuzzParams {
+        address target;
+        bytes4 selector;
+        uint16 startIndex;
+        bytes singleCalldata;
+    }
+
     /// @notice reference to the Timelock contract
     Timelock private timelock;
 
@@ -186,40 +193,27 @@ contract CalldataListUnitTest is Test {
     }
 
     function testAddAndRemoveCalldataFuzzy(
-        address[] memory fuzzyTargets,
-        bytes4[] memory fuzzySelectors,
-        uint16[] memory fuzzyStartIndexes,
-        bytes[] memory fuzzyCalldatas
+        CheckDataFuzzParams[] memory fuzzyCheckData
     ) public {
-        uint256 minLength;
+        uint256 fuzzyLength;
         {
-            // find min length among all fuzzed arrays
-            minLength = fuzzyStartIndexes.length;
-            minLength = minLength > fuzzyTargets.length
-                ? fuzzyTargets.length
-                : minLength;
-            minLength = minLength > fuzzySelectors.length
-                ? fuzzySelectors.length
-                : minLength;
-            minLength = minLength > fuzzyCalldatas.length
-                ? fuzzyCalldatas.length
-                : minLength;
+            fuzzyLength = fuzzyCheckData.length;
 
-            vm.assume(minLength > 0);
+            vm.assume(fuzzyLength > 0);
 
             // number of checks for each contract address and function selector pair
-            uint256 checkCount = bound(fuzzyStartIndexes[0], 1, 10);
+            uint256 checkCount = bound(fuzzyCheckData[0].startIndex, 1, 10);
             // total length of all the checks
-            uint256 length = checkCount * minLength;
+            uint256 length = checkCount * fuzzyLength;
 
             CheckData memory checkData = _initializeCheckData(length);
 
             // generate checkCount number of checks for each contract address and function selector pair
-            for (uint256 i = 0; i < minLength; i++) {
+            for (uint256 i = 0; i < fuzzyLength; i++) {
                 // target should not be safe or timelock address
                 vm.assume(
-                    fuzzyTargets[i] != address(safe)
-                        && fuzzyTargets[i] != address(timelock)
+                    fuzzyCheckData[i].target != address(safe)
+                        && fuzzyCheckData[i].target != address(timelock)
                 );
 
                 // generate checkCount number of checks
@@ -227,14 +221,14 @@ contract CalldataListUnitTest is Test {
                     // index where the new check is added
                     uint256 index = i * checkCount + j;
 
-                    checkData.targets[index] = fuzzyTargets[i];
-                    checkData.selectors[index] = fuzzySelectors[i];
+                    checkData.targets[index] = fuzzyCheckData[i].target;
+                    checkData.selectors[index] = fuzzyCheckData[i].selector;
                     checkData.startIndexes[index] =
-                        uint16(bound(fuzzyStartIndexes[i] + j, 4, 100));
+                        uint16(bound(fuzzyCheckData[i].startIndex + j, 4, 100));
                     checkData.calldatas = generateCalldatas(
                         checkData.calldatas,
-                        abi.encodePacked(fuzzyCalldatas[i], j),
-                        fuzzyStartIndexes[i] + j,
+                        abi.encodePacked(fuzzyCheckData[i].singleCalldata, j),
+                        fuzzyCheckData[i].startIndex + j,
                         index
                     );
                     // set end index to start index + calldata length
@@ -259,9 +253,9 @@ contract CalldataListUnitTest is Test {
             );
 
             // assert calldata checks were added
-            for (uint256 i = 0; i < minLength; i++) {
+            for (uint256 i = 0; i < fuzzyLength; i++) {
                 uint256 finalCheckLength = timelock.getCalldataChecks(
-                    fuzzyTargets[i], fuzzySelectors[i]
+                    fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                 ).length;
                 // finalCheckLength % checkCount to cover case where a pair of
                 // contract address and selector is repeated in fuzzed array
@@ -272,23 +266,25 @@ contract CalldataListUnitTest is Test {
         }
 
         {
-            for (uint256 i = 0; i < minLength; i++) {
+            for (uint256 i = 0; i < fuzzyLength; i++) {
                 uint256 checksLength = timelock.getCalldataChecks(
-                    fuzzyTargets[i], fuzzySelectors[i]
+                    fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                 ).length;
                 uint256 index;
                 while (checksLength > 0) {
                     index = randomInRange(0, checksLength - 1, false);
                     vm.prank(address(timelock));
                     timelock.removeCalldataCheck(
-                        fuzzyTargets[i], fuzzySelectors[i], index
+                        fuzzyCheckData[i].target,
+                        fuzzyCheckData[i].selector,
+                        index
                     );
                     checksLength--;
                 }
                 // assert calldata checks removed
                 assertEq(
                     timelock.getCalldataChecks(
-                        fuzzyTargets[i], fuzzySelectors[i]
+                        fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                     ).length,
                     0,
                     "all checks not removed"
