@@ -1,5 +1,8 @@
 methods {
+    function addCalldataCheck(address,bytes4,uint16,uint16,bytes[],bool[]) external  ;
+    function addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]) external;
     function removeCalldataCheck(address,bytes4,uint256) external                    ;
+    function removeAllCalldataChecks(address[],bytes4[]) external                    ;
     function getRoleMemberCount(bytes32)           external returns (uint256) envfree;
     function DEFAULT_ADMIN_ROLE()                  external returns (bytes32) envfree;
     function expirationPeriod()                    external returns (uint256) envfree;

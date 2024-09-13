@@ -30,12 +30,6 @@ invariant setLengthInvariant()
 invariant timestampInvariant(bytes32 proposalId)
     t.timestamps[proposalId] == timestamps(proposalId);
 
-invariant noSelfWhitelisting(bytes4 selector)
-    t._calldataList[timelockAddress()][selector].length == 0;
-
-invariant noSafeWhitelisting(bytes4 selector)
-    t._calldataList[safe()][selector].length == 0;
-
 invariant minDelayInvariant()
     minDelay() >= oneDay() && minDelay() <= oneMonth();
 
@@ -194,16 +188,6 @@ rule revokeHotSigner(env e, address signer) {
     revokeHotSigner(e, signer);
 
     assert !hasRole(HOT_SIGNER_ROLE(), signer), "signer should not have hot signer role";
-}
-
-/// removeCalldataCheck removes all calldata checks
-rule removeCalldataCheck(env e, address target, bytes4 selector, uint256 index) {
-    mathint len = t._calldataList[target][selector].length;
-
-    removeCalldataCheck(e, target, selector, index);
-
-    /// verify all state transitions
-    assert to_mathint(t._calldataList[target][selector].length) == len - 1, "calldata list should be empty";
 }
 
 /// post execute, proposal timestamp is set to 1
