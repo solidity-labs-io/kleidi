@@ -47,6 +47,8 @@ rule removeCalldataCheck(env e, address target, bytes4 selector, uint256 index) 
 rule addCalldataCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data, bool[] isSelfAddressCheck) {
     mathint len = t._calldataList[target][selector].length;
     uint256 uint256Len = t._calldataList[target][selector].length;
+    uint256 numberValues = t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length;
+    require numberValues + data.length <= to_mathint(uintMax());
 
     addCalldataCheck(e, target, selector, startIndex, endIndex, data, isSelfAddressCheck);
 
@@ -54,7 +56,7 @@ rule addCalldataCheck(env e, address target, bytes4 selector, uint16 startIndex,
     assert to_mathint(t._calldataList[target][selector].length) == len + 1, "one calldata check should be added";
     assert startIndex >= 4, "start index should be greater than 3";
     assert endIndex >= startIndex, "end index should be greater than equal to start index";
-    assert t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length == data.length, "All OR data should be added for the check";
+    assert t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length == assert_uint256(data.length + numberValues), "All OR data should be added for the check";
 }
 
 /// addCalldataCheck add 1 calldata check
