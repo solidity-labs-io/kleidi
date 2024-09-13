@@ -18,6 +18,10 @@ import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 import {
+    generateCalldatas,
+    generateSelfAddressChecks
+} from "test/utils/NestedArrayHelper.sol";
+import {
     InstanceDeployer,
     NewInstance,
     SystemInstance
@@ -87,7 +91,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         ethenaUsd = addresses.getAddress("ETHENA_USD");
         dai = addresses.getAddress("DAI");
         irm = addresses.getAddress("MORPHO_BLUE_IRM");
-        oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
+        oracle = addresses.getAddress("MORPHO_BLUE_EUSD_DAI_ORACLE");
         multicall = addresses.getAddress("MULTICALL3");
         morphoBlue = addresses.getAddress("MORPHO_BLUE");
 
@@ -211,30 +215,40 @@ contract DeploymentMultichainTest is SystemDeploy {
             selectors[6] = IMorphoBase.supplyCollateral.selector;
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
 
-            bytes[] memory calldatas = new bytes[](8);
+            bytes[][] memory calldatas = new bytes[][](8);
+            bytes memory singleCalldata;
+
             /// can only deposit to dai/eusd pool
-            calldatas[0] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            singleCalldata = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 0);
 
             /// can only deposit to timelock
-            calldatas[1] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 1);
 
             /// morpho blue address can be approved to spend eUSD
-            calldatas[2] = abi.encodePacked(morphoBlue);
+            singleCalldata = abi.encodePacked(morphoBlue);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 2);
 
             /// can only borrow on behalf of timelock
-            calldatas[3] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 3);
 
             /// can only deposit to timelock
-            calldatas[4] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 4);
 
             /// can only repay on behalf of timelock
-            calldatas[5] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 5);
 
             /// can only supply collateral on behalf of timelock
-            calldatas[6] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 6);
 
             /// can only withdraw collateral back to timelock
-            calldatas[7] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 7);
 
             address[] memory targets = new address[](8);
             targets[0] = morphoBlue;
@@ -246,15 +260,34 @@ contract DeploymentMultichainTest is SystemDeploy {
             targets[6] = morphoBlue;
             targets[7] = morphoBlue;
 
-            bool[] memory isSelfAddressCheck = new bool[](8);
-            isSelfAddressCheck[0] = false;
-            isSelfAddressCheck[1] = true;
-            isSelfAddressCheck[2] = false;
-            isSelfAddressCheck[3] = true;
-            isSelfAddressCheck[4] = true;
-            isSelfAddressCheck[5] = true;
-            isSelfAddressCheck[6] = true;
-            isSelfAddressCheck[7] = true;
+            bool[][] memory isSelfAddressChecks = new bool[][](8);
+            bool isSelfAddressCheck = false;
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 0
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 2
+            );
+
+            isSelfAddressCheck = true;
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 1
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 3
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 4
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 5
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 6
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 7
+            );
 
             instance = NewInstance(
                 owners,
@@ -274,7 +307,7 @@ contract DeploymentMultichainTest is SystemDeploy {
                     startIndexes,
                     endIndexes,
                     calldatas,
-                    isSelfAddressCheck,
+                    isSelfAddressChecks,
                     bytes32(0)
                 )
             );
@@ -319,8 +352,6 @@ contract DeploymentMultichainTest is SystemDeploy {
         addressCalculation =
             AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
 
-        instance.timelockParams.isSelfAddressCheck[1] = false;
-
         SystemInstance memory calculatedInstanceBase =
             addressCalculation.calculateAddress(instance);
 
@@ -334,10 +365,15 @@ contract DeploymentMultichainTest is SystemDeploy {
         instance.timelockParams.endIndexes = new uint16[](1);
         instance.timelockParams.endIndexes[0] = 10;
 
-        instance.timelockParams.datas = new bytes[](1);
-        instance.timelockParams.datas[0] = new bytes(6);
+        instance.timelockParams.datas = new bytes[][](1);
+        bytes[] memory data = new bytes[](1);
+        data[0] = new bytes(6);
+        instance.timelockParams.datas[0] = data;
 
-        instance.timelockParams.isSelfAddressCheck = new bool[](1);
+        instance.timelockParams.isSelfAddressCheck = new bool[][](1);
+        bool[] memory check = new bool[](1);
+        check[0] = false;
+        instance.timelockParams.isSelfAddressCheck[0] = check;
 
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
@@ -471,30 +507,40 @@ contract DeploymentMultichainTest is SystemDeploy {
             selectors[6] = IMorphoBase.supplyCollateral.selector;
             selectors[7] = IMorphoBase.withdrawCollateral.selector;
 
-            bytes[] memory calldatas = new bytes[](8);
+            bytes[][] memory calldatas = new bytes[][](8);
+            bytes memory singleCalldata;
+
             /// can only deposit to dai/eusd pool
-            calldatas[0] = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            singleCalldata = abi.encode(dai, ethenaUsd, oracle, irm, lltv);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 0);
 
             /// can only deposit to timelock
-            calldatas[1] = "";
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 1);
 
             /// morpho blue address can be approved to spend eUSD
-            calldatas[2] = abi.encodePacked(morphoBlue);
+            singleCalldata = abi.encodePacked(morphoBlue);
+            calldatas = generateCalldatas(calldatas, singleCalldata, 2);
 
-            /// can only borrow on behalf of timelock
-            calldatas[3] = "";
+            // /// can only borrow on behalf of timelock
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 3);
 
-            /// can only deposit to timelock
-            calldatas[4] = "";
+            // /// can only deposit to timelock
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 4);
 
-            /// can only repay on behalf of timelock
-            calldatas[5] = "";
+            // /// can only repay on behalf of timelock
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 5);
 
-            /// can only supply collateral on behalf of timelock
-            calldatas[6] = "";
+            // /// can only supply collateral on behalf of timelock
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 6);
 
-            /// can only withdraw collateral back to timelock
-            calldatas[7] = "";
+            // /// can only withdraw collateral back to timelock
+            singleCalldata = "";
+            calldatas = generateCalldatas(calldatas, singleCalldata, 7);
 
             address[] memory targets = new address[](8);
             targets[0] = morphoBlue;
@@ -506,15 +552,34 @@ contract DeploymentMultichainTest is SystemDeploy {
             targets[6] = morphoBlue;
             targets[7] = morphoBlue;
 
-            bool[] memory isSelfAddressCheck = new bool[](8);
-            isSelfAddressCheck[0] = false;
-            isSelfAddressCheck[1] = true;
-            isSelfAddressCheck[2] = false;
-            isSelfAddressCheck[3] = true;
-            isSelfAddressCheck[4] = true;
-            isSelfAddressCheck[5] = true;
-            isSelfAddressCheck[6] = true;
-            isSelfAddressCheck[7] = true;
+            bool[][] memory isSelfAddressChecks = new bool[][](8);
+            bool isSelfAddressCheck = false;
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 0
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 2
+            );
+
+            isSelfAddressCheck = true;
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 1
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 3
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 4
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 5
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 6
+            );
+            isSelfAddressChecks = generateSelfAddressChecks(
+                isSelfAddressChecks, isSelfAddressCheck, 7
+            );
 
             instance = NewInstance(
                 owners,
@@ -534,7 +599,7 @@ contract DeploymentMultichainTest is SystemDeploy {
                     startIndexes,
                     endIndexes,
                     calldatas,
-                    isSelfAddressCheck,
+                    isSelfAddressChecks,
                     bytes32(0)
                 )
             );

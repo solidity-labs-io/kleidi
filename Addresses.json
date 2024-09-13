@@ -79,7 +79,37 @@
     },
     {
         "addr": "0xaE4750d0813B5E37A51f7629beedd72AF1f9cA35",
-        "name": "MORPHO_BLUE_ORACLE",
+        "name": "MORPHO_BLUE_EUSD_DAI_ORACLE",
+        "chainId": 1,
+        "isContract": true
+    },
+    {
+        "addr": "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+        "name": "C_DAI",
+        "chainId": 1,
+        "isContract": true
+    },
+    {
+        "addr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "name": "WBTC",
+        "chainId": 1,
+        "isContract": true
+    },
+    {
+        "addr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "name": "WETH",
+        "chainId": 1,
+        "isContract": true
+    },
+    {
+        "addr": "0xc29B3Bc033640baE31ca53F8a0Eb892AdF68e663",
+        "name": "MORPHO_BLUE_WBTC_WETH_ORACLE",
+        "chainId": 1,
+        "isContract": true
+    },
+    {
+        "addr": "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5",
+        "name": "C_ETHER",
         "chainId": 1,
         "isContract": true
     }

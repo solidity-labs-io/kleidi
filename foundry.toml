@@ -3,10 +3,14 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-optimizer_runs = 1500
+optimizer_runs = 400
 solc_version = "0.8.25"
 evm_version="Cancun"
 fs_permissions = [{ access = "read", path = "./"}]
+gas_limit = "18446744073709551615"
+
+[fuzz]
+runs = 1000
 
 [fmt]
 line_length = 80

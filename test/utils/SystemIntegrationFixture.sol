@@ -143,11 +143,26 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// @notice DAI contract
     address public dai;
 
+    /// @notice WBTC contract
+    address public wbtc;
+
+    /// @notice WETH contract
+    address public weth;
+
+    /// @notice cDAI contract
+    address public cDai;
+
+    /// @notice cEther contract
+    address public cEther;
+
     /// @notice morpho blue irm contract
     address public irm;
 
-    /// @notice morpho blue oracle contract
-    address public oracle;
+    /// @notice morpho blue oracle contract USDe Dai
+    address public oracleEusdDai;
+
+    /// @notice morpho blue oracle contract WBTC WETH
+    address public oracleWbtcdWeth;
 
     /// @notice the multicall contract
     address public multicall;
@@ -199,9 +214,14 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         logic = addresses.getAddress("SAFE_LOGIC");
         ethenaUsd = addresses.getAddress("ETHENA_USD");
         dai = addresses.getAddress("DAI");
+        wbtc = addresses.getAddress("WBTC");
+        weth = addresses.getAddress("WETH");
         irm = addresses.getAddress("MORPHO_BLUE_IRM");
-        oracle = addresses.getAddress("MORPHO_BLUE_ORACLE");
+        oracleEusdDai = addresses.getAddress("MORPHO_BLUE_EUSD_DAI_ORACLE");
+        oracleWbtcdWeth = addresses.getAddress("MORPHO_BLUE_WBTC_WETH_ORACLE");
         multicall = addresses.getAddress("MULTICALL3");
+        cDai = addresses.getAddress("C_DAI");
+        cEther = addresses.getAddress("C_ETHER");
 
         owners.push(vm.addr(pk1));
         owners.push(vm.addr(pk2));
@@ -245,8 +265,8 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
                 new bytes4[](0),
                 new uint16[](0),
                 new uint16[](0),
-                new bytes[](0),
-                new bool[](0),
+                new bytes[][](0),
+                new bool[][](0),
                 bytes32(0)
             )
         );
