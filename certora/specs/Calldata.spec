@@ -19,7 +19,9 @@ invariant calldataIndexesInvariant(address contract, bytes4 selector, uint256 in
         t._calldataList[contract][selector][index].endIndex >= t._calldataList[contract][selector][index].startIndex
     ) {
         preserved {
-            requireInvariant calldataIndexesInvariant(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            if (t._calldataList[contract][selector].length >= 1) {
+                requireInvariant calldataIndexesInvariant(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            }
         }
     }
 
@@ -31,7 +33,9 @@ invariant singleCheckIfWildcard(address contract, bytes4 selector, uint256 index
        t._calldataList[contract][selector].length == 1
     ) {
         preserved {
-            requireInvariant singleCheckIfWildcard(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            if (t._calldataList[contract][selector].length >= 1) {
+                requireInvariant singleCheckIfWildcard(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            }
         }
     }
 
