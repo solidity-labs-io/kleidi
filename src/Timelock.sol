@@ -1,23 +1,11 @@
-// SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.25;
 
-import {
-    AccessControl,
-    IAccessControl
-} from "@openzeppelin-contracts/contracts/access/AccessControl.sol";
-import {AccessControlEnumerable} from
-    "@openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {
-    IERC165,
-    ERC165
-} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
-import {EnumerableSet} from
-    "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
+import {AccessControl, IAccessControl} from "@openzeppelin-contracts/contracts/access/AccessControl.sol";
+import {AccessControlEnumerable} from "@openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
+import {IERC1155Receiver} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC721Receiver} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC165, ERC165} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import {EnumerableSet} from "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Safe} from "@safe/Safe.sol";
 
 import {BytesHelper} from "src/BytesHelper.sol";
@@ -118,10 +106,8 @@ contract Timelock is
     mapping(bytes32 proposalId => uint256 executionTime) public timestamps;
 
     /// @notice mapping of contract address to function selector to array of Index structs
-    mapping(
-        address contractAddress
-            => mapping(bytes4 selector => Index[] calldataChecks)
-    ) private _calldataList;
+    mapping(address contractAddress => mapping(bytes4 selector => Index[] calldataChecks))
+        private _calldataList;
 
     /// minDelay >= MIN_DELAY && minDelay <= MAX_DELAY
 
@@ -358,7 +344,8 @@ contract Timelock is
     /// @notice allows timelocked actions to make certain parameter changes
     modifier onlyTimelock() {
         require(
-            msg.sender == address(this), "Timelock: caller is not the timelock"
+            msg.sender == address(this),
+            "Timelock: caller is not the timelock"
         );
         _;
     }
@@ -390,15 +377,13 @@ contract Timelock is
     /// @dev See {IERC165-supportsInterface}.
     /// @notice supports 1155 and 721 receiver
     /// also supports ERC165 interface id
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(IERC165, AccessControlEnumerable)
-        returns (bool)
-    {
-        return interfaceId == type(IERC1155Receiver).interfaceId
-            || interfaceId == type(IERC721Receiver).interfaceId
-            || super.supportsInterface(interfaceId);
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(IERC165, AccessControlEnumerable) returns (bool) {
+        return
+            interfaceId == type(IERC1155Receiver).interfaceId ||
+            interfaceId == type(IERC721Receiver).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /// @dev Returns whether an id corresponds to a registered operation. This
@@ -414,8 +399,10 @@ contract Timelock is
     function isOperationReady(bytes32 id) public view returns (bool) {
         /// cache timestamp, save up to 2 extra SLOADs
         uint256 timestamp = timestamps[id];
-        return timestamp > _DONE_TIMESTAMP && timestamp <= block.timestamp
-            && timestamp + expirationPeriod > block.timestamp;
+        return
+            timestamp > _DONE_TIMESTAMP &&
+            timestamp <= block.timestamp &&
+            timestamp + expirationPeriod > block.timestamp;
     }
 
     /// @dev Returns whether an operation is done or not.
@@ -465,11 +452,10 @@ contract Timelock is
     }
 
     /// @notice get the calldata checks for a specific contract and function selector
-    function getCalldataChecks(address contractAddress, bytes4 selector)
-        public
-        view
-        returns (IndexData[] memory indexDatas)
-    {
+    function getCalldataChecks(
+        address contractAddress,
+        bytes4 selector
+    ) public view returns (IndexData[] memory indexDatas) {
         Index[] storage indexes = _calldataList[contractAddress][selector];
 
         indexDatas = new IndexData[](indexes.length);
@@ -487,17 +473,19 @@ contract Timelock is
     /// matches the expected data
     /// @param contractAddress the address of the contract that the calldata check is applied to
     /// @param data the calldata to check
-    function checkCalldata(address contractAddress, bytes memory data)
-        public
-        view
-    {
+    function checkCalldata(
+        address contractAddress,
+        bytes memory data
+    ) public view {
         bytes4 selector = data.getFunctionSignature();
 
-        Index[] storage calldataChecks =
-            _calldataList[contractAddress][selector];
+        Index[] storage calldataChecks = _calldataList[contractAddress][
+            selector
+        ];
 
         require(
-            calldataChecks.length > 0, "CalldataList: No calldata checks found"
+            calldataChecks.length > 0,
+            "CalldataList: No calldata checks found"
         );
 
         for (uint256 i = 0; i < calldataChecks.length; i++) {
@@ -510,7 +498,8 @@ contract Timelock is
             require(
                 calldataCheck.dataHashes.contains(
                     data.getSlicedBytesHash(
-                        calldataCheck.startIndex, calldataCheck.endIndex
+                        calldataCheck.startIndex,
+                        calldataCheck.endIndex
                     )
                 ),
                 "CalldataList: Calldata does not match expected value"
@@ -567,7 +556,8 @@ contract Timelock is
         uint256 delay
     ) external onlySafe whenNotPaused {
         require(
-            targets.length == values.length && targets.length == payloads.length,
+            targets.length == values.length &&
+                targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
@@ -583,7 +573,13 @@ contract Timelock is
 
         for (uint256 i = 0; i < targets.length; i++) {
             emit CallScheduled(
-                id, i, targets[i], values[i], payloads[i], salt, delay
+                id,
+                i,
+                targets[i],
+                values[i],
+                payloads[i],
+                salt,
+                delay
             );
         }
     }
@@ -637,7 +633,8 @@ contract Timelock is
         bytes32 salt
     ) external payable whenNotPaused {
         require(
-            targets.length == values.length && targets.length == payloads.length,
+            targets.length == values.length &&
+                targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
@@ -748,7 +745,8 @@ contract Timelock is
         bytes[] calldata payloads
     ) external payable onlyRole(HOT_SIGNER_ROLE) whenNotPaused {
         require(
-            targets.length == values.length && targets.length == payloads.length,
+            targets.length == values.length &&
+                targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
@@ -771,23 +769,27 @@ contract Timelock is
     /// @notice function to grant a role to an address
     /// @param role the role to grant
     /// @param account the address to grant the role to
-    function grantRole(bytes32 role, address account)
-        public
-        override(AccessControl, IAccessControl)
-    {
-        require(role != DEFAULT_ADMIN_ROLE, "Timelock: cannot grant admin role");
+    function grantRole(
+        bytes32 role,
+        address account
+    ) public override(AccessControl, IAccessControl) {
+        require(
+            role != DEFAULT_ADMIN_ROLE,
+            "Timelock: cannot grant admin role"
+        );
         super.grantRole(role, account);
     }
 
     /// @notice function to revoke a role from an address
     /// @param role the role to revoke
     /// @param account the address to revoke the role from
-    function revokeRole(bytes32 role, address account)
-        public
-        override(AccessControl, IAccessControl)
-    {
+    function revokeRole(
+        bytes32 role,
+        address account
+    ) public override(AccessControl, IAccessControl) {
         require(
-            role != DEFAULT_ADMIN_ROLE, "Timelock: cannot revoke admin role"
+            role != DEFAULT_ADMIN_ROLE,
+            "Timelock: cannot revoke admin role"
         );
         super.revokeRole(role, account);
     }
@@ -795,12 +797,13 @@ contract Timelock is
     /// @notice function to renounce a role
     /// @param role the role to renounce
     /// @param account the address to renounce the role from
-    function renounceRole(bytes32 role, address account)
-        public
-        override(AccessControl, IAccessControl)
-    {
+    function renounceRole(
+        bytes32 role,
+        address account
+    ) public override(AccessControl, IAccessControl) {
         require(
-            role != DEFAULT_ADMIN_ROLE, "Timelock: cannot renounce admin role"
+            role != DEFAULT_ADMIN_ROLE,
+            "Timelock: cannot renounce admin role"
         );
         super.renounceRole(role, account);
     }
@@ -938,10 +941,9 @@ contract Timelock is
     /// @notice update the pause period for timelocked actions
     /// @dev can only be between 1 day and 30 days
     /// @param newPauseDuration the new pause duartion
-    function updatePauseDuration(uint128 newPauseDuration)
-        external
-        onlyTimelock
-    {
+    function updatePauseDuration(
+        uint128 newPauseDuration
+    ) external onlyTimelock {
         /// min and max checks are done in the internal function
         _updatePauseDuration(newPauseDuration);
     }
@@ -977,10 +979,12 @@ contract Timelock is
     /// @param target the address of the contract to call
     /// @param value the value in native tokens to send in the call
     /// @param data the calldata to send in the call
-    function _execute(address target, uint256 value, bytes calldata data)
-        private
-    {
-        (bool success,) = target.call{value: value}(data);
+    function _execute(
+        address target,
+        uint256 value,
+        bytes calldata data
+    ) private {
+        (bool success, ) = target.call{value: value}(data);
         require(success, "Timelock: underlying transaction reverted");
     }
 
@@ -1000,7 +1004,8 @@ contract Timelock is
         bool[] memory isSelfAddressCheck
     ) private {
         require(
-            startIndex >= 4, "CalldataList: Start index must be greater than 3"
+            startIndex >= 4,
+            "CalldataList: Start index must be greater than 3"
         );
         require(
             data.length == isSelfAddressCheck.length,
@@ -1012,10 +1017,14 @@ contract Timelock is
             contractAddress != address(this),
             "CalldataList: Address cannot be this"
         );
-        require(contractAddress != safe, "CalldataList: Address cannot be safe");
+        require(
+            contractAddress != safe,
+            "CalldataList: Address cannot be safe"
+        );
 
-        Index[] storage calldataChecks =
-            _calldataList[contractAddress][selector];
+        Index[] storage calldataChecks = _calldataList[contractAddress][
+            selector
+        ];
         uint256 listLength = calldataChecks.length;
 
         if (listLength == 1) {
@@ -1067,8 +1076,9 @@ contract Timelock is
                 );
             }
 
-            bytes32 dataHash =
-                isSelfAddressCheck[i] ? ADDRESS_THIS_HASH : keccak256(data[i]);
+            bytes32 dataHash = isSelfAddressCheck[i]
+                ? ADDRESS_THIS_HASH
+                : keccak256(data[i]);
 
             assert(indexes[indexLength].dataHashes.add(dataHash));
         }
@@ -1097,11 +1107,11 @@ contract Timelock is
         bool[][] memory isSelfAddressCheck
     ) private {
         require(
-            contractAddresses.length == selectors.length
-                && selectors.length == startIndexes.length
-                && startIndexes.length == endIndexes.length
-                && endIndexes.length == datas.length
-                && datas.length == isSelfAddressCheck.length,
+            contractAddresses.length == selectors.length &&
+                selectors.length == startIndexes.length &&
+                startIndexes.length == endIndexes.length &&
+                endIndexes.length == datas.length &&
+                datas.length == isSelfAddressCheck.length,
             "CalldataList: Array lengths must be equal"
         );
 
@@ -1126,8 +1136,9 @@ contract Timelock is
         bytes4 selector,
         uint256 index
     ) private {
-        Index[] storage calldataChecks =
-            _calldataList[contractAddress][selector];
+        Index[] storage calldataChecks = _calldataList[contractAddress][
+            selector
+        ];
         /// if no calldata checks are found, this check will fail because
         /// calldataChecks.length will be 0, and no uint value can be lt 0
         require(
@@ -1149,8 +1160,9 @@ contract Timelock is
         /// pop the index without swap if index is same as last index
         if (calldataChecks.length > 1) {
             /// index check to overwrite the specified index check with
-            Index storage lastIndexCheck =
-                calldataChecks[calldataChecks.length - 1];
+            Index storage lastIndexCheck = calldataChecks[
+                calldataChecks.length - 1
+            ];
 
             indexCheck.startIndex = lastIndexCheck.startIndex;
             indexCheck.endIndex = lastIndexCheck.endIndex;
@@ -1180,11 +1192,13 @@ contract Timelock is
     /// checks are removed from
     /// @param selector the function selector of the function that the calldata
     /// checks are removed from
-    function _removeAllCalldataChecks(address contractAddress, bytes4 selector)
-        private
-    {
-        Index[] storage calldataChecks =
-            _calldataList[contractAddress][selector];
+    function _removeAllCalldataChecks(
+        address contractAddress,
+        bytes4 selector
+    ) private {
+        Index[] storage calldataChecks = _calldataList[contractAddress][
+            selector
+        ];
 
         uint256 checksLength = calldataChecks.length;
 
@@ -1192,11 +1206,13 @@ contract Timelock is
 
         /// delete all calldata in the list for the given contract and selector
         while (checksLength != 0) {
-            Index storage removedCalldataCheck =
-                calldataChecks[checksLength - 1];
+            Index storage removedCalldataCheck = calldataChecks[
+                checksLength - 1
+            ];
 
-            bytes32[] memory dataHashes =
-                removedCalldataCheck.dataHashes.values();
+            bytes32[] memory dataHashes = removedCalldataCheck
+                .dataHashes
+                .values();
 
             emit CalldataRemoved(
                 contractAddress,
@@ -1223,22 +1239,23 @@ contract Timelock is
     /// ---------------------------------------------------------------
 
     /// @dev See {IERC721Receiver-onERC721Received}.
-    function onERC721Received(address, address, uint256, bytes memory)
-        external
-        pure
-        override
-        returns (bytes4)
-    {
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) external pure override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
     /// @dev See {IERC1155Receiver-onERC1155Received}.
-    function onERC1155Received(address, address, uint256, uint256, bytes memory)
-        external
-        pure
-        override
-        returns (bytes4)
-    {
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) external pure override returns (bytes4) {
         return this.onERC1155Received.selector;
     }
 

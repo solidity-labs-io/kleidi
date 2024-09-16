@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
 import {Test, console} from "forge-std/Test.sol";
@@ -19,7 +18,12 @@ contract RecoverySpellFactoryUnitTest is Test {
     function testDeployRecoverySpellFailsNonExistentSafe() public {
         vm.expectRevert("RecoverySpell: safe non-existent");
         recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), address(0), 1, 1, 1
+            bytes32(0),
+            new address[](1),
+            address(0),
+            1,
+            1,
+            1
         );
     }
 
@@ -41,18 +45,33 @@ contract RecoverySpellFactoryUnitTest is Test {
         }
 
         RecoverySpell recovery1 = recoveryFactory.createRecoverySpell(
-            salt, owners, SAFE, threshold, recoveryThreshold, delay
+            salt,
+            owners,
+            SAFE,
+            threshold,
+            recoveryThreshold,
+            delay
         );
 
         vm.expectRevert();
         RecoverySpell recovery2 = recoveryFactory.createRecoverySpell(
-            salt, owners, SAFE, threshold, recoveryThreshold, delay
+            salt,
+            owners,
+            SAFE,
+            threshold,
+            recoveryThreshold,
+            delay
         );
 
         assertEq(
             address(
                 recoveryFactory.calculateAddress(
-                    salt, owners, SAFE, threshold, recoveryThreshold, delay
+                    salt,
+                    owners,
+                    SAFE,
+                    threshold,
+                    recoveryThreshold,
+                    delay
                 )
             ),
             address(recovery1),
@@ -80,8 +99,13 @@ contract RecoverySpellFactoryUnitTest is Test {
             owners[i] = address(uint160(i));
         }
 
-        RecoverySpell spell =
-            _trySpellCreation(salt, owners, SAFE, threshold, delay);
+        RecoverySpell spell = _trySpellCreation(
+            salt,
+            owners,
+            SAFE,
+            threshold,
+            delay
+        );
 
         /// owner length must be greater than or equal to threshold
         /// threshold must be greater than or equal to 1
@@ -89,8 +113,10 @@ contract RecoverySpellFactoryUnitTest is Test {
         /// delay must be lte 20 days
         /// the above conditions being true implies the spell should not be zero
         if (
-            ownerLength >= threshold && threshold >= 1 && delay <= 20 days
-                && ownerLength >= recoveryThreshold
+            ownerLength >= threshold &&
+            threshold >= 1 &&
+            delay <= 20 days &&
+            ownerLength >= recoveryThreshold
         ) {
             assertNotEq(address(spell), address(0), "spell should not be zero");
         }
@@ -101,7 +127,10 @@ contract RecoverySpellFactoryUnitTest is Test {
                 spell.getOwners().length >= spell.threshold(),
                 "threshold invariant 1 violated"
             );
-            assertTrue(spell.threshold() >= 1, "threshold invariant 2 violated");
+            assertTrue(
+                spell.threshold() >= 1,
+                "threshold invariant 2 violated"
+            );
             assertTrue(spell.delay() <= 365 days, "delay invariant violated");
 
             address[] memory spellOwners = spell.getOwners();
@@ -133,9 +162,16 @@ contract RecoverySpellFactoryUnitTest is Test {
         uint256 threshold,
         uint256 delay
     ) private returns (RecoverySpell) {
-        try recoveryFactory.createRecoverySpell(
-            salt, owners, safe, threshold, threshold, delay
-        ) returns (RecoverySpell spell) {
+        try
+            recoveryFactory.createRecoverySpell(
+                salt,
+                owners,
+                safe,
+                threshold,
+                threshold,
+                delay
+            )
+        returns (RecoverySpell spell) {
             return spell;
         } catch Error(string memory) {
             return RecoverySpell(address(0));
@@ -143,9 +179,16 @@ contract RecoverySpellFactoryUnitTest is Test {
     }
 
     function testViewFunctionFailsThresholdGtOwners() public {
-        vm.expectRevert("RecoverySpell: Threshold must be lte number of owners");
+        vm.expectRevert(
+            "RecoverySpell: Threshold must be lte number of owners"
+        );
         recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), SAFE, 2, 1, 0
+            bytes32(0),
+            new address[](1),
+            SAFE,
+            2,
+            1,
+            0
         );
     }
 
@@ -154,56 +197,98 @@ contract RecoverySpellFactoryUnitTest is Test {
             "RecoverySpell: Recovery threshold must be lte number of owners"
         );
         recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), SAFE, 1, 2, 0
+            bytes32(0),
+            new address[](1),
+            SAFE,
+            1,
+            2,
+            0
         );
     }
 
     function testViewFunctionFailsThresholdEqZero() public {
         vm.expectRevert("RecoverySpell: Threshold must be gt 0");
         recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), SAFE, 0, 0, 0
+            bytes32(0),
+            new address[](1),
+            SAFE,
+            0,
+            0,
+            0
         );
     }
 
     function testViewFunctionFailsDaysOutOfBand() public {
         vm.expectRevert("RecoverySpell: Delay must be lte a year");
         recoveryFactory.calculateAddress(
-            bytes32(0), new address[](1), SAFE, 1, 0, 365 days + 1
+            bytes32(0),
+            new address[](1),
+            SAFE,
+            1,
+            0,
+            365 days + 1
         );
     }
 
     function testCreateFunctionFailsDaysOutOfBand() public {
         vm.expectRevert("RecoverySpell: Delay must be lte a year");
         recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), SAFE, 1, 0, 365 days + 1
+            bytes32(0),
+            new address[](1),
+            SAFE,
+            1,
+            0,
+            365 days + 1
         );
     }
 
     function testCreateFunctionFailsThresholdGtOwners() public {
-        vm.expectRevert("RecoverySpell: Threshold must be lte number of owners");
+        vm.expectRevert(
+            "RecoverySpell: Threshold must be lte number of owners"
+        );
         recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), SAFE, 2, 0, 1
+            bytes32(0),
+            new address[](1),
+            SAFE,
+            2,
+            0,
+            1
         );
     }
 
     function testCreateFunctionFailsThresholdEqZero() public {
         vm.expectRevert("RecoverySpell: Threshold must be gt 0");
         recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), SAFE, 0, 0, 1
+            bytes32(0),
+            new address[](1),
+            SAFE,
+            0,
+            0,
+            1
         );
     }
 
     function testCreateFunctionFailsDuplicateOwner() public {
         vm.expectRevert("RecoverySpell: Duplicate owner");
         recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](3), SAFE, 1, 1, 10 days
+            bytes32(0),
+            new address[](3),
+            SAFE,
+            1,
+            1,
+            10 days
         );
     }
 
     function testCalculateAddressFailsDuplicateOwner() public {
         vm.expectRevert("RecoverySpell: Duplicate owner");
         recoveryFactory.calculateAddress(
-            bytes32(0), new address[](3), SAFE, 1, 1, 10 days
+            bytes32(0),
+            new address[](3),
+            SAFE,
+            1,
+            1,
+            10 days
         );
     }
 
@@ -221,17 +306,29 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address firstAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
         address secondAddress = address(
             recoveryFactory.calculateAddress(
-                bytes32(0), owners, SAFE, threshold, recoveryThreshold, delay
+                bytes32(0),
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
 
         assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
+            firstAddress,
+            secondAddress,
+            "addresses should not be the same"
         );
     }
 
@@ -249,19 +346,31 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address firstAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
 
         owners[2] = address(0x4);
         address secondAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
 
         assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
+            firstAddress,
+            secondAddress,
+            "addresses should not be the same"
         );
     }
 
@@ -282,17 +391,29 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address firstAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, safe, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                safe,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
         address secondAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
 
         assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
+            firstAddress,
+            secondAddress,
+            "addresses should not be the same"
         );
     }
 
@@ -310,28 +431,49 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address firstAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
         address secondAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold + 1, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold + 1,
+                recoveryThreshold,
+                delay
             )
         );
         address thirdAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold - 1, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold - 1,
+                recoveryThreshold,
+                delay
             )
         );
 
         assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
+            firstAddress,
+            secondAddress,
+            "addresses should not be the same"
         );
         assertNotEq(
-            secondAddress, thirdAddress, "addresses should not be the same"
+            secondAddress,
+            thirdAddress,
+            "addresses should not be the same"
         );
         assertNotEq(
-            firstAddress, thirdAddress, "addresses should not be the same"
+            firstAddress,
+            thirdAddress,
+            "addresses should not be the same"
         );
     }
 
@@ -352,28 +494,49 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address firstAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
         address secondAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold + 1, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold + 1,
+                delay
             )
         );
         address thirdAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold - 1, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold - 1,
+                delay
             )
         );
 
         assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
+            firstAddress,
+            secondAddress,
+            "addresses should not be the same"
         );
         assertNotEq(
-            secondAddress, thirdAddress, "addresses should not be the same"
+            secondAddress,
+            thirdAddress,
+            "addresses should not be the same"
         );
         assertNotEq(
-            firstAddress, thirdAddress, "addresses should not be the same"
+            firstAddress,
+            thirdAddress,
+            "addresses should not be the same"
         );
     }
 
@@ -391,28 +554,49 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address firstAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay
             )
         );
         address secondAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay + 1
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay + 1
             )
         );
         address thirdAddress = address(
             recoveryFactory.calculateAddress(
-                salt, owners, SAFE, threshold, recoveryThreshold, delay - 1
+                salt,
+                owners,
+                SAFE,
+                threshold,
+                recoveryThreshold,
+                delay - 1
             )
         );
 
         assertNotEq(
-            firstAddress, secondAddress, "addresses should not be the same"
+            firstAddress,
+            secondAddress,
+            "addresses should not be the same"
         );
         assertNotEq(
-            secondAddress, thirdAddress, "addresses should not be the same"
+            secondAddress,
+            thirdAddress,
+            "addresses should not be the same"
         );
         assertNotEq(
-            firstAddress, thirdAddress, "addresses should not be the same"
+            firstAddress,
+            thirdAddress,
+            "addresses should not be the same"
         );
     }
 }

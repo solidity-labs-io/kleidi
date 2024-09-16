@@ -1,15 +1,9 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC1155Receiver} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {
-    IERC165,
-    ERC165
-} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import {IERC721Receiver} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC165, ERC165} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {FallbackManager} from "@safe/base/FallbackManager.sol";
 import {ModuleManager} from "@safe/base/ModuleManager.sol";
@@ -21,12 +15,7 @@ import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
 import {SafeL2} from "@safe/SafeL2.sol";
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
-import {
-    IMorpho,
-    Position,
-    IMorphoBase,
-    MarketParams
-} from "src/interface/IMorpho.sol";
+import {IMorpho, Position, IMorphoBase, MarketParams} from "src/interface/IMorpho.sol";
 
 import {Test, stdError, console} from "forge-std/Test.sol";
 
@@ -41,11 +30,7 @@ import {SystemDeploy} from "src/deploy/SystemDeploy.s.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
-import {
-    InstanceDeployer,
-    NewInstance,
-    SystemInstance
-} from "src/InstanceDeployer.sol";
+import {InstanceDeployer, NewInstance, SystemInstance} from "src/InstanceDeployer.sol";
 
 contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     using BytesHelper for bytes;
@@ -242,13 +227,16 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         }
 
         guard = Guard(addresses.getAddress("GUARD"));
-        recoveryFactory =
-            RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
+        recoveryFactory = RecoverySpellFactory(
+            addresses.getAddress("RECOVERY_SPELL_FACTORY")
+        );
         deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
-        timelockFactory =
-            TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
-        addressCalculation =
-            AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
+        timelockFactory = TimelockFactory(
+            addresses.getAddress("TIMELOCK_FACTORY")
+        );
+        addressCalculation = AddressCalculation(
+            addresses.getAddress("ADDRESS_CALCULATION")
+        );
 
         NewInstance memory instance = NewInstance(
             owners,
@@ -271,8 +259,8 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
             )
         );
 
-        SystemInstance memory calculatedInstance =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory calculatedInstance = addressCalculation
+            .calculateAddress(instance);
 
         recoverySpellAddress = recoveryFactory.calculateAddress(
             recoverySalt,
@@ -288,8 +276,9 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         instance.recoverySpells = recoverySpells;
 
         vm.prank(HOT_SIGNER_ONE);
-        SystemInstance memory walletInstance =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory walletInstance = deployer.createSystemInstance(
+            instance
+        );
 
         safe = SafeL2(payable(walletInstance.safe));
         timelock = Timelock(payable(walletInstance.timelock));
@@ -301,14 +290,14 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// MORPHO Helper function
 
     /// @notice Returns the id of the market `marketParams`.
-    function id(MarketParams memory marketParams)
-        internal
-        pure
-        returns (bytes32 marketParamsId)
-    {
+    function id(
+        MarketParams memory marketParams
+    ) internal pure returns (bytes32 marketParamsId) {
         assembly ("memory-safe") {
-            marketParamsId :=
-                keccak256(marketParams, MARKET_PARAMS_BYTES_LENGTH)
+            marketParamsId := keccak256(
+                marketParams,
+                MARKET_PARAMS_BYTES_LENGTH
+            )
         }
     }
 }

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
 import {Test, stdError} from "forge-std/Test.sol";
@@ -36,11 +35,19 @@ contract RecoverySpellUnitTest is Test {
 
     function testDomainSeparatorDifferentTwoContracts() public {
         RecoverySpell recovery1 = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            4,
+            recoveryDelay
         );
 
         RecoverySpell recovery2 = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            4,
+            recoveryDelay
         );
 
         assertNotEq(
@@ -62,7 +69,13 @@ contract RecoverySpellUnitTest is Test {
         owners[2] = address(0x3);
         owners[3] = address(0x4);
 
-        recovery = new RecoverySpell(owners, address(safe), 2, 0, recoveryDelay);
+        recovery = new RecoverySpell(
+            owners,
+            address(safe),
+            2,
+            0,
+            recoveryDelay
+        );
 
         vm.prank(owners[0]);
         recovery.initiateRecovery();
@@ -82,8 +95,13 @@ contract RecoverySpellUnitTest is Test {
     }
 
     function testExecuteRecoveryFailsNotInitiated() public {
-        RecoverySpell recovery =
-            new RecoverySpell(new address[](1), address(safe), 0, 0, 1);
+        RecoverySpell recovery = new RecoverySpell(
+            new address[](1),
+            address(safe),
+            0,
+            0,
+            1
+        );
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
         recovery.executeRecovery(address(1));
@@ -98,14 +116,21 @@ contract RecoverySpellUnitTest is Test {
 
     function testRecoveryFailsNotPassedDelaySignatures() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            4,
+            recoveryDelay
         );
 
         recovery.initiateRecovery();
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
         recovery.executeRecovery(
-            address(1), new uint8[](1), new bytes32[](1), new bytes32[](1)
+            address(1),
+            new uint8[](1),
+            new bytes32[](1),
+            new bytes32[](1)
         );
     }
 
@@ -131,7 +156,11 @@ contract RecoverySpellUnitTest is Test {
 
     function testRecoverySucceedsMultipleSignatures() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            4,
+            recoveryDelay
         );
 
         recovery.initiateRecovery();
@@ -171,7 +200,11 @@ contract RecoverySpellUnitTest is Test {
     function testRecoveryFailsSignaturesRequired() public {
         /// recovery threshold is 4, so 4/5 signatures are required
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 5, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            5,
+            4,
+            recoveryDelay
         );
 
         vm.expectRevert("RecoverySpell: Signatures required");
@@ -180,7 +213,11 @@ contract RecoverySpellUnitTest is Test {
 
     function testRecoveryFailsDuplicateSignature() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            4,
+            recoveryDelay
         );
 
         recovery.initiateRecovery();
@@ -213,7 +250,11 @@ contract RecoverySpellUnitTest is Test {
 
     function testRecoveryFailsInvalidSignature() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            4,
+            recoveryDelay
         );
 
         recovery.initiateRecovery();
@@ -282,7 +323,11 @@ contract RecoverySpellUnitTest is Test {
 
     function testRecoveryWithSignaturesFailsMulticall() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 4, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            4,
+            recoveryDelay
         );
 
         recovery.initiateRecovery();
@@ -312,7 +357,11 @@ contract RecoverySpellUnitTest is Test {
 
     function testRecoveryNotEnoughSignaturesFails() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 5, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            5,
+            recoveryDelay
         );
 
         recovery.initiateRecovery();
@@ -340,7 +389,11 @@ contract RecoverySpellUnitTest is Test {
 
     function testRecoveryFailsSignatureLengthMismatch() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 2, 5, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            2,
+            5,
+            recoveryDelay
         );
 
         recovery.initiateRecovery();
@@ -395,16 +448,21 @@ contract RecoverySpellUnitTest is Test {
         }
     }
 
-    function testExecuteRecoveryWithSignaturesFailsNoSignaturesNeeded()
-        public
-    {
+    function testExecuteRecoveryWithSignaturesFailsNoSignaturesNeeded() public {
         RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 3, 0, recoveryDelay
+            recoveryOwners,
+            address(safe),
+            3,
+            0,
+            recoveryDelay
         );
 
         vm.expectRevert("RecoverySpell: No signatures needed");
         recovery.executeRecovery(
-            address(1), new uint8[](1), new bytes32[](1), new bytes32[](1)
+            address(1),
+            new uint8[](1),
+            new bytes32[](1),
+            new bytes32[](1)
         );
     }
 }

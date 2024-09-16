@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
 import "test/utils/SystemIntegrationFixture.sol";
@@ -50,7 +49,10 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         recoverySpellLength = uint8(bound(recoverySpellLength, 0, 20));
 
         _createAndValidateSystemInstance(
-            ownersLength, threshold, recoverySpellLength, true
+            ownersLength,
+            threshold,
+            recoverySpellLength,
+            true
         );
     }
 
@@ -118,13 +120,20 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         );
 
         SafeProxy proxy = factory.createProxyWithNonce(
-            deployer.safeProxyLogic(), safeInitData, creationSalt
+            deployer.safeProxyLogic(),
+            safeInitData,
+            creationSalt
         );
 
-        (Timelock newTimelock, SafeProxy newSafe) =
-        _createAndValidateSystemInstance(
-            ownersLength, threshold, recoverySpellLength, true
-        );
+        (
+            Timelock newTimelock,
+            SafeProxy newSafe
+        ) = _createAndValidateSystemInstance(
+                ownersLength,
+                threshold,
+                recoverySpellLength,
+                true
+            );
 
         assertEq(
             address(proxy),
@@ -153,17 +162,23 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             "owner length incorrect"
         );
 
-        (address[] memory array,) =
-            Safe(payable(newSafe)).getModulesPaginated(address(1), 25);
+        (address[] memory array, ) = Safe(payable(newSafe)).getModulesPaginated(
+            address(1),
+            25
+        );
 
         assertEq(
-            array.length, 1 + recoverySpellLength, "module length incorrect"
+            array.length,
+            1 + recoverySpellLength,
+            "module length incorrect"
         );
 
         /// timelock validations
 
         assertEq(
-            newTimelock.safe(), address(newSafe), "timelock not owned by safe"
+            newTimelock.safe(),
+            address(newSafe),
+            "timelock not owned by safe"
         );
         assertEq(
             newTimelock.minDelay(),
@@ -179,7 +194,9 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         assertFalse(newTimelock.pauseUsed(), "pause should not be used yet");
         assertEq(newTimelock.pauseStartTime(), 0, "pauseStartTime should be 0");
         assertEq(
-            newTimelock.pauseGuardian(), guardian, "guardian incorrectly set"
+            newTimelock.pauseGuardian(),
+            guardian,
+            "guardian incorrectly set"
         );
         assertEq(
             newTimelock.pauseDuration(),
@@ -197,20 +214,33 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         uint8 threshold = 5;
         uint8 recoverySpellLength = 7;
 
-        (Timelock newTimelock1, SafeProxy newSafe1) =
-        _createAndValidateSystemInstance(
-            ownersLength, threshold, recoverySpellLength, true
-        );
+        (
+            Timelock newTimelock1,
+            SafeProxy newSafe1
+        ) = _createAndValidateSystemInstance(
+                ownersLength,
+                threshold,
+                recoverySpellLength,
+                true
+            );
 
         vm.expectRevert(stdError.assertionError);
         _createAndValidateSystemInstance(
-            ownersLength, threshold, recoverySpellLength, false
+            ownersLength,
+            threshold,
+            recoverySpellLength,
+            false
         );
 
-        (Timelock newTimelock2, SafeProxy newSafe2) =
-        _createAndValidateSystemInstance(
-            ownersLength + 1, threshold, recoverySpellLength, true
-        );
+        (
+            Timelock newTimelock2,
+            SafeProxy newSafe2
+        ) = _createAndValidateSystemInstance(
+                ownersLength + 1,
+                threshold,
+                recoverySpellLength,
+                true
+            );
 
         assertNotEq(
             address(newTimelock1),
@@ -282,11 +312,13 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
                 "owner length incorrect"
             );
 
-            (address[] memory array,) =
-                Safe(payable(newSafe)).getModulesPaginated(address(1), 25);
+            (address[] memory array, ) = Safe(payable(newSafe))
+                .getModulesPaginated(address(1), 25);
 
             assertEq(
-                array.length, 1 + recoverySpellLength, "module length incorrect"
+                array.length,
+                1 + recoverySpellLength,
+                "module length incorrect"
             );
 
             /// timelock validations
@@ -307,11 +339,18 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
                 "timelock expiration period"
             );
             assertEq(
-                newTimelock.getAllProposals().length, 0, "proposal length 0"
+                newTimelock.getAllProposals().length,
+                0,
+                "proposal length 0"
             );
-            assertFalse(newTimelock.pauseUsed(), "pause should not be used yet");
+            assertFalse(
+                newTimelock.pauseUsed(),
+                "pause should not be used yet"
+            );
             assertEq(
-                newTimelock.pauseStartTime(), 0, "pauseStartTime should be 0"
+                newTimelock.pauseStartTime(),
+                0,
+                "pauseStartTime should be 0"
             );
             assertEq(
                 newTimelock.pauseGuardian(),
@@ -395,8 +434,10 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
 
         SafeProxy safeProxy = SafeProxyFactory(deployer.safeProxyFactory())
             .createProxyWithNonce(
-            deployer.safeProxyLogic(), safeInitdata, creationSalt
-        );
+                deployer.safeProxyLogic(),
+                safeInitdata,
+                creationSalt
+            );
 
         vm.expectEmit(true, true, true, true, address(deployer));
         emit SafeCreationFailed(
@@ -408,8 +449,9 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         );
 
         vm.prank(HOT_SIGNER_ONE);
-        SystemInstance memory walletInstance =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory walletInstance = deployer.createSystemInstance(
+            instance
+        );
 
         assertEq(
             address(walletInstance.safe),

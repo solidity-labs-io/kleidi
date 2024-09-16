@@ -1,13 +1,7 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
 import {IERC20} from "@openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {
-    IMorpho,
-    Position,
-    IMorphoBase,
-    MarketParams
-} from "src/interface/IMorpho.sol";
+import {IMorpho, Position, IMorphoBase, MarketParams} from "src/interface/IMorpho.sol";
 
 import {stdError} from "forge-std/Test.sol";
 
@@ -17,15 +11,8 @@ import {RecoverySpell} from "src/RecoverySpell.sol";
 import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
-import {
-    generateCalldatas,
-    generateSelfAddressChecks
-} from "test/utils/NestedArrayHelper.sol";
-import {
-    InstanceDeployer,
-    NewInstance,
-    SystemInstance
-} from "src/InstanceDeployer.sol";
+import {generateCalldatas, generateSelfAddressChecks} from "test/utils/NestedArrayHelper.sol";
+import {InstanceDeployer, NewInstance, SystemInstance} from "src/InstanceDeployer.sol";
 
 contract DeploymentMultichainTest is SystemDeploy {
     /// @notice reference to the Guard contract
@@ -96,13 +83,16 @@ contract DeploymentMultichainTest is SystemDeploy {
         morphoBlue = addresses.getAddress("MORPHO_BLUE");
 
         guard = Guard(addresses.getAddress("GUARD"));
-        recoveryFactory =
-            RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
+        recoveryFactory = RecoverySpellFactory(
+            addresses.getAddress("RECOVERY_SPELL_FACTORY")
+        );
         deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
-        timelockFactory =
-            TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
-        addressCalculation =
-            AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
+        timelockFactory = TimelockFactory(
+            addresses.getAddress("TIMELOCK_FACTORY")
+        );
+        addressCalculation = AddressCalculation(
+            addresses.getAddress("ADDRESS_CALCULATION")
+        );
     }
 
     function testMultichainDeployment() public view {
@@ -263,30 +253,46 @@ contract DeploymentMultichainTest is SystemDeploy {
             bool[][] memory isSelfAddressChecks = new bool[][](8);
             bool isSelfAddressCheck = false;
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 0
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                0
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 2
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                2
             );
 
             isSelfAddressCheck = true;
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 1
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                1
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 3
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                3
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 4
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                4
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 5
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                5
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 6
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                6
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 7
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                7
             );
 
             instance = NewInstance(
@@ -313,18 +319,18 @@ contract DeploymentMultichainTest is SystemDeploy {
             );
         }
 
-        SystemInstance memory calculatedInstance =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory calculatedInstance = addressCalculation
+            .calculateAddress(instance);
 
         instance.recoverySpells = new address[](1);
         instance.recoverySpells[0] = address(111111111111);
 
-        SystemInstance memory calculatedInstance2 =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory calculatedInstance2 = addressCalculation
+            .calculateAddress(instance);
 
         vm.prank(hotSigners[0]);
-        SystemInstance memory actualInstanceMainnet =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory actualInstanceMainnet = deployer
+            .createSystemInstance(instance);
 
         assertEq(
             address(calculatedInstance.safe),
@@ -349,11 +355,12 @@ contract DeploymentMultichainTest is SystemDeploy {
 
         vm.selectFork(baseForkId);
 
-        addressCalculation =
-            AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
+        addressCalculation = AddressCalculation(
+            addresses.getAddress("ADDRESS_CALCULATION")
+        );
 
-        SystemInstance memory calculatedInstanceBase =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory calculatedInstanceBase = addressCalculation
+            .calculateAddress(instance);
 
         /// change the whitelisted calldata before deployment on base
         instance.timelockParams.contractAddresses = new address[](1);
@@ -376,8 +383,8 @@ contract DeploymentMultichainTest is SystemDeploy {
         instance.timelockParams.isSelfAddressCheck[0] = check;
 
         vm.prank(hotSigners[0]);
-        SystemInstance memory actualInstanceBase =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory actualInstanceBase = deployer
+            .createSystemInstance(instance);
 
         assertEq(
             address(calculatedInstanceBase.safe),
@@ -555,30 +562,46 @@ contract DeploymentMultichainTest is SystemDeploy {
             bool[][] memory isSelfAddressChecks = new bool[][](8);
             bool isSelfAddressCheck = false;
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 0
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                0
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 2
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                2
             );
 
             isSelfAddressCheck = true;
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 1
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                1
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 3
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                3
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 4
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                4
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 5
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                5
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 6
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                6
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 7
+                isSelfAddressChecks,
+                isSelfAddressCheck,
+                7
             );
 
             instance = NewInstance(
@@ -605,18 +628,18 @@ contract DeploymentMultichainTest is SystemDeploy {
             );
         }
 
-        SystemInstance memory calculatedInstance =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory calculatedInstance = addressCalculation
+            .calculateAddress(instance);
 
         instance.recoverySpells = new address[](1);
         instance.recoverySpells[0] = address(111111111111);
 
-        SystemInstance memory calculatedInstance2 =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory calculatedInstance2 = addressCalculation
+            .calculateAddress(instance);
 
         vm.prank(hotSigners[0]);
-        SystemInstance memory actualInstanceMainnet =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory actualInstanceMainnet = deployer
+            .createSystemInstance(instance);
 
         assertEq(
             address(calculatedInstance.safe),
@@ -641,17 +664,18 @@ contract DeploymentMultichainTest is SystemDeploy {
 
         vm.selectFork(baseForkId);
 
-        addressCalculation =
-            AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
+        addressCalculation = AddressCalculation(
+            addresses.getAddress("ADDRESS_CALCULATION")
+        );
 
         instance.recoverySpells[0] = address(222222222222);
 
-        SystemInstance memory calculatedInstanceBase =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory calculatedInstanceBase = addressCalculation
+            .calculateAddress(instance);
 
         vm.prank(hotSigners[0]);
-        SystemInstance memory actualInstanceBase =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory actualInstanceBase = deployer
+            .createSystemInstance(instance);
 
         assertEq(
             address(calculatedInstanceBase.safe),

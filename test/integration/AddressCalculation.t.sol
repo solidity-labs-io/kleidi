@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
 import "test/utils/SystemIntegrationFixture.sol";
@@ -41,12 +40,13 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             timelockParams: params
         });
 
-        SystemInstance memory expectedContracts =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory expectedContracts = addressCalculation
+            .calculateAddress(instance);
 
         vm.prank(HOT_SIGNER_ONE);
-        SystemInstance memory actualContracts =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory actualContracts = deployer.createSystemInstance(
+            instance
+        );
 
         assertEq(
             address(expectedContracts.safe),
@@ -89,15 +89,16 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             timelockParams: params
         });
 
-        SystemInstance memory expectedContracts =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory expectedContracts = addressCalculation
+            .calculateAddress(instance);
 
         /// remove recovery spell
         instance.recoverySpells = new address[](0);
 
         vm.prank(HOT_SIGNER_ONE);
-        SystemInstance memory actualContracts =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory actualContracts = deployer.createSystemInstance(
+            instance
+        );
 
         assertEq(
             address(expectedContracts.safe),
@@ -150,9 +151,7 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         addressCalculation.calculateAddress(instance);
     }
 
-    function testCalculateAddressTimelockFailsTimelockAlreadyDeployed()
-        public
-    {
+    function testCalculateAddressTimelockFailsTimelockAlreadyDeployed() public {
         address[] memory recoverySpell = new address[](1);
         recoverySpell[0] = recoverySpellAddress;
 
@@ -184,8 +183,8 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         /// remove recovery spell
         instance.recoverySpells = new address[](0);
 
-        SystemInstance memory expectedContracts =
-            addressCalculation.calculateAddress(instance);
+        SystemInstance memory expectedContracts = addressCalculation
+            .calculateAddress(instance);
 
         vm.etch(address(expectedContracts.timelock), hex"3afe");
 
@@ -226,8 +225,9 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         instance.recoverySpells = new address[](0);
 
         vm.prank(HOT_SIGNER_ONE);
-        SystemInstance memory contracts =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory contracts = deployer.createSystemInstance(
+            instance
+        );
 
         /// remove timelock and safe bytecode
         vm.etch(address(contracts.safe), "");
@@ -327,10 +327,12 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
 
         instance2.timelockParams.hotSigners = hotSigners;
 
-        SystemInstance memory contracts1 =
-            addressCalculation.calculateAddress(instance1);
-        SystemInstance memory contracts2 =
-            addressCalculation.calculateAddress(instance2);
+        SystemInstance memory contracts1 = addressCalculation.calculateAddress(
+            instance1
+        );
+        SystemInstance memory contracts2 = addressCalculation.calculateAddress(
+            instance2
+        );
 
         assertNotEq(
             address(contracts1.safe),
@@ -373,12 +375,13 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
             timelockParams: params
         });
 
-        SystemInstance memory expectedContracts =
-            addressCalculation.calculateAddressUnsafe(instance);
+        SystemInstance memory expectedContracts = addressCalculation
+            .calculateAddressUnsafe(instance);
 
         vm.prank(HOT_SIGNER_ONE);
-        SystemInstance memory actualContracts =
-            deployer.createSystemInstance(instance);
+        SystemInstance memory actualContracts = deployer.createSystemInstance(
+            instance
+        );
 
         assertEq(
             address(expectedContracts.safe),
