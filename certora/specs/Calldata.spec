@@ -17,10 +17,11 @@ invariant calldataIndexesInvariant(address contract, bytes4 selector, uint256 in
     (
         t._calldataList[contract][selector][index].startIndex >= 4 &&
         t._calldataList[contract][selector][index].endIndex >= t._calldataList[contract][selector][index].startIndex
-    )
-        filtered {
-            f -> f.selector != sig:removeCalldataCheck(address,bytes4,uint256).selector
+    ) {
+        preserved {
+            requireInvariant calldataIndexesInvariant(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
         }
+    }
 
 invariant singleCheckIfWildcard(address contract, bytes4 selector, uint256 index)
     (t._calldataList[contract][selector].length > index && 
@@ -28,10 +29,11 @@ invariant singleCheckIfWildcard(address contract, bytes4 selector, uint256 index
     (
        t._calldataList[contract][selector][index].startIndex == 4 &&
        t._calldataList[contract][selector].length == 1
-    )
-        filtered {
-            f -> f.selector != sig:removeCalldataCheck(address,bytes4,uint256).selector
+    ) {
+        preserved {
+            requireInvariant singleCheckIfWildcard(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
         }
+    }
 
 /// removeCalldataCheck removes 1 calldata check
 rule removeCalldataCheck(env e, address target, bytes4 selector, uint256 index) {
