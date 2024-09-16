@@ -41,18 +41,19 @@ import {
 ///    All of the following actions are batched into a single action
 ///  through multicall. The actions are as follows:
 ///
-///    3. call the guard contract from the safe
-///    4. add the timelock as a module to the safe
-///    5. add the guard to the safe
-///    6. add all recovery spells as modules to the safe
-///    7. rotate this contract as the safe owner off the safe and add the supplied
-/// owners to the safe. Update the proposal threshold on the final call
-/// performing these swaps.
+///    3. add the timelock as a module to the safe
+///    4. add the guard to the safe
+///    5. add all recovery spells as modules to the safe
+///    6. rotate this contract as the safe owner off the safe and add the supplied
+///    owners to the safe.
+///    7. Update the proposal threshold on the final call performing the rotation.
 
 struct NewInstance {
     /// safe information
     address[] owners;
     uint256 threshold;
+    /// recovery spells are not part of the creation salt as that would create
+    /// a circular dependency
     address[] recoverySpells;
     /// timelock information
     DeploymentParams timelockParams;
@@ -64,19 +65,19 @@ struct SystemInstance {
 }
 
 contract InstanceDeployer {
-    /// @notice safe proxy creation factory
+    /// @notice safe proxy creation factory, address is the same across all chains
     address public immutable safeProxyFactory;
 
-    /// @notice safe proxy logic contract
+    /// @notice safe proxy logic contract, address is the same across all chains
     address public immutable safeProxyLogic;
 
-    /// @notice timelock factory address
+    /// @notice timelock factory address, address is the same across all chains
     address public immutable timelockFactory;
 
-    /// @notice Guard address
+    /// @notice Guard address, address is the same across all chains
     address public immutable guard;
 
-    /// @notice MULTICALL3 address
+    /// @notice MULTICALL3 address, address is the same across all chains
     address public immutable multicall3;
 
     /// @notice emitted when a new system instance is created
@@ -103,6 +104,7 @@ contract InstanceDeployer {
         uint256 creationSalt
     );
 
+    /// @notice initialize with all immutable variables
     constructor(
         address _safeProxyFactory,
         address _safeProxyLogic,
@@ -126,7 +128,7 @@ contract InstanceDeployer {
     /// 1. new safe created with specified owners and threshold
     /// 2. new timelock created owned by the safe
     /// 3. timelock is a module in the safe
-    /// 4. the guard is configured on the safe
+    /// 4. the guard is configured on the safe as a guard
     /// 5. all recovery spells are added as modules on the safe
     /// 6. this contract is no longer an owner and threshold is updated to
     /// the threshold parameter passed
