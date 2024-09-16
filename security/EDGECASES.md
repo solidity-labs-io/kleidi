@@ -35,3 +35,36 @@ The two variables timestamps and _liveProposals are closely related. When a prop
 ### Expired & Cleaned Up
 - **timestamps[id]**: block.timestamp + delay
 - **_liveProposals**: does not contain id
+
+## Assumptions
+
+All system contracts are deployed across chains using the Arachnid Create2 deployer contract. This means the timelock factory, guard, multicall3, and safe addresses will be the same across all chains. If this is not true, then the system will not work as expected.
+
+
+## Deployer Parameters
+- hot signers must be the same across all chains and the hot signer in the deployment list must not be compromised.
+
+## Timelock Parameters
+- The Timelock Factory uses the message sender to calculate the address of the timelock. This means the timelock address will be the same across all chains as the TimelockFactory is called by the InstanceDeployer.
+
+## Deployment Parameters
+- The following parameters can affect the deployment address of the system:
+  - gnosis safe owners
+  - gnosis safe quorum
+  - timelock delay
+  - timelock expiration period
+  - pause guardian
+  - pause duration
+  - hot signers
+  - salt
+If the aforemented parameters are changed, the address of the deployed contracts will change.
+
+- The following parameters do not affect the deployment address of the system:
+  - recovery spells (this would create a circular dependency if it was used to calculate the address, meaning no recovery spells could be provided during construction)
+  - whitelisted targets, selectors and calldatas
+
+This means if the aforementioned parameters are changed, the changes should not affect the address of the deployed contracts.
+
+## Future Standards
+
+This wallet does not support future token standards that may be developed. This system is intentionally immutable and new protocols and token standards can only be supported by creating a new system instance with the updated contracts.
