@@ -97,6 +97,15 @@ contract CalldataListUnitTest is Test {
         );
     }
 
+    function testSetup() public view {
+        for (uint256 i = 0; i < hotSigners.length; i++) {
+            assertTrue(
+                timelock.hasRole(timelock.HOT_SIGNER_ROLE(), hotSigners[i]),
+                "hot signer not assigned"
+            );
+        }
+    }
+
     function testAddCalldataCheckAndRemoveCalldataCheckSucceeds() public {
         address[] memory targets = new address[](1);
         targets[0] = address(timelock);
@@ -619,7 +628,9 @@ contract CalldataListUnitTest is Test {
         require(min <= max, "randomInRange bad inputs");
         if (max == 0 && nonZero) return 1;
         else if (max == min) return max;
-        return uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
-            % (max - min + 1) + min;
+        return (
+            uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
+                % (max - min + 1)
+        ) + min;
     }
 }
