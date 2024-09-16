@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
 import "test/utils/SystemIntegrationFixture.sol";
@@ -78,12 +77,19 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         instance.timelockParams.pauser = guardian;
         instance.timelockParams.pauseDuration = PAUSE_DURATION;
         instance.timelockParams.salt = bytes32(uint256(0x3a17));
-        instance.timelockParams.hotSigners = new address[](0);
+        instance.timelockParams.hotSigners = new address[](1);
+        instance.timelockParams.hotSigners[0] = HOT_SIGNER_ONE;
 
         uint256 creationSalt = uint256(
             keccak256(
                 abi.encode(
-                    instance.owners, instance.threshold, instance.timelockParams
+                    instance.owners,
+                    instance.threshold,
+                    instance.timelockParams.minDelay,
+                    instance.timelockParams.expirationPeriod,
+                    instance.timelockParams.pauser,
+                    instance.timelockParams.pauseDuration,
+                    instance.timelockParams.hotSigners
                 )
             )
         );
@@ -110,13 +116,19 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             address(0)
         );
 
-        factory.createProxyWithNonce(
+        SafeProxy proxy = factory.createProxyWithNonce(
             deployer.safeProxyLogic(), safeInitData, creationSalt
         );
 
         (Timelock newTimelock, SafeProxy newSafe) =
         _createAndValidateSystemInstance(
             ownersLength, threshold, recoverySpellLength, true
+        );
+
+        assertEq(
+            address(proxy),
+            address(newSafe),
+            "safe address incorrectly calculated"
         );
 
         for (uint256 i = 0; i < ownersLength; i++) {

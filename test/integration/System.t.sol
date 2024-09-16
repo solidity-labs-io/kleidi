@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.25;
 
 import "test/utils/SystemIntegrationFixture.sol";
 import {WETH9} from "src/interface/WETH9.sol";

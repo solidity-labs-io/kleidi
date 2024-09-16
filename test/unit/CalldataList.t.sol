@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.25;
 
 import {IERC1155Receiver} from
     "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
@@ -95,6 +94,15 @@ contract CalldataListUnitTest is Test {
             new bytes[][](0),
             new bool[][](0)
         );
+    }
+
+    function testSetup() public view {
+        for (uint256 i = 0; i < hotSigners.length; i++) {
+            assertTrue(
+                timelock.hasRole(timelock.HOT_SIGNER_ROLE(), hotSigners[i]),
+                "hot signer not assigned"
+            );
+        }
     }
 
     function testAddCalldataCheckAndRemoveCalldataCheckSucceeds() public {
@@ -619,7 +627,9 @@ contract CalldataListUnitTest is Test {
         require(min <= max, "randomInRange bad inputs");
         if (max == 0 && nonZero) return 1;
         else if (max == min) return max;
-        return uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
-            % (max - min + 1) + min;
+        return (
+            uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
+                % (max - min + 1)
+        ) + min;
     }
 }
