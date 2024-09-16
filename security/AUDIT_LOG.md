@@ -1,0 +1,3 @@
+# Audit Log
+
+08/26/24 - While writing the Certora specifications for the pause functionality, it was discovered that the pause duration could be extended after a pause, thus re-pausing an already unpaused contract. This issue was remediated in commit [f3752cb5793f0b8ae83d02a74867967b9d87ca56](https://github.com/solidity-labs-io/safe-time-guard/pull/17/commits/f3752cb5793f0b8ae83d02a74867967b9d87ca56).
