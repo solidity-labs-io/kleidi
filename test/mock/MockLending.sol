@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity 0.8.25;
 
 contract MockLending {
     mapping(address owner => uint256 amount) _balance;
