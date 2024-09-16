@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.25;
+
+struct Create2Params {
+    address creator;
+    bytes creationCode;
+    bytes constructorParams;
+    bytes32 salt;
+}
 
 function calculateCreate2Address(
     address creator,
@@ -24,13 +31,6 @@ function calculateCreate2Address(
             )
         )
     );
-}
-
-struct Create2Params {
-    address creator;
-    bytes creationCode;
-    bytes constructorParams;
-    bytes32 salt;
 }
 
 function calculateCreate2Address(Create2Params memory params)
