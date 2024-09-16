@@ -5,12 +5,10 @@ import "test/utils/SystemIntegrationFixture.sol";
 contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
 
-    function testCreateAddAndUseCounterfactualRecoverySpellRecoveryThresholdTwo()
-        public
-    {
+    function testCreateAddAndUseCounterfactualRecoverySpellRecoveryThresholdTwo(
+    ) public {
         assertTrue(
-            safe.isModuleEnabled(address(timelock)),
-            "timelock not a module"
+            safe.isModuleEnabled(address(timelock)), "timelock not a module"
         );
         assertTrue(
             safe.isModuleEnabled(recoverySpellAddress),
@@ -106,8 +104,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             "recovery spell address incorrect"
         );
         assertTrue(
-            address(recovery).code.length != 0,
-            "recovery spell not created"
+            address(recovery).code.length != 0, "recovery spell not created"
         );
 
         recovery.initiateRecovery();
@@ -192,20 +189,14 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
         recovery.executeRecovery(
-            address(1),
-            new uint8[](0),
-            new bytes32[](0),
-            new bytes32[](0)
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
         );
 
         /// now timestamp exactly at recovery delay
         vm.warp(block.timestamp + 1);
         vm.expectRevert("RecoverySpell: Recovery not ready");
         recovery.executeRecovery(
-            address(1),
-            new uint8[](0),
-            new bytes32[](0),
-            new bytes32[](0)
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
         );
 
         /// now timestamp is exactly 1 second past recovery delay and recovery can commence
@@ -216,18 +207,12 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
 
         vm.expectRevert("RecoverySpell: Not enough signatures");
         recovery.executeRecovery(
-            address(1),
-            new uint8[](0),
-            new bytes32[](0),
-            new bytes32[](0)
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
         );
 
         vm.expectRevert("RecoverySpell: Invalid signature parameters");
         recovery.executeRecovery(
-            address(1),
-            new uint8[](1),
-            new bytes32[](0),
-            new bytes32[](0)
+            address(1), new uint8[](1), new bytes32[](0), new bytes32[](0)
         );
 
         bytes32[] memory r = new bytes32[](recoveryPrivateKeys.length);
@@ -253,14 +238,16 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
     }
 
     function testInitiateRecoveryPostRecoveryFails() public {
-        RecoverySpell recovery = testRecoverySpellNoSignersNeededRotatesSafeSigners();
+        RecoverySpell recovery =
+            testRecoverySpellNoSignersNeededRotatesSafeSigners();
 
         vm.expectRevert("RecoverySpell: Recovery already initiated");
         recovery.initiateRecovery();
     }
 
     function testExecuteRecoveryPostRecoveryFails() public {
-        RecoverySpell recovery = testRecoverySpellNoSignersNeededRotatesSafeSigners();
+        RecoverySpell recovery =
+            testRecoverySpellNoSignersNeededRotatesSafeSigners();
 
         vm.expectRevert(stdError.arithmeticError);
         recovery.executeRecovery(address(1));
@@ -282,10 +269,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             )
         );
 
-        assertTrue(
-            address(recovery).code.length == 0,
-            "recovery spell created"
-        );
+        assertTrue(address(recovery).code.length == 0, "recovery spell created");
 
         /// timelock calls multisig, multisig calls multisig
 
@@ -294,8 +278,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             address(safe),
             0,
             abi.encodeWithSelector(
-                ModuleManager.enableModule.selector,
-                address(recovery)
+                ModuleManager.enableModule.selector, address(recovery)
             ),
             Enum.Operation.Call
         );
@@ -322,18 +305,11 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(
-            transactionHash,
-            innerCalldatas,
-            collatedSignatures,
-            3
+            transactionHash, innerCalldatas, collatedSignatures, 3
         );
 
         safe.execTransaction(
@@ -358,9 +334,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             "recovery spell should be removed after execution"
         );
         assertEq(
-            timelock.getAllProposals().length,
-            0,
-            "proposal should be removed"
+            timelock.getAllProposals().length, 0, "proposal should be removed"
         );
     }
 

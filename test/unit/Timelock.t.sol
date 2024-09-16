@@ -5,16 +5,8 @@ import "test/utils/TimelockUnitFixture.sol";
 contract TimelockUnitTest is TimelockUnitFixture {
     function testSetup() public view {
         assertEq(timelock.safe(), address(safe), "safe incorrectly set");
-        assertEq(
-            timelock.minDelay(),
-            MINIMUM_DELAY,
-            "minDelay incorrectly set"
-        );
-        assertEq(
-            timelock.pauseGuardian(),
-            guardian,
-            "guardian incorrectly set"
-        );
+        assertEq(timelock.minDelay(), MINIMUM_DELAY, "minDelay incorrectly set");
+        assertEq(timelock.pauseGuardian(), guardian, "guardian incorrectly set");
         assertEq(
             timelock.pauseDuration(),
             PAUSE_DURATION,
@@ -98,8 +90,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(timelock),
             value: 0,
             data: abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
+                timelock.updateDelay.selector, MINIMUM_DELAY
             ),
             salt: bytes32(0),
             delay: MINIMUM_DELAY
@@ -108,36 +99,26 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id = timelock.hashOperation(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
         assertGt(timelock.timestamps(id), 1, "operation should be pending");
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id),
-            "operation should not be ready"
+            timelock.isOperationReady(id), "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id),
-            "operation should not be done"
+            timelock.isOperationDone(id), "operation should not be done"
         );
         assertFalse(
-            timelock.isOperationExpired(id),
-            "operation should not be expired"
+            timelock.isOperationExpired(id), "operation should not be expired"
         );
 
         assertEq(
-            timelock.getAllProposals()[0],
-            id,
-            "proposal should be in proposals"
+            timelock.getAllProposals()[0], id, "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length,
-            1,
-            "proposal length incorrect"
+            timelock.getAllProposals().length, 1, "proposal length incorrect"
         );
         assertEq(
             timelock.positionOf(id),
@@ -162,10 +143,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
         values[0] = 0;
 
         bytes[] memory datas = new bytes[](1);
-        datas[0] = abi.encodeWithSelector(
-            timelock.updateDelay.selector,
-            newDelay
-        );
+        datas[0] =
+            abi.encodeWithSelector(timelock.updateDelay.selector, newDelay);
 
         _scheduleBatch({
             caller: address(safe),
@@ -177,33 +156,23 @@ contract TimelockUnitTest is TimelockUnitFixture {
             delay: MINIMUM_DELAY
         });
 
-        bytes32 id = timelock.hashOperationBatch(
-            targets,
-            values,
-            datas,
-            bytes32(0)
-        );
+        bytes32 id =
+            timelock.hashOperationBatch(targets, values, datas, bytes32(0));
 
         assertGt(timelock.timestamps(id), 1, "operation should be pending");
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id),
-            "operation should not be ready"
+            timelock.isOperationReady(id), "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id),
-            "operation should not be done"
+            timelock.isOperationDone(id), "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0],
-            id,
-            "proposal should be in proposals"
+            timelock.getAllProposals()[0], id, "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length,
-            1,
-            "proposal length incorrect"
+            timelock.getAllProposals().length, 1, "proposal length incorrect"
         );
 
         return (id, targets, values, datas);
@@ -235,9 +204,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "minDelay should be updated"
         );
         assertEq(
-            timelock.getAllProposals().length,
-            0,
-            "proposal length incorrect"
+            timelock.getAllProposals().length, 0, "proposal length incorrect"
         );
 
         vm.expectRevert("Timelock: proposal does not exist");
@@ -252,12 +219,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertGt(timelock.timestamps(id), 1, "operation should be pending");
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertTrue(
-            timelock.isOperationReady(id),
-            "operation should not be ready"
+            timelock.isOperationReady(id), "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id),
-            "operation should not be done"
+            timelock.isOperationDone(id), "operation should not be done"
         );
     }
 
@@ -266,10 +231,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -302,17 +264,12 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertTrue(timelock.paused(), "timelock should be paused");
 
         assertEq(timelock.timestamps(id), 0, "operation should be pending");
+        assertFalse(timelock.isOperation(id), "operation should not be present");
         assertFalse(
-            timelock.isOperation(id),
-            "operation should not be present"
+            timelock.isOperationReady(id), "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationReady(id),
-            "operation should not be ready"
-        );
-        assertFalse(
-            timelock.isOperationDone(id),
-            "operation should not be done"
+            timelock.isOperationDone(id), "operation should not be done"
         );
 
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
@@ -403,12 +360,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         vm.expectRevert("Timelock: caller is not the timelock");
         timelock.addCalldataCheck(
-            address(0),
-            bytes4(0xFFFFFFFF),
-            0,
-            1,
-            datas,
-            selfAddressChecks
+            address(0), bytes4(0xFFFFFFFF), 0, 1, datas, selfAddressChecks
         );
     }
 
@@ -552,9 +504,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertFalse(timelock.pauseUsed(), "pause should not be used");
     }
 
-    function testSetGuardianSucceedsAsTimelockAndUnpauses(
-        address newGuardian
-    ) public {
+    function testSetGuardianSucceedsAsTimelockAndUnpauses(address newGuardian)
+        public
+    {
         vm.prank(guardian);
         timelock.pause();
 
@@ -624,8 +576,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(timelock),
             value: 0,
             data: abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
+                timelock.updateDelay.selector, MINIMUM_DELAY
             ),
             salt: bytes32(0),
             delay: MINIMUM_DELAY
@@ -636,10 +587,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -653,10 +601,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0),
             MINIMUM_DELAY - 1
         );
@@ -710,19 +655,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.expectRevert("Timelock: length mismatch");
         vm.prank(address(safe));
         timelock.executeBatch(
-            new address[](1),
-            new uint256[](0),
-            new bytes[](0),
-            bytes32(0)
+            new address[](1), new uint256[](0), new bytes[](0), bytes32(0)
         );
 
         vm.expectRevert("Timelock: length mismatch");
         vm.prank(address(safe));
         timelock.executeBatch(
-            new address[](1),
-            new uint256[](1),
-            new bytes[](0),
-            bytes32(0)
+            new address[](1), new uint256[](1), new bytes[](0), bytes32(0)
         );
     }
 
@@ -764,8 +703,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(timelock),
             value: 0,
             payload: abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
+                timelock.updateDelay.selector, MINIMUM_DELAY
             ),
             salt: bytes32(0)
         });
@@ -774,9 +712,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.isOperationExpired(id);
 
         assertEq(
-            timelock.minDelay(),
-            MINIMUM_DELAY,
-            "minDelay should be updated"
+            timelock.minDelay(), MINIMUM_DELAY, "minDelay should be updated"
         );
         assertTrue(timelock.isOperationDone(id), "operation should be done");
     }
@@ -788,10 +724,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
     }
@@ -805,8 +738,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(timelock),
             value: 0,
             data: abi.encodeWithSelector(
-                timelock.updateExpirationPeriod.selector,
-                newExpirationPeriod
+                timelock.updateExpirationPeriod.selector, newExpirationPeriod
             ),
             salt: bytes32(0),
             delay: MINIMUM_DELAY
@@ -822,8 +754,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(timelock),
             value: 0,
             payload: abi.encodeWithSelector(
-                timelock.updateExpirationPeriod.selector,
-                newExpirationPeriod
+                timelock.updateExpirationPeriod.selector, newExpirationPeriod
             ),
             salt: bytes32(0)
         });
@@ -832,8 +763,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateExpirationPeriod.selector,
-                newExpirationPeriod
+                timelock.updateExpirationPeriod.selector, newExpirationPeriod
             ),
             bytes32(0)
         );
@@ -854,9 +784,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "expirationPeriod should be updated"
         );
         assertEq(
-            timelock.minDelay(),
-            MINIMUM_DELAY,
-            "minDelay should be updated"
+            timelock.minDelay(), MINIMUM_DELAY, "minDelay should be updated"
         );
     }
 
@@ -949,12 +877,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             delay: MINIMUM_DELAY
         });
 
-        bytes32 id = timelock.hashOperationBatch(
-            targets,
-            values,
-            datas,
-            bytes32(0)
-        );
+        bytes32 id =
+            timelock.hashOperationBatch(targets, values, datas, bytes32(0));
 
         assertEq(
             timelock.timestamps(id),
@@ -963,23 +887,17 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id),
-            "operation should not be ready"
+            timelock.isOperationReady(id), "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id),
-            "operation should not be done"
+            timelock.isOperationDone(id), "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0],
-            id,
-            "proposal should be in proposals"
+            timelock.getAllProposals()[0], id, "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length,
-            1,
-            "proposal length incorrect"
+            timelock.getAllProposals().length, 1, "proposal length incorrect"
         );
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -996,17 +914,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.checkCalldata(
             address(lending),
             abi.encodeWithSelector(
-                lending.deposit.selector,
-                address(timelock),
-                100
+                lending.deposit.selector, address(timelock), 100
             )
         );
         timelock.checkCalldata(
             address(lending),
             abi.encodeWithSelector(
-                lending.withdraw.selector,
-                address(timelock),
-                100
+                lending.withdraw.selector, address(timelock), 100
             )
         );
 
@@ -1014,9 +928,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.checkCalldata(
             address(lending),
             abi.encodeWithSelector(
-                lending.withdraw.selector,
-                address(this),
-                100
+                lending.withdraw.selector, address(this), 100
             )
         );
         vm.expectRevert("CalldataList: Calldata does not match expected value");
@@ -1031,9 +943,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(lending),
             value: 0,
             payload: abi.encodeWithSelector(
-                lending.deposit.selector,
-                address(timelock),
-                100
+                lending.deposit.selector, address(timelock), 100
             )
         });
 
@@ -1043,9 +953,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(lending),
             value: 0,
             payload: abi.encodeWithSelector(
-                lending.withdraw.selector,
-                address(timelock),
-                100
+                lending.withdraw.selector, address(timelock), 100
             )
         });
 
@@ -1061,19 +969,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
             .getCalldataChecks(address(lending), MockLending.deposit.selector);
 
         assertEq(
-            calldataDepositChecks.length,
-            1,
-            "calldata checks should be added"
+            calldataDepositChecks.length, 1, "calldata checks should be added"
         );
         assertEq(
-            calldataDepositChecks[0].startIndex,
-            16,
-            "startIndex should be 16"
+            calldataDepositChecks[0].startIndex, 16, "startIndex should be 16"
         );
         assertEq(
-            calldataDepositChecks[0].endIndex,
-            36,
-            "startIndex should be 16"
+            calldataDepositChecks[0].endIndex, 36, "startIndex should be 16"
         );
         assertEq(
             calldataDepositChecks[0].dataHashes[0],
@@ -1085,19 +987,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
             .getCalldataChecks(address(lending), MockLending.withdraw.selector);
 
         assertEq(
-            calldataWithdrawChecks.length,
-            1,
-            "calldata checks should be added"
+            calldataWithdrawChecks.length, 1, "calldata checks should be added"
         );
         assertEq(
-            calldataWithdrawChecks[0].startIndex,
-            16,
-            "startIndex should be 16"
+            calldataWithdrawChecks[0].startIndex, 16, "startIndex should be 16"
         );
         assertEq(
-            calldataWithdrawChecks[0].endIndex,
-            36,
-            "startIndex should be 16"
+            calldataWithdrawChecks[0].endIndex, 36, "startIndex should be 16"
         );
         assertEq(
             calldataWithdrawChecks[0].dataHashes[0],
@@ -1198,12 +1094,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
                 delay: MINIMUM_DELAY
             });
 
-            bytes32 id = timelock.hashOperationBatch(
-                targets,
-                values,
-                datas,
-                bytes32(0)
-            );
+            bytes32 id =
+                timelock.hashOperationBatch(targets, values, datas, bytes32(0));
 
             assertEq(
                 timelock.timestamps(id),
@@ -1212,12 +1104,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
             );
             assertTrue(timelock.isOperation(id), "operation should be present");
             assertFalse(
-                timelock.isOperationReady(id),
-                "operation should not be ready"
+                timelock.isOperationReady(id), "operation should not be ready"
             );
             assertFalse(
-                timelock.isOperationDone(id),
-                "operation should not be done"
+                timelock.isOperationDone(id), "operation should not be done"
             );
 
             assertEq(
@@ -1254,14 +1144,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         bytes[] memory lendingPayloads = new bytes[](2);
         lendingPayloads[0] = abi.encodeWithSelector(
-            lending.deposit.selector,
-            address(timelock),
-            100
+            lending.deposit.selector, address(timelock), 100
         );
         lendingPayloads[1] = abi.encodeWithSelector(
-            lending.withdraw.selector,
-            address(timelock),
-            100
+            lending.withdraw.selector, address(timelock), 100
         );
 
         _executeWhitelistedBatch({
@@ -1273,8 +1159,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         });
 
         Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
-            address(lending),
-            MockLending.deposit.selector
+            address(lending), MockLending.deposit.selector
         );
 
         assertEq(calldataChecks.length, 1, "calldata checks should exist");
@@ -1351,9 +1236,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             )
         );
         timelock.executeWhitelistedBatch(
-            new address[](0),
-            new uint256[](0),
-            new bytes[](0)
+            new address[](0), new uint256[](0), new bytes[](0)
         );
     }
 
@@ -1369,8 +1252,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.cancel(id);
 
         assertFalse(
-            timelock.isOperation(id),
-            "operation should no longer be present"
+            timelock.isOperation(id), "operation should no longer be present"
         );
 
         vm.expectRevert("Timelock: operation non-existent");
@@ -1398,39 +1280,32 @@ contract TimelockUnitTest is TimelockUnitFixture {
         uint256 timestamp = block.timestamp + MIN_DELAY;
 
         assertFalse(
-            timelock.isOperationExpired(id),
-            "operation should not be expired"
+            timelock.isOperationExpired(id), "operation should not be expired"
         );
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
 
         assertFalse(
-            timelock.isOperationExpired(id),
-            "operation should not be expired"
+            timelock.isOperationExpired(id), "operation should not be expired"
         );
 
         vm.warp(block.timestamp + EXPIRATION_PERIOD - 1);
 
         assertFalse(
-            timelock.isOperationExpired(id),
-            "operation should not be expired"
+            timelock.isOperationExpired(id), "operation should not be expired"
         );
 
         vm.warp(block.timestamp + 1);
 
         assertTrue(
-            timelock.isOperationExpired(id),
-            "operation should not be expired"
+            timelock.isOperationExpired(id), "operation should not be expired"
         );
 
         vm.expectRevert("Timelock: operation is not ready");
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
 
@@ -1464,8 +1339,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id = testScheduleProposalSafeSucceeds();
 
         assertFalse(
-            timelock.isOperationExpired(id),
-            "operation should not be expired"
+            timelock.isOperationExpired(id), "operation should not be expired"
         );
 
         vm.expectRevert("Timelock: operation not expired");
@@ -1480,16 +1354,12 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         vm.expectRevert("Timelock: length mismatch");
         timelock.executeWhitelistedBatch(
-            new address[](1),
-            new uint256[](0),
-            new bytes[](0)
+            new address[](1), new uint256[](0), new bytes[](0)
         );
 
         vm.expectRevert("Timelock: length mismatch");
         timelock.executeWhitelistedBatch(
-            new address[](1),
-            new uint256[](1),
-            new bytes[](0)
+            new address[](1), new uint256[](1), new bytes[](0)
         );
     }
 
@@ -1512,14 +1382,11 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         vm.prank(address(timelock));
         timelock.removeCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            0
+            address(lending), MockLending.deposit.selector, 0
         );
 
         Timelock.IndexData[] memory calldataChecks = timelock.getCalldataChecks(
-            address(lending),
-            MockLending.deposit.selector
+            address(lending), MockLending.deposit.selector
         );
 
         assertEq(calldataChecks.length, 0, "calldata checks should be removed");
@@ -1544,28 +1411,18 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         {
             Timelock.IndexData[] memory calldataChecks = timelock
-                .getCalldataChecks(
-                    address(lending),
-                    MockLending.deposit.selector
-                );
+                .getCalldataChecks(address(lending), MockLending.deposit.selector);
 
             assertEq(
-                calldataChecks.length,
-                0,
-                "calldata checks should be removed"
+                calldataChecks.length, 0, "calldata checks should be removed"
             );
         }
         {
             Timelock.IndexData[] memory calldataChecks = timelock
-                .getCalldataChecks(
-                    address(lending),
-                    MockLending.withdraw.selector
-                );
+                .getCalldataChecks(address(lending), MockLending.withdraw.selector);
 
             assertEq(
-                calldataChecks.length,
-                0,
-                "calldata checks should be removed"
+                calldataChecks.length, 0, "calldata checks should be removed"
             );
         }
 
@@ -1574,9 +1431,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             address(lending),
             0,
             abi.encodeWithSelector(
-                MockLending.deposit.selector,
-                address(timelock),
-                100
+                MockLending.deposit.selector, address(timelock), 100
             )
         );
 
@@ -1585,9 +1440,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             address(lending),
             0,
             abi.encodeWithSelector(
-                MockLending.withdraw.selector,
-                address(timelock),
-                100
+                MockLending.withdraw.selector, address(timelock), 100
             )
         );
     }
@@ -1615,10 +1468,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
 
@@ -1628,10 +1478,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
     }
@@ -1645,10 +1492,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
 
@@ -1657,10 +1501,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
     }
@@ -1743,8 +1584,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(timelock),
             value: 0,
             data: abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY - 1
+                timelock.updateDelay.selector, MINIMUM_DELAY - 1
             ),
             salt: bytes32(0),
             delay: MINIMUM_DELAY
@@ -1754,8 +1594,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY - 1
+                timelock.updateDelay.selector, MINIMUM_DELAY - 1
             ),
             bytes32(0)
         );
@@ -1767,23 +1606,17 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
         assertTrue(timelock.isOperation(id), "operation should be present");
         assertFalse(
-            timelock.isOperationReady(id),
-            "operation should not be ready"
+            timelock.isOperationReady(id), "operation should not be ready"
         );
         assertFalse(
-            timelock.isOperationDone(id),
-            "operation should not be done"
+            timelock.isOperationDone(id), "operation should not be done"
         );
 
         assertEq(
-            timelock.getAllProposals()[0],
-            id,
-            "proposal should be in proposals"
+            timelock.getAllProposals()[0], id, "proposal should be in proposals"
         );
         assertEq(
-            timelock.getAllProposals().length,
-            1,
-            "proposal length incorrect"
+            timelock.getAllProposals().length, 1, "proposal length incorrect"
         );
 
         vm.warp(block.timestamp + MINIMUM_DELAY);
@@ -1793,8 +1626,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             address(timelock),
             0,
             abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY - 1
+                timelock.updateDelay.selector, MINIMUM_DELAY - 1
             ),
             bytes32(0)
         );
@@ -1811,10 +1643,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
 
         bytes32 id = timelock.hashOperationBatch(
-            new address[](0),
-            new uint256[](0),
-            new bytes[](0),
-            bytes32(0)
+            new address[](0), new uint256[](0), new bytes[](0), bytes32(0)
         );
 
         vm.warp(
@@ -1836,26 +1665,19 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         vm.expectRevert("Timelock: proposal does not exist");
         timelock.executeBatch(
-            new address[](0),
-            new uint256[](0),
-            new bytes[](0),
-            bytes32(0)
+            new address[](0), new uint256[](0), new bytes[](0), bytes32(0)
         );
     }
 
     function testNoopReceiveNoRevert() public {
         timelock.onERC1155Received(address(0), address(0), 0, 0, "");
         timelock.onERC1155BatchReceived(
-            address(0),
-            address(0),
-            new uint256[](0),
-            new uint256[](0),
-            ""
+            address(0), address(0), new uint256[](0), new uint256[](0), ""
         );
         timelock.onERC721Received(address(0), address(0), 0, "");
 
         vm.deal(address(this), 1);
-        (bool success, ) = address(timelock).call{value: 1}("");
+        (bool success,) = address(timelock).call{value: 1}("");
         assertTrue(success, "payable call failed");
     }
 

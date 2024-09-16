@@ -4,11 +4,7 @@ import "test/utils/TimelockUnitFixture.sol";
 
 contract TimelockPauseUnitTest is TimelockUnitFixture {
     function testSetup() public view {
-        assertEq(
-            timelock.pauseGuardian(),
-            guardian,
-            "guardian incorrectly set"
-        );
+        assertEq(timelock.pauseGuardian(), guardian, "guardian incorrectly set");
         assertEq(
             timelock.pauseDuration(),
             PAUSE_DURATION,
@@ -34,10 +30,7 @@ contract TimelockPauseUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -66,10 +59,7 @@ contract TimelockPauseUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector,
-                MINIMUM_DELAY
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
             bytes32(0)
         );
     }
@@ -80,10 +70,7 @@ contract TimelockPauseUnitTest is TimelockUnitFixture {
 
         vm.expectRevert("Pausable: paused");
         timelock.executeBatch(
-            new address[](0),
-            new uint256[](0),
-            new bytes[](0),
-            bytes32(0)
+            new address[](0), new uint256[](0), new bytes[](0), bytes32(0)
         );
     }
 
@@ -145,9 +132,9 @@ contract TimelockPauseUnitTest is TimelockUnitFixture {
         timelock.pause();
     }
 
-    function testUpdatePauseDurationTimelockSucceeds(
-        uint128 newDuration
-    ) public {
+    function testUpdatePauseDurationTimelockSucceeds(uint128 newDuration)
+        public
+    {
         newDuration = uint128(
             _bound(
                 newDuration,
@@ -160,9 +147,7 @@ contract TimelockPauseUnitTest is TimelockUnitFixture {
         timelock.updatePauseDuration(newDuration);
 
         assertEq(
-            timelock.pauseDuration(),
-            newDuration,
-            "pause duration not updated"
+            timelock.pauseDuration(), newDuration, "pause duration not updated"
         );
     }
 

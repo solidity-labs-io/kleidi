@@ -30,10 +30,7 @@ contract GuardUnitTest is CallHelper {
     }
 
     function testEnableSafe() public {
-        _initializeConfiguration({
-            caller: address(this),
-            guard: address(guard)
-        });
+        _initializeConfiguration({caller: address(this), guard: address(guard)});
     }
 
     function testInitializeFailsSafeNoBytecode() public {
@@ -140,10 +137,11 @@ contract GuardUnitTest is CallHelper {
         guard.checkAfterExecution(bytes32(0), false);
     }
 
-    function getStorageAt(
-        uint256 offset,
-        uint256 length
-    ) public view returns (bytes memory) {
+    function getStorageAt(uint256 offset, uint256 length)
+        public
+        view
+        returns (bytes memory)
+    {
         bytes memory result = new bytes(length * 32);
         for (uint256 index = 0; index < length; index++) {
             // solhint-disable-next-line no-inline-assembly

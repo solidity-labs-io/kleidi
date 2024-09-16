@@ -8,9 +8,7 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
     /// @param creationTime of the new timelock
     /// @param sender that called the contract to create the timelock
     event TimelockCreated(
-        address indexed timelock,
-        uint256 creationTime,
-        address sender
+        address indexed timelock, uint256 creationTime, address sender
     );
 
     function testTimelockCreation() public view {
@@ -64,10 +62,8 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             salt: salt
         });
 
-        address newTimelock = timelockFactory.createTimelock(
-            address(this),
-            params
-        );
+        address newTimelock =
+            timelockFactory.createTimelock(address(this), params);
 
         assertTrue(
             timelockFactory.factoryCreated(newTimelock),
@@ -95,34 +91,24 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
         });
 
         vm.prank(address(1000000000));
-        address newTimelockSenderOne = timelockFactory.createTimelock(
-            address(this),
-            params
-        );
+        address newTimelockSenderOne =
+            timelockFactory.createTimelock(address(this), params);
 
         assertTrue(
             timelockFactory.factoryCreated(newTimelockSenderOne),
             "Timelock should be created by factory"
         );
-        assertTrue(
-            newTimelockSenderOne.code.length > 0,
-            "Timelock not created"
-        );
+        assertTrue(newTimelockSenderOne.code.length > 0, "Timelock not created");
 
         vm.prank(address(2000000000));
-        address newTimelockSenderTwo = timelockFactory.createTimelock(
-            address(this),
-            params
-        );
+        address newTimelockSenderTwo =
+            timelockFactory.createTimelock(address(this), params);
 
         assertTrue(
             timelockFactory.factoryCreated(newTimelockSenderTwo),
             "Timelock should be created by factory"
         );
-        assertTrue(
-            newTimelockSenderTwo.code.length > 0,
-            "Timelock not created"
-        );
+        assertTrue(newTimelockSenderTwo.code.length > 0, "Timelock not created");
 
         assertNotEq(
             newTimelockSenderTwo,
@@ -132,8 +118,8 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
     }
 
     function testTimelockCreationCode() public view {
-        bytes memory timelockCreationCode = timelockFactory
-            .timelockCreationCode();
+        bytes memory timelockCreationCode =
+            timelockFactory.timelockCreationCode();
         bytes memory actualTimelockCreationCode = type(Timelock).creationCode;
 
         assertEq(
@@ -171,9 +157,8 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             params.pauseDuration,
             params.hotSigners
         );
-        create2Params.salt = keccak256(
-            abi.encodePacked(params.salt, address(this))
-        );
+        create2Params.salt =
+            keccak256(abi.encodePacked(params.salt, address(this)));
 
         address newTimelock = calculateCreate2Address(create2Params);
 

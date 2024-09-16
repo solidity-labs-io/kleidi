@@ -1,8 +1,13 @@
 pragma solidity 0.8.25;
 
-import {IERC1155Receiver} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
-import {IERC165, ERC165} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import {IERC1155Receiver} from
+    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC721Receiver} from
+    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC165,
+    ERC165
+} from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
 
 import {Test, console} from "forge-std/Test.sol";
 
@@ -147,64 +152,49 @@ contract CalldataListUnitTest is Test {
         );
 
         assertEq(
-            timelock
-                .getCalldataChecks(
-                    address(lending),
-                    MockLending.deposit.selector
-                )
-                .length,
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
             2,
             "calldata checks not added"
         );
 
         vm.prank(address(timelock));
         timelock.removeCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            0
+            address(lending), MockLending.deposit.selector, 0
         );
 
         assertEq(
-            timelock
-                .getCalldataChecks(
-                    address(lending),
-                    MockLending.deposit.selector
-                )
-                .length,
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
             1,
             "calldata check not removed"
         );
         assertEq(
-            timelock
-            .getCalldataChecks(address(lending), MockLending.deposit.selector)[
-                0
-            ].startIndex,
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            )[0].startIndex,
             16,
             "calldata check not removed"
         );
         assertEq(
-            timelock
-            .getCalldataChecks(address(lending), MockLending.deposit.selector)[
-                0
-            ].endIndex,
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            )[0].endIndex,
             36,
             "calldata check not removed"
         );
 
         vm.prank(address(timelock));
         timelock.removeCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            0
+            address(lending), MockLending.deposit.selector, 0
         );
 
         assertEq(
-            timelock
-                .getCalldataChecks(
-                    address(lending),
-                    MockLending.deposit.selector
-                )
-                .length,
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
             0,
             "calldata check not removed"
         );
@@ -230,8 +220,8 @@ contract CalldataListUnitTest is Test {
             for (uint256 i = 0; i < fuzzyLength; i++) {
                 // target should not be safe or timelock address
                 vm.assume(
-                    fuzzyCheckData[i].target != address(safe) &&
-                        fuzzyCheckData[i].target != address(timelock)
+                    fuzzyCheckData[i].target != address(safe)
+                        && fuzzyCheckData[i].target != address(timelock)
                 );
 
                 // generate checkCount number of checks
@@ -241,9 +231,8 @@ contract CalldataListUnitTest is Test {
 
                     checkData.targets[index] = fuzzyCheckData[i].target;
                     checkData.selectors[index] = fuzzyCheckData[i].selector;
-                    checkData.startIndexes[index] = uint16(
-                        bound(fuzzyCheckData[i].startIndex + j, 4, 100)
-                    );
+                    checkData.startIndexes[index] =
+                        uint16(bound(fuzzyCheckData[i].startIndex + j, 4, 100));
                     checkData.calldatas = generateCalldatas(
                         checkData.calldatas,
                         abi.encodePacked(fuzzyCheckData[i].singleCalldata, j),
@@ -251,9 +240,8 @@ contract CalldataListUnitTest is Test {
                         index
                     );
                     // set end index to start index + calldata length
-                    checkData.endIndexes[index] =
-                        checkData.startIndexes[index] +
-                        uint16(checkData.calldatas[index][0].length);
+                    checkData.endIndexes[index] = checkData.startIndexes[index]
+                        + uint16(checkData.calldatas[index][0].length);
                     checkData.isSelfAddressChecks = generateSelfAddressChecks(
                         checkData.isSelfAddressChecks,
                         checkData.calldatas[index].length,
@@ -274,12 +262,9 @@ contract CalldataListUnitTest is Test {
 
             // assert calldata checks were added
             for (uint256 i = 0; i < fuzzyLength; i++) {
-                uint256 finalCheckLength = timelock
-                    .getCalldataChecks(
-                        fuzzyCheckData[i].target,
-                        fuzzyCheckData[i].selector
-                    )
-                    .length;
+                uint256 finalCheckLength = timelock.getCalldataChecks(
+                    fuzzyCheckData[i].target, fuzzyCheckData[i].selector
+                ).length;
                 // finalCheckLength % checkCount to cover case where a pair of
                 // contract address and selector is repeated in fuzzed array
                 assertTrue(
@@ -290,12 +275,9 @@ contract CalldataListUnitTest is Test {
 
         {
             for (uint256 i = 0; i < fuzzyLength; i++) {
-                uint256 checksLength = timelock
-                    .getCalldataChecks(
-                        fuzzyCheckData[i].target,
-                        fuzzyCheckData[i].selector
-                    )
-                    .length;
+                uint256 checksLength = timelock.getCalldataChecks(
+                    fuzzyCheckData[i].target, fuzzyCheckData[i].selector
+                ).length;
                 uint256 index;
                 while (checksLength > 0) {
                     index = randomInRange(0, checksLength - 1, false);
@@ -309,12 +291,9 @@ contract CalldataListUnitTest is Test {
                 }
                 // assert calldata checks removed
                 assertEq(
-                    timelock
-                        .getCalldataChecks(
-                            fuzzyCheckData[i].target,
-                            fuzzyCheckData[i].selector
-                        )
-                        .length,
+                    timelock.getCalldataChecks(
+                        fuzzyCheckData[i].target, fuzzyCheckData[i].selector
+                    ).length,
                     0,
                     "all checks not removed"
                 );
@@ -402,22 +381,16 @@ contract CalldataListUnitTest is Test {
         );
 
         assertEq(
-            timelock
-                .getCalldataChecks(
-                    address(lending),
-                    MockLending.deposit.selector
-                )
-                .length,
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
             1,
             "calldata check for deposit not added"
         );
         assertEq(
-            timelock
-                .getCalldataChecks(
-                    address(lending),
-                    MockLending.withdraw.selector
-                )
-                .length,
+            timelock.getCalldataChecks(
+                address(lending), MockLending.withdraw.selector
+            ).length,
             1,
             "calldata check for withdraw not added"
         );
@@ -583,10 +556,11 @@ contract CalldataListUnitTest is Test {
                                 HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    function sliceBytes32(
-        bytes32 data,
-        uint256 length
-    ) internal pure returns (bytes memory) {
+    function sliceBytes32(bytes32 data, uint256 length)
+        internal
+        pure
+        returns (bytes memory)
+    {
         bytes memory slicedData = new bytes(length);
         for (uint256 i = 0; i < length; i++) {
             slicedData[i] = data[i];
@@ -627,34 +601,35 @@ contract CalldataListUnitTest is Test {
         return selfAddressChecks;
     }
 
-    function _initializeCheckData(
-        uint256 length
-    ) internal pure returns (CheckData memory) {
-        return
-            CheckData({
-                targets: new address[](length),
-                selectors: new bytes4[](length),
-                startIndexes: new uint16[](length),
-                endIndexes: new uint16[](length),
-                calldatas: new bytes[][](length),
-                isSelfAddressChecks: new bool[][](length)
-            });
+    function _initializeCheckData(uint256 length)
+        internal
+        pure
+        returns (CheckData memory)
+    {
+        return CheckData({
+            targets: new address[](length),
+            selectors: new bytes4[](length),
+            startIndexes: new uint16[](length),
+            endIndexes: new uint16[](length),
+            calldatas: new bytes[][](length),
+            isSelfAddressChecks: new bool[][](length)
+        });
     }
 
     function getNextNonce() internal returns (uint256) {
         return _nonce == type(uint256).max ? 0 : ++_nonce;
     }
 
-    function randomInRange(
-        uint256 min,
-        uint256 max,
-        bool nonZero
-    ) internal returns (uint256) {
+    function randomInRange(uint256 min, uint256 max, bool nonZero)
+        internal
+        returns (uint256)
+    {
         require(min <= max, "randomInRange bad inputs");
         if (max == 0 && nonZero) return 1;
         else if (max == min) return max;
-        return
-            (uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce()))) %
-                (max - min + 1)) + min;
+        return (
+            uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
+                % (max - min + 1)
+        ) + min;
     }
 }

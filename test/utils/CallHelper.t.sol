@@ -16,10 +16,7 @@ contract CallHelper is Test {
     /// @param startHour start hour of the allowed time range
     /// @param endHour end hour of the allowed time range
     event TimeRangeAdded(
-        address indexed safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
+        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
     );
 
     /// @notice Emitted when a time range is updated for the allowed days
@@ -44,10 +41,7 @@ contract CallHelper is Test {
     /// @param startHour previous start hour of the allowed time range
     /// @param endHour previous end hour of the allowed time range
     event TimeRangeDeleted(
-        address indexed safe,
-        uint8 dayOfWeek,
-        uint8 startHour,
-        uint8 endHour
+        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
     );
 
     /// @notice Emitted when the guard is removed from a safe
@@ -117,12 +111,8 @@ contract CallHelper is Test {
         bytes32 salt,
         uint256 delay
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperation(
-            target,
-            value,
-            data,
-            salt
-        );
+        bytes32 id =
+            Timelock(payable(timelock)).hashOperation(target, value, data, salt);
         vm.expectEmit(true, true, true, true, timelock);
         emit CallScheduled(id, 0, target, value, data, salt, delay);
 
@@ -146,31 +136,18 @@ contract CallHelper is Test {
         uint256 delay
     ) internal {
         bytes32 id = Timelock(payable(timelock)).hashOperationBatch(
-            targets,
-            values,
-            payloads,
-            salt
+            targets, values, payloads, salt
         );
         vm.expectEmit(true, true, true, true, timelock);
         for (uint256 i = 0; i < targets.length; ++i) {
             emit CallScheduled(
-                id,
-                i,
-                targets[i],
-                values[i],
-                payloads[i],
-                salt,
-                delay
+                id, i, targets[i], values[i], payloads[i], salt, delay
             );
         }
 
         vm.prank(caller);
         Timelock(payable(timelock)).scheduleBatch(
-            targets,
-            values,
-            payloads,
-            salt,
-            delay
+            targets, values, payloads, salt, delay
         );
     }
 
@@ -183,10 +160,7 @@ contract CallHelper is Test {
         bytes32 salt
     ) internal {
         bytes32 id = Timelock(payable(timelock)).hashOperation(
-            target,
-            value,
-            payload,
-            salt
+            target, value, payload, salt
         );
         vm.expectEmit(true, true, true, true, timelock);
         emit CallExecuted(id, 0, target, value, payload);
@@ -204,10 +178,7 @@ contract CallHelper is Test {
         bytes32 salt
     ) internal {
         bytes32 id = Timelock(payable(timelock)).hashOperationBatch(
-            targets,
-            values,
-            payloads,
-            salt
+            targets, values, payloads, salt
         );
         for (uint256 i = 0; i < targets.length; ++i) {
             vm.expectEmit(true, true, true, true, timelock);
@@ -216,10 +187,7 @@ contract CallHelper is Test {
 
         vm.prank(caller);
         Timelock(payable(timelock)).executeBatch(
-            targets,
-            values,
-            payloads,
-            salt
+            targets, values, payloads, salt
         );
     }
 
@@ -246,20 +214,12 @@ contract CallHelper is Test {
     ) internal {
         for (uint256 i = 0; i < targets.length; ++i) {
             vm.expectEmit(true, true, true, true, timelock);
-            emit CallExecuted(
-                bytes32(0),
-                i,
-                targets[i],
-                values[i],
-                payloads[i]
-            );
+            emit CallExecuted(bytes32(0), i, targets[i], values[i], payloads[i]);
         }
 
         vm.prank(caller);
         Timelock(payable(timelock)).executeWhitelistedBatch(
-            targets,
-            values,
-            payloads
+            targets, values, payloads
         );
     }
 }

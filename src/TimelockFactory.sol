@@ -40,16 +40,14 @@ contract TimelockFactory {
     /// @param creationTime of the new timelock
     /// @param sender that called the contract to create the timelock
     event TimelockCreated(
-        address indexed timelock,
-        uint256 creationTime,
-        address sender
+        address indexed timelock, uint256 creationTime, address sender
     );
 
     /// @notice Creates a timelock for a given safe and deployment parameters
-    function createTimelock(
-        address safe,
-        DeploymentParams memory params
-    ) external returns (address timelock) {
+    function createTimelock(address safe, DeploymentParams memory params)
+        external
+        returns (address timelock)
+    {
         timelock = address(
             new Timelock{
                 salt: keccak256(abi.encodePacked(params.salt, msg.sender))

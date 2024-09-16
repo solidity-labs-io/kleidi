@@ -4,13 +4,16 @@ import "test/utils/SystemIntegrationFixture.sol";
 import {WETH9} from "src/interface/WETH9.sol";
 import {CErc20Interface} from "src/interface/CErc20Interface.sol";
 import {CEtherInterface} from "src/interface/CEtherInterface.sol";
-import {generateCalldatas, generateSelfAddressChecks} from "test/utils/NestedArrayHelper.sol";
+import {
+    generateCalldatas,
+    generateSelfAddressChecks
+} from "test/utils/NestedArrayHelper.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
 
     function testSafeSetup() public view {
-        (address[] memory modules, ) = safe.getModulesPaginated(address(1), 10);
+        (address[] memory modules,) = safe.getModulesPaginated(address(1), 10);
         assertEq(
             modules.length,
             2,
@@ -63,9 +66,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
         assertEq(timelock.pauseGuardian(), guardian, "incorrect pauser");
         assertEq(
-            timelock.pauseDuration(),
-            PAUSE_DURATION,
-            "incorrect pause duration"
+            timelock.pauseDuration(), PAUSE_DURATION, "incorrect pause duration"
         );
 
         assertTrue(
@@ -127,24 +128,19 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         calls3[0].callData = abi.encodeWithSelector(Guard.checkSafe.selector);
 
         calls3[1].callData = abi.encodeWithSelector(
-            GuardManager.setGuard.selector,
-            address(guard)
+            GuardManager.setGuard.selector, address(guard)
         );
 
         calls3[2].callData = abi.encodeWithSelector(
-            ModuleManager.enableModule.selector,
-            address(timelock)
+            ModuleManager.enableModule.selector, address(timelock)
         );
 
         calls3[3].callData = abi.encodeWithSelector(
-            ModuleManager.enableModule.selector,
-            recoverySpellAddress
+            ModuleManager.enableModule.selector, recoverySpellAddress
         );
 
-        bytes memory safeData = abi.encodeWithSelector(
-            IMulticall3.aggregate3.selector,
-            calls3
-        );
+        bytes memory safeData =
+            abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3);
 
         bytes32 transactionHash = safe.getTransactionHash(
             multicall,
@@ -159,12 +155,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(transactionHash, safeData, collatedSignatures, 3);
 
@@ -182,17 +174,14 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             collatedSignatures
         );
 
-        bytes memory guardBytes = SafeL2(payable(safe)).getStorageAt(
-            GUARD_STORAGE_SLOT,
-            1
-        );
+        bytes memory guardBytes =
+            SafeL2(payable(safe)).getStorageAt(GUARD_STORAGE_SLOT, 1);
 
         address guard = address(uint160(uint256(guardBytes.getFirstWord())));
 
         assertEq(guard, address(guard), "guard is not guard");
         assertTrue(
-            safe.isModuleEnabled(address(timelock)),
-            "timelock not a module"
+            safe.isModuleEnabled(address(timelock)), "timelock not a module"
         );
         assertTrue(
             safe.isModuleEnabled(recoverySpellAddress),
@@ -307,20 +296,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             /// can only deposit to dai/eusd pool
             bytes[] memory approvedPools = new bytes[](2);
-            approvedPools[0] = abi.encode(
-                dai,
-                ethenaUsd,
-                oracleEusdDai,
-                irm,
-                lltv
-            );
-            approvedPools[1] = abi.encode(
-                weth,
-                wbtc,
-                oracleWbtcdWeth,
-                irm,
-                lltv
-            );
+            approvedPools[0] =
+                abi.encode(dai, ethenaUsd, oracleEusdDai, irm, lltv);
+            approvedPools[1] =
+                abi.encode(weth, wbtc, oracleWbtcdWeth, irm, lltv);
             calldatas[0] = approvedPools;
 
             /// morpho blue address can be approved to spend eUSD and weth
@@ -384,66 +363,42 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bool[][] memory isSelfAddressChecks = new bool[][](14);
             bool isSelfAddressCheck = false;
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                2
+                isSelfAddressChecks, isSelfAddressCheck, 2
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                9
+                isSelfAddressChecks, isSelfAddressCheck, 9
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                10
+                isSelfAddressChecks, isSelfAddressCheck, 10
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                11
+                isSelfAddressChecks, isSelfAddressCheck, 11
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                12
+                isSelfAddressChecks, isSelfAddressCheck, 12
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                13
+                isSelfAddressChecks, isSelfAddressCheck, 13
             );
 
             isSelfAddressCheck = true;
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                1
+                isSelfAddressChecks, isSelfAddressCheck, 1
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                3
+                isSelfAddressChecks, isSelfAddressCheck, 3
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                4
+                isSelfAddressChecks, isSelfAddressCheck, 4
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                5
+                isSelfAddressChecks, isSelfAddressCheck, 5
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                6
+                isSelfAddressChecks, isSelfAddressCheck, 6
             );
             isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks,
-                isSelfAddressCheck,
-                7
+                isSelfAddressChecks, isSelfAddressCheck, 7
             );
 
             bool[] memory approveSelfAddressChecks = new bool[](2);
@@ -487,18 +442,11 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(
-            transactionHash,
-            innerCalldatas,
-            collatedSignatures,
-            3
+            transactionHash, innerCalldatas, collatedSignatures, 3
         );
 
         safe.execTransaction(
@@ -522,8 +470,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
     function testSetFallbackHandlerFails() public {
         bytes memory calldatas = abi.encodeWithSelector(
-            FallbackManager.setFallbackHandler.selector,
-            address(0)
+            FallbackManager.setFallbackHandler.selector, address(0)
         );
 
         bytes32 transactionHash = safe.getTransactionHash(
@@ -539,12 +486,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -566,10 +509,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
     function testRemoveOwnerFails() public {
         /// threshold unchanged
         bytes memory calldatas = abi.encodeWithSelector(
-            OwnerManager.removeOwner.selector,
-            address(0),
-            address(0),
-            2
+            OwnerManager.removeOwner.selector, address(0), address(0), 2
         );
 
         bytes32 transactionHash = safe.getTransactionHash(
@@ -585,12 +525,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -612,9 +548,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
     function testAddOwnerFails() public {
         /// threshold unchanged
         bytes memory calldatas = abi.encodeWithSelector(
-            OwnerManager.addOwnerWithThreshold.selector,
-            address(0),
-            2
+            OwnerManager.addOwnerWithThreshold.selector, address(0), 2
         );
 
         bytes32 transactionHash = safe.getTransactionHash(
@@ -630,12 +564,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -656,10 +586,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
     function testSwapOwnerFails() public {
         bytes memory calldatas = abi.encodeWithSelector(
-            OwnerManager.swapOwner.selector,
-            address(0),
-            address(0),
-            address(0)
+            OwnerManager.swapOwner.selector, address(0), address(0), address(0)
         );
 
         bytes32 transactionHash = safe.getTransactionHash(
@@ -675,12 +602,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -701,10 +624,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
     function testChangeThresholdFails() public {
         /// threshold unchanged
-        bytes memory calldatas = abi.encodeWithSelector(
-            OwnerManager.changeThreshold.selector,
-            2
-        );
+        bytes memory calldatas =
+            abi.encodeWithSelector(OwnerManager.changeThreshold.selector, 2);
 
         bytes32 transactionHash = safe.getTransactionHash(
             address(safe),
@@ -719,12 +640,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -745,8 +662,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
     function testEnableModuleFails() public {
         bytes memory calldatas = abi.encodeWithSelector(
-            ModuleManager.enableModule.selector,
-            address(1111111111)
+            ModuleManager.enableModule.selector, address(1111111111)
         );
 
         bytes32 transactionHash = safe.getTransactionHash(
@@ -762,12 +678,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -789,8 +701,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
     function testRemoveModuleFails() public {
         /// remove timelock as a module
         bytes memory calldatas = abi.encodeWithSelector(
-            ModuleManager.disableModule.selector,
-            address(timelock)
+            ModuleManager.disableModule.selector, address(timelock)
         );
 
         bytes32 transactionHash = safe.getTransactionHash(
@@ -806,12 +717,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -849,12 +756,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             startingNonce
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// warp forward to allowed time
 
@@ -916,18 +819,11 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.checkNSignatures(
-            transactionHash,
-            innerCalldatas,
-            collatedSignatures,
-            3
+            transactionHash, innerCalldatas, collatedSignatures, 3
         );
 
         safe.execTransaction(
@@ -964,8 +860,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             "recovery spell address incorrect"
         );
         assertTrue(
-            address(recovery).code.length != 0,
-            "recovery spell not created"
+            address(recovery).code.length != 0, "recovery spell not created"
         );
 
         recovery.initiateRecovery();
@@ -1020,8 +915,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// set old guardian again as guardian
         calldatas = abi.encodeWithSelector(
-            Timelock.setGuardian.selector,
-            address(guardian)
+            Timelock.setGuardian.selector, address(guardian)
         );
 
         innerCalldatas = abi.encodeWithSelector(
@@ -1055,10 +949,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
 
         safe.checkNSignatures(
-            transactionHash,
-            innerCalldatas,
-            collatedSignatures,
-            3
+            transactionHash, innerCalldatas, collatedSignatures, 3
         );
 
         safe.execTransaction(
@@ -1080,14 +971,12 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         /// add a new recovery spell
         uint256 newRecoveryOwnersLength = 3;
-        address[] memory newRecoveryOwners = new address[](
-            newRecoveryOwnersLength
-        );
+        address[] memory newRecoveryOwners =
+            new address[](newRecoveryOwnersLength);
 
         for (uint256 i = 0; i < newRecoveryOwnersLength; i++) {
-            newRecoveryOwners[i] = makeAddr(
-                string(abi.encodePacked("newRecoveryAddress", i))
-            );
+            newRecoveryOwners[i] =
+                makeAddr(string(abi.encodePacked("newRecoveryAddress", i)));
         }
 
         address newRecoverySpellAddress = recoveryFactory.calculateAddress(
@@ -1140,10 +1029,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
 
         safe.checkNSignatures(
-            transactionHash,
-            innerCalldatas,
-            collatedSignatures,
-            3
+            transactionHash, innerCalldatas, collatedSignatures, 3
         );
 
         safe.execTransaction(
@@ -1191,9 +1077,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             deal(ethenaUsd, address(timelock), supplyAmount);
 
             calldatas[0] = abi.encodeWithSelector(
-                IERC20.approve.selector,
-                morphoBlue,
-                supplyAmount
+                IERC20.approve.selector, morphoBlue, supplyAmount
             );
 
             calldatas[1] = abi.encodeWithSelector(
@@ -1217,14 +1101,11 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             timelock.executeWhitelistedBatch(targets, values, calldatas);
         }
 
-        bytes32 marketId = id(
-            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-        );
+        bytes32 marketId =
+            id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
-        Position memory position = IMorpho(morphoBlue).position(
-            marketId,
-            address(timelock)
-        );
+        Position memory position =
+            IMorpho(morphoBlue).position(marketId, address(timelock));
 
         assertEq(position.supplyShares, 0, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
@@ -1253,10 +1134,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_TWO);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            position = IMorpho(morphoBlue).position(
-                marketId,
-                address(timelock)
-            );
+            position = IMorpho(morphoBlue).position(marketId, address(timelock));
 
             assertEq(position.supplyShares, 0, "incorrect supply shares");
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
@@ -1357,9 +1235,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             deal(dai, address(timelock), supplyAmount);
 
             calldatas[0] = abi.encodeWithSelector(
-                IERC20.approve.selector,
-                morphoBlue,
-                supplyAmount
+                IERC20.approve.selector, morphoBlue, supplyAmount
             );
 
             calldatas[1] = abi.encodeWithSelector(
@@ -1383,20 +1259,13 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             timelock.executeWhitelistedBatch(targets, values, calldatas);
         }
 
-        bytes32 marketId = id(
-            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-        );
+        bytes32 marketId =
+            id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
-        Position memory position = IMorpho(morphoBlue).position(
-            marketId,
-            address(timelock)
-        );
+        Position memory position =
+            IMorpho(morphoBlue).position(marketId, address(timelock));
 
-        assertEq(
-            position.supplyShares,
-            supplyShares,
-            "incorrect supply shares"
-        );
+        assertEq(position.supplyShares, supplyShares, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
         assertEq(position.collateral, 0, "incorrect collateral");
 
@@ -1424,10 +1293,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_TWO);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            position = IMorpho(morphoBlue).position(
-                marketId,
-                address(timelock)
-            );
+            position = IMorpho(morphoBlue).position(marketId, address(timelock));
 
             assertEq(position.supplyShares, 0, "incorrect supply shares");
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
@@ -1518,9 +1384,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         deal(dai, address(timelock), supplyAmount);
 
         calldatas[0] = abi.encodeWithSelector(
-            IERC20.approve.selector,
-            morphoBlue,
-            supplyAmount
+            IERC20.approve.selector, morphoBlue, supplyAmount
         );
 
         calldatas[1] = abi.encodeWithSelector(
@@ -1543,14 +1407,11 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.prank(HOT_SIGNER_ONE);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-        bytes32 marketId = id(
-            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-        );
+        bytes32 marketId =
+            id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
-        Position memory position = IMorpho(morphoBlue).position(
-            marketId,
-            address(timelock)
-        );
+        Position memory position =
+            IMorpho(morphoBlue).position(marketId, address(timelock));
 
         assertGt(position.supplyShares, 0, "incorrect supply shares");
         assertEq(position.borrowShares, 0, "incorrect borrow shares");
@@ -1568,9 +1429,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         deal(ethenaUsd, address(timelock), supplyAmount);
 
         calldatas[0] = abi.encodeWithSelector(
-            IERC20.approve.selector,
-            morphoBlue,
-            supplyAmount
+            IERC20.approve.selector, morphoBlue, supplyAmount
         );
 
         calldatas[1] = abi.encodeWithSelector(
@@ -1651,9 +1510,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         targets[1] = address(morphoBlue);
 
         calldatas[0] = abi.encodeWithSelector(
-            IERC20.approve.selector,
-            morphoBlue,
-            supplyAmount / 2
+            IERC20.approve.selector, morphoBlue, supplyAmount / 2
         );
         calldatas[1] = abi.encodeWithSelector(
             IMorphoBase.repay.selector,
@@ -1757,8 +1614,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
     function testSafeRevokeHotSignerSucceed() public {
         bytes memory calldatas = abi.encodeWithSelector(
-            Timelock.revokeHotSigner.selector,
-            HOT_SIGNER_ONE
+            Timelock.revokeHotSigner.selector, HOT_SIGNER_ONE
         );
         uint256 value = 0;
 
@@ -1775,12 +1631,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         safe.execTransaction(
             address(timelock),
@@ -1826,12 +1678,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             safe.nonce()
         );
 
-        bytes memory collatedSignatures = signTxAllOwners(
-            transactionHash,
-            pk1,
-            pk2,
-            pk3
-        );
+        bytes memory collatedSignatures =
+            signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
         /// create snapshot when unpaused
         uint256 snapshot = vm.snapshot();
@@ -1877,8 +1725,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             uint256[] memory values = new uint256[](1);
             bytes[] memory payloads = new bytes[](1);
             payloads[0] = abi.encodeWithSelector(
-                Timelock.updateDelay.selector,
-                MINIMUM_DELAY * 2
+                Timelock.updateDelay.selector, MINIMUM_DELAY * 2
             );
 
             calldatas = abi.encodeWithSelector(
@@ -1903,12 +1750,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 safe.nonce()
             );
 
-            collatedSignatures = signTxAllOwners(
-                transactionHash,
-                pk1,
-                pk2,
-                pk3
-            );
+            collatedSignatures = signTxAllOwners(transactionHash, pk1, pk2, pk3);
 
             /// unpause
             vm.revertTo(snapshot);
@@ -1969,9 +1811,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             timelock.executeBatch(targets, values, payloads, bytes32(0));
 
             assertEq(
-                timelock.minDelay(),
-                MINIMUM_DELAY * 2,
-                "delay not updated"
+                timelock.minDelay(), MINIMUM_DELAY * 2, "delay not updated"
             );
 
             /// unpause
@@ -2006,8 +1846,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.revertTo(snapshot);
 
         calldatas = abi.encodeWithSelector(
-            Timelock.updateDelay.selector,
-            MINIMUM_DELAY * 2
+            Timelock.updateDelay.selector, MINIMUM_DELAY * 2
         );
 
         calldatas = abi.encodeWithSelector(
@@ -2056,16 +1895,12 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             address(timelock),
             value,
             abi.encodeWithSelector(
-                Timelock.updateDelay.selector,
-                MINIMUM_DELAY * 2
+                Timelock.updateDelay.selector, MINIMUM_DELAY * 2
             ),
             bytes32(0)
         );
 
-        calldatas = abi.encodeWithSelector(
-            Timelock.cancel.selector,
-            proposalId
-        );
+        calldatas = abi.encodeWithSelector(Timelock.cancel.selector, proposalId);
 
         transactionHash = safe.getTransactionHash(
             address(timelock),
@@ -2135,8 +1970,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.revertTo(snapshot);
 
         calldatas = abi.encodeWithSelector(
-            Timelock.updateDelay.selector,
-            MINIMUM_DELAY * 2
+            Timelock.updateDelay.selector, MINIMUM_DELAY * 2
         );
 
         vm.warp(block.timestamp + timelock.minDelay());
@@ -2184,11 +2018,8 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         vm.prank(guardian);
         timelock.pause();
 
-        calldatas = abi.encodeWithSelector(
-            IERC20.approve.selector,
-            morphoBlue,
-            1000
-        );
+        calldatas =
+            abi.encodeWithSelector(IERC20.approve.selector, morphoBlue, 1000);
 
         /// executeWhitelisted reverts when paused
         vm.prank(HOT_SIGNER_ONE);
@@ -2229,9 +2060,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             deal(dai, address(timelock), supplyAmount);
 
             calldatas[0] = abi.encodeWithSelector(
-                IERC20.approve.selector,
-                morphoBlue,
-                supplyAmount
+                IERC20.approve.selector, morphoBlue, supplyAmount
             );
 
             calldatas[1] = abi.encodeWithSelector(
@@ -2254,19 +2083,14 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(
-                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-            );
+            bytes32 marketId =
+                id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
-            Position memory position = IMorpho(morphoBlue).position(
-                marketId,
-                address(timelock)
-            );
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
 
             assertEq(
-                position.supplyShares,
-                supplyShares,
-                "incorrect supply shares"
+                position.supplyShares, supplyShares, "incorrect supply shares"
             );
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
             assertEq(position.collateral, 0, "incorrect collateral");
@@ -2304,14 +2128,11 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_TWO);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(
-                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-            );
+            bytes32 marketId =
+                id(MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv));
 
-            Position memory position = IMorpho(morphoBlue).position(
-                marketId,
-                address(timelock)
-            );
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
 
             assertEq(position.supplyShares, 0, "incorrect supply shares");
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
@@ -2335,14 +2156,11 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bytes[] memory calldatas = new bytes[](2);
 
             calldatas[0] = abi.encodeWithSelector(
-                IERC20.approve.selector,
-                cDai,
-                supplyAmount
+                IERC20.approve.selector, cDai, supplyAmount
             );
 
             calldatas[1] = abi.encodeWithSelector(
-                CErc20Interface.mint.selector,
-                supplyAmount / 2
+                CErc20Interface.mint.selector, supplyAmount / 2
             );
 
             vm.prank(HOT_SIGNER_ONE);
@@ -2396,9 +2214,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bytes[] memory calldatas = new bytes[](2);
 
             calldatas[0] = abi.encodeWithSelector(
-                IERC20.approve.selector,
-                morphoBlue,
-                supplyAmount
+                IERC20.approve.selector, morphoBlue, supplyAmount
             );
 
             calldatas[1] = abi.encodeWithSelector(
@@ -2421,19 +2237,14 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(
-                MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv)
-            );
+            bytes32 marketId =
+                id(MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv));
 
-            Position memory position = IMorpho(morphoBlue).position(
-                marketId,
-                address(timelock)
-            );
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
 
             assertEq(
-                position.supplyShares,
-                supplyShares,
-                "incorrect supply shares"
+                position.supplyShares, supplyShares, "incorrect supply shares"
             );
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
             assertEq(position.collateral, 0, "incorrect collateral");
@@ -2469,14 +2280,11 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             vm.prank(HOT_SIGNER_TWO);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
 
-            bytes32 marketId = id(
-                MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv)
-            );
+            bytes32 marketId =
+                id(MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv));
 
-            Position memory position = IMorpho(morphoBlue).position(
-                marketId,
-                address(timelock)
-            );
+            Position memory position =
+                IMorpho(morphoBlue).position(marketId, address(timelock));
 
             assertEq(position.supplyShares, 0, "incorrect supply shares");
             assertEq(position.borrowShares, 0, "incorrect borrow shares");
@@ -2499,8 +2307,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             bytes[] memory calldatas = new bytes[](1);
 
             calldatas[0] = abi.encodeWithSelector(
-                WETH9.withdraw.selector,
-                0.999999999999999999e18
+                WETH9.withdraw.selector, 0.999999999999999999e18
             );
 
             vm.prank(HOT_SIGNER_ONE);
@@ -2529,9 +2336,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             bytes[] memory calldatas = new bytes[](1);
 
-            calldatas[0] = abi.encodeWithSelector(
-                CEtherInterface.mint.selector
-            );
+            calldatas[0] = abi.encodeWithSelector(CEtherInterface.mint.selector);
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);

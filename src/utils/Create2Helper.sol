@@ -13,49 +13,44 @@ function calculateCreate2Address(
     bytes memory constructorParams,
     bytes32 salt
 ) pure returns (address) {
-    return
-        address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            creator,
-                            salt,
-                            keccak256(
-                                abi.encodePacked(
-                                    creationCode,
-                                    constructorParams
-                                )
-                            )
+    return address(
+        uint160(
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        bytes1(0xff),
+                        creator,
+                        salt,
+                        keccak256(
+                            abi.encodePacked(creationCode, constructorParams)
                         )
                     )
                 )
             )
-        );
+        )
+    );
 }
 
-function calculateCreate2Address(
-    Create2Params memory params
-) pure returns (address) {
-    return
-        address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            params.creator,
-                            params.salt,
-                            keccak256(
-                                abi.encodePacked(
-                                    params.creationCode,
-                                    params.constructorParams
-                                )
+function calculateCreate2Address(Create2Params memory params)
+    pure
+    returns (address)
+{
+    return address(
+        uint160(
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        bytes1(0xff),
+                        params.creator,
+                        params.salt,
+                        keccak256(
+                            abi.encodePacked(
+                                params.creationCode, params.constructorParams
                             )
                         )
                     )
                 )
             )
-        );
+        )
+    );
 }
