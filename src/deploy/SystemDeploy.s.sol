@@ -19,7 +19,10 @@ contract SystemDeploy is MultisigProposal {
         0x0000000000000000000000000000000000000000000000000000000000003afe;
 
     constructor() {
-        addresses = new Addresses("./Addresses.json");
+        uint256[] memory chainIds = new uint256[](2);
+        chainIds[0] = 1;
+        chainIds[1] = 8453;
+        addresses = new Addresses("./addresses", chainIds);
     }
 
     function name() public pure override returns (string memory) {
