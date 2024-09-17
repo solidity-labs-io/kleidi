@@ -204,9 +204,10 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         startTimestamp = block.timestamp;
 
         /// set addresses object in msig proposal
-        uint256[] memory chainIds = new uint256[](2);
+        uint256[] memory chainIds = new uint256[](3);
         chainIds[0] = 1;
         chainIds[1] = 8453;
+        chainIds[2] = 84532;
         addresses = new Addresses("./addresses", chainIds);
 
         deploy();
