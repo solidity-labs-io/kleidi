@@ -68,3 +68,21 @@ This means if the aforementioned parameters are changed, the changes should not 
 ## Future Standards
 
 This wallet does not support future token standards that may be developed. This system is intentionally immutable and new protocols and token standards can only be supported by creating a new system instance with the updated contracts.
+
+
+## Recovery Spells and Front Running
+
+If an attacker finds a counterfactual timelock address on a chain where it has not been deployed yet. They can front-run and deploy a safe to that chain without using the Instance Deployer. However, they cannot call `createSystemInstance` on the Instance Deployer as they do not have the hot signer private key to deploy the timelock. This means that the recovery spells are safe from front-running attacks because once the safe is deployed by the attacker, a recovery spell can be created, but it cannot be used because it is not a module in the safe yet. It can only become a module in the safe once the system is deployed from the InstanceDeployer, at which point the recovery spell becomes a module in the safe.
+
+Recovery spells cannot be deployed unless a safe is deployed first.
+
+Order of operations for deployment (unexpected):
+
+1. Deploy safe
+2. Deploy recovery spell
+3. Deploy system instance
+
+Alternative order of operations for deployment (expected):
+
+1. Deploy system instance
+2. Deploy recovery spell
