@@ -304,8 +304,15 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.renounceRole(role, address(1));
     }
 
-    function testGrantRoleFails() public {
+    function testGrantHotSignerRoleFails() public {
         bytes32 role = timelock.HOT_SIGNER_ROLE();
+        vm.expectRevert();
+        timelock.grantRole(role, address(1));
+    }
+
+    function testGrantNewRoleAsHotSignerFails() public {
+        bytes32 role = keccak256("testing123");
+        vm.prank(hotSigners[0]);
         vm.expectRevert();
         timelock.grantRole(role, address(1));
     }
