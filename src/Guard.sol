@@ -60,6 +60,11 @@ contract Guard is BaseGuard {
         /// it's really hard to reason about what a fallback handler could do
         /// so do not accept a safe that has an active fallback handler to
         /// initialize itself with this guard.
+        ///   some ideas of what could go wrong:
+        /// 1. a fallback handler allows accepting 721 and 1155 tokens, which
+        /// the safe should not be accepting as it does not hold assets.
+        /// 2. a malicious fallback handler could be used to bypass the guard
+        /// through self calls.
         bytes memory fallBackHandlerBytes = Safe(payable(msg.sender))
             .getStorageAt(FALLBACK_HANDLER_STORAGE_SLOT, 1);
 

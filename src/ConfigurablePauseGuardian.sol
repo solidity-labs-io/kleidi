@@ -83,6 +83,7 @@ contract ConfigurablePauseGuardian {
 
     /// @notice pause the contracts, can only pause while the contracts are unpaused
     /// uses up the pause, and starts the pause timer
+    /// calling removes the pause guardian
     function pause() public virtual whenNotPaused {
         /// if msg.sender == pause guardian, contract is not paused
         /// this implies that pause is not used
@@ -92,6 +93,8 @@ contract ConfigurablePauseGuardian {
         );
 
         /// pause, set pauseStartTime to current block timestamp
+        /// safe unchecked downcast because maximum would be 2^128 - 1 which is
+        /// a very large number and very far in the future
         _setPauseTime(uint128(block.timestamp));
 
         address previousPauseGuardian = pauseGuardian;

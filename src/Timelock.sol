@@ -528,6 +528,9 @@ contract Timelock is
     /// Callable only by the safe and when the contract is not paused
     /// @param target to call
     /// @param value amount of native token to spend
+    /// @param data calldata to send target
+    /// @param salt to be used in the operation
+    /// @param delay the delay before the operation becomes valid
     function schedule(
         address target,
         uint256 value,
@@ -711,13 +714,13 @@ contract Timelock is
 
     /// ----------------------------------------------------------
     /// ----------------------------------------------------------
-    /// ------------------ SAFE OWNER FUNCTIONS ------------------
+    /// ------------------ HOT SIGNER FUNCTIONS ------------------
     /// ----------------------------------------------------------
     /// ----------------------------------------------------------
 
-    /// @notice any safe owner can call this function and execute
+    /// @notice any hot signer can call this function and execute
     /// a call to whitelisted contracts with whitelisted calldatas
-    /// no reentrancy checks needed here as the safe owners can execute this
+    /// no reentrancy checks needed here as the hot signers can execute this
     /// whitelisted calldata as many times as they want
     /// @param target the addresses of the contracts to call
     /// @param value the values to send in the calls
@@ -767,8 +770,9 @@ contract Timelock is
     /// Access Control Enumerable Overrides
 
     /// @notice function to grant a role to an address
+    /// callable only by the timelock as timelock is the only role with admin
     /// @param role the role to grant
-    /// @param account the address to grant the role to
+    /// @param account to grant the role to
     function grantRole(bytes32 role, address account)
         public
         override(AccessControl, IAccessControl)
