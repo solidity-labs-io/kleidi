@@ -2,115 +2,71 @@
     {
         "addr": "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
         "name": "SAFE_FACTORY",
-        "chainId": 8453,
         "isContract": true
-    },
-    {
-        "addr": "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
-        "name": "SAFE_FACTORY",
-        "chainId": 1,
-        "isContract": true
-    },
-    {
-        "addr": "0x29B28B0Ff5B6B26448F3Ac02Cd209539626D96Ab",
-        "name": "DEPLOYER_EOA",
-        "chainId": 8453,
-        "isContract": false
     },
     {
         "addr": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "name": "DEPLOYER_EOA",
-        "chainId": 1,
         "isContract": false
     },
     {
         "addr": "0xcA11bde05977b3631167028862bE2a173976CA11",
         "name": "MULTICALL3",
-        "chainId": 8453,
-        "isContract": true
-    },
-    {
-        "addr": "0xcA11bde05977b3631167028862bE2a173976CA11",
-        "name": "MULTICALL3",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
         "name": "MORPHO_BLUE",
-        "chainId": 8453,
-        "isContract": true
-    },
-    {
-        "addr": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
-        "name": "MORPHO_BLUE",
-        "chainId": 1,
-        "isContract": true
-    },
-    {
-        "addr": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
-        "name": "SAFE_LOGIC",
-        "chainId": 8453,
         "isContract": true
     },
     {
         "addr": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
         "name": "ETHENA_USD",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
         "name": "SAFE_LOGIC",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
         "name": "DAI",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
         "name": "MORPHO_BLUE_IRM",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0xaE4750d0813B5E37A51f7629beedd72AF1f9cA35",
         "name": "MORPHO_BLUE_EUSD_DAI_ORACLE",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
         "name": "C_DAI",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
         "name": "WBTC",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
         "name": "WETH",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0xc29B3Bc033640baE31ca53F8a0Eb892AdF68e663",
         "name": "MORPHO_BLUE_WBTC_WETH_ORACLE",
-        "chainId": 1,
         "isContract": true
     },
     {
         "addr": "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5",
         "name": "C_ETHER",
-        "chainId": 1,
         "isContract": true
     }
 ]
