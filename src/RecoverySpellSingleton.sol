@@ -66,7 +66,9 @@ contract RecoverySpellSingleton is EIP712("Recovery Spell", "0.1.0") {
     /// @notice event emitted when the recovery is initiated
     /// @param time the time the recovery was initiated
     /// @param caller the address that initiated the recovery
-    event RecoveryInitiated(uint256 indexed time, address indexed caller, address indexed safe);
+    event RecoveryInitiated(
+        uint256 indexed time, address indexed caller, address indexed safe
+    );
 
     /// @notice event emitted when the recovery is executed
     /// @param time the time the recovery was executed
@@ -179,9 +181,10 @@ contract RecoverySpellSingleton is EIP712("Recovery Spell", "0.1.0") {
         /// in storage, then remove that address from used addresses
         /// to prevent the same owner passing multiple signatures.
 
-        bytes32 digest =
-            getDigest(salt, spell.safe, owners, threshold, recoveryThreshold, delay);
-        
+        bytes32 digest = getDigest(
+            salt, spell.safe, owners, threshold, recoveryThreshold, delay
+        );
+
         for (uint256 i = 0; i < recoveryData.length; i++) {
             address recoveredAddress = ecrecover(
                 digest, recoveryData[i].v, recoveryData[i].r, recoveryData[i].s
@@ -229,7 +232,10 @@ contract RecoverySpellSingleton is EIP712("Recovery Spell", "0.1.0") {
         require(spell.safe != address(0), "RecoverySpell: spell non-existent");
         require(spell.safe.code.length != 0, "RecoverySpell: safe non-existent");
         require(!spell.executed, "RecoverySpell: already executed");
-        require(spell.executionTime <= block.timestamp, "RecoverySpell: execution not ready");
+        require(
+            spell.executionTime <= block.timestamp,
+            "RecoverySpell: execution not ready"
+        );
 
         /// effects - make this recovery spell unusable so it can only be used
         /// once
