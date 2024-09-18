@@ -41,6 +41,15 @@ get_content_after_pattern() {
   echo "$clean_content"
 }
 
+get_first_line_with_pattern() {
+  local file="$1"
+  local pattern="$2"
+
+  local line=$(grep "$pattern" "$file" | head -n 1)
+
+  echo "$line"
+}
+
 # Function to check if an index is in the skip array
 should_skip() {
   local index="$1"
@@ -97,7 +106,7 @@ process_test_output() {
 
 target_file="src/Timelock.sol"
 target_dir="MutationTestOutput"
-num_files=3
+num_files=150
 
 # Create directory for output files if it doesn't exist
 mkdir -p "$target_dir"
@@ -108,14 +117,14 @@ failed_mutation=0
 is_current_mutation_failed=0 # Intialized as false
 
 # Array of mutation indexes to skip
-# skip_indexes=(21 56 64 77 97 117 126 145 238 241 248 268 283 286)
-skip_indexes=(1 2)
+skip_indexes=(21 56 64 77 97 117 126 145 238 241 248 268 283 286)
+# skip_indexes=(1 2)
 
 # Append Mutation Result to TimelockResult.md with desired format
 output_title "Mutation Results\n"
 
 # Loop through the number of files
-for (( i=1; i <= num_files; i++ )); do
+for (( i=35; i <= num_files; i++ )); do
   # Check if the current index should be skipped
   if should_skip "$i"; then
     echo "Skipping mutation $i as it's in the skip list."
@@ -132,6 +141,7 @@ for (( i=1; i <= num_files; i++ )); do
     # Copy the file's contents to the target file
     cat "$file_path" > "$target_file"
 
+    echo "Mutation $i"
     output_heading "Mutation $i"
 
     mutation_diff=$(gambit summary --mids $i --mutation-directory gambit_out_Timelock)
@@ -143,26 +153,44 @@ for (( i=1; i <= num_files; i++ )); do
     touch "$temp_output_file"
 
     # Run unit tests and capture output
+    echo "Runnin unit tests"
     unit_command_output=$(forge test --mc UnitTest -v --nmt testAddAndRemoveCalldataFuzzy)
     echo "$unit_command_output" > "$temp_output_file"
     # Process unit test outputs using the function
     process_test_output "Unit Tests" "$temp_output_file"
 
     # Run integration tests and capture output
+    echo "Runnin integration tests"
     integration_command_output=$(forge test --mc IntegrationTest -v --fork-url $ETH_RPC_URL)
     echo "$integration_command_output" > "$temp_output_file"
     # Process integration test outputs using the function
     process_test_output "Integration Tests" "$temp_output_file"
 
-    # output_heading "Certora Prover Results: \n"
-    # certora_run_output=$(certoraRun certora/confs/Timelock.conf --wait_for_results)
-    # echo "$certora_run_output" > "$temp_output_file"
+    # Run certora prover and capture output
+    echo "Running certora prover"
+    output_heading "Certora Prover Results: \n"
+    certora_run_output=$(certoraRun certora/confs/TimelockMutations.conf --wait_for_results)
+    echo "$certora_run_output"
+    echo "$certora_run_output" > "$temp_output_file"
+    echo "Certora prover run ended"
 
-    # # Extract content after the pattern
-    # content_after_pattern=$(get_content_after_pattern "$temp_output_file" "Results for all:")
+    # Extract the Certora Prover URL from the output
+    certora_url_line=$(get_first_line_with_pattern "$temp_output_file" "https://prover.certora.com/output")
+    if [[ -n "$certora_url_line" ]]; then
+      certora_url=$(echo "$certora_url_line" | awk '{print $9}')
+      echo "Certora Prover Output URL: $certora_url" >> MutationTestOutput/TimelockResult.md
+    fi
+
+    # Extract last line with certora prover result
+    certora_result=$(get_last_line "$temp_output_file")
+    # Remove escape sequences and color codes using sed
+    clean_certora_result=$(echo "$certora_result" | sed 's/\x1B\[[0-9;]*m//g')
+    echo "Certora Prover Result: $clean_certora_result" >> MutationTestOutput/TimelockResult.md
+
+    if [[ "$clean_certora_result" == "Violations were found" ]]; then
+      is_current_mutation_failed=1
+    fi
     
-    # output_results "$content_after_pattern" "View Result"
-
     rm "$temp_output_file"
 
     if [[ $is_current_mutation_failed -eq 1 ]]; then
