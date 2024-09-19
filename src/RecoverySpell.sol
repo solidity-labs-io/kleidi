@@ -220,12 +220,8 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         bytes32 digest = getDigest();
         for (uint256 i = 0; i < v.length; i++) {
             address recoveredAddress = ecrecover(digest, v[i], r[i], s[i]);
-            require(
-                recoveredAddress != address(0),
-                "RecoverySpell: Invalid signature"
-            );
-
             bool valid;
+
             assembly ("memory-safe") {
                 valid := tload(recoveredAddress)
                 if eq(valid, 1) { tstore(recoveredAddress, 0) }
@@ -235,7 +231,7 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
             /// be 0 and the require will fail.
             /// if the address of the signer duplicated signatures, the value
             /// will be 0 on the second retrieval and the require will fail.
-            require(valid, "RecoverySpell: Duplicate signature");
+            require(valid && recoveredAddress != address(0), "RecoverySpell: Invalid signature");
         }
 
         _executeRecovery(previousModule);
@@ -273,6 +269,9 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         address[] memory existingOwners = safe.getOwners();
         uint256 existingOwnersLength = existingOwners.length;
 
+        /// + 1 is for the module removal
+        /// new owner length = 1
+        /// existing owner length = 1
         IMulticall3.Call3[] memory calls3 =
             new IMulticall3.Call3[](newOwners.length + existingOwnersLength + 1);
 
@@ -306,17 +305,18 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
             newOwners[0]
         );
 
-        /// only cover indexes 1 through newOwners.length - 1
-        for (uint256 i = 1; i < newOwners.length - 1; i++) {
+        /// only cover indexes 1 through newOwners.length
+        for (uint256 i = 1; i < newOwners.length; i++) {
             calls3[index++].callData = abi.encodeWithSelector(
                 OwnerManager.addOwnerWithThreshold.selector, newOwners[i], 1
             );
         }
 
+        /// TODO add tests here with 1, 2, 3, 4 new and existing owners and thresholds
+
         /// add new owner with the updated threshold
         calls3[index++].callData = abi.encodeWithSelector(
-            OwnerManager.addOwnerWithThreshold.selector,
-            newOwners[newOwners.length - 1],
+            OwnerManager.changeThreshold.selector,
             threshold
         );
 
