@@ -15,7 +15,6 @@ methods {
     function isOperation(bytes32)                  external returns (bool)    envfree;
     function timestamps(bytes32)                   external returns (uint256) envfree;
     function minDelay()                            external returns (uint256) envfree;
-    function pauseUsed()                           external returns (bool)    envfree;
     function paused()                              external returns (bool)           ;
     function pause()                               external returns (bool)           ;
     function safe()                                external returns (address) envfree;
