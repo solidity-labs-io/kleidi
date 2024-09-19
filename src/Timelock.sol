@@ -826,6 +826,9 @@ contract Timelock is
     /// resets the pauseStartTime to 0, which unpauses the contract
     /// @param newGuardian the address of the new guardian
     function setGuardian(address newGuardian) public onlyTimelock {
+        /// if a new guardian is granted, the contract is automatically unpaused
+        _setPauseTime(0);
+
         _grantGuardian(newGuardian);
     }
 
