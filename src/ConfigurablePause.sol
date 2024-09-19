@@ -1,10 +1,12 @@
 pragma solidity 0.8.25;
 
+/// naming: rename to pausable
+
 /// @notice possible states for this contract to be in:
 ///     1. paused, pauseStartTime != 0, guardian == address(0)
 ///     2. unpaused, pauseStartTime == 0, guardian != address(0)
 ///     3. unpaused, pauseStartTime <= block.timestamp - pauseDuration, guardian == address(0)
-contract ConfigurablePauseGuardian {
+contract ConfigurablePause {
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
     /// ------------------- STORAGE VARIABLES -------------------
@@ -53,9 +55,6 @@ contract ConfigurablePauseGuardian {
     /// @dev Emitted when the pause is triggered by `account`.
     event Paused(address account);
 
-    /// @dev Emitted when the pause is lifted by `account`.
-    event Unpaused(address account);
-
     /// @dev Modifier to make a function callable only when the contract is not paused.
     modifier whenNotPaused() {
         require(!paused(), "Pausable: paused");
@@ -64,19 +63,11 @@ contract ConfigurablePauseGuardian {
 
     /// ------------- VIEW ONLY FUNCTIONS -------------
 
-    /// @notice returns whether the pause has been used by the pause guardian
-    /// if pauseStartTime is 0, contract pause is not used, if non zero, it is used
-    function pauseUsed() public view returns (bool) {
-        return pauseStartTime != 0;
-    }
-
     /// @notice return the current pause status
     /// if pauseStartTime is 0, contract is not paused
     /// if pauseStartTime is not 0, contract could be paused in the pauseDuration window
     function paused() public view returns (bool) {
-        return pauseStartTime == 0
-            ? false
-            : block.timestamp <= pauseStartTime + pauseDuration;
+        return block.timestamp <= pauseStartTime + pauseDuration;
     }
 
     /// ------------- PAUSE FUNCTION -------------
@@ -134,6 +125,8 @@ contract ConfigurablePauseGuardian {
 
         emit PauseTimeUpdated(newPauseStartTime);
     }
+
+    /// TODO maybe we do not automatically unpause when calling this function
 
     /// @dev when a new guardian is granted, the contract is automatically unpaused
     /// @notice grant pause guardian role to a new address
