@@ -231,7 +231,10 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
             /// be 0 and the require will fail.
             /// if the address of the signer duplicated signatures, the value
             /// will be 0 on the second retrieval and the require will fail.
-            require(valid && recoveredAddress != address(0), "RecoverySpell: Invalid signature");
+            require(
+                valid && recoveredAddress != address(0),
+                "RecoverySpell: Invalid signature"
+            );
         }
 
         _executeRecovery(previousModule);
@@ -316,8 +319,7 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
 
         /// add new owner with the updated threshold
         calls3[index++].callData = abi.encodeWithSelector(
-            OwnerManager.changeThreshold.selector,
-            threshold
+            OwnerManager.changeThreshold.selector, threshold
         );
 
         calls3[index].callData = abi.encodeWithSelector(

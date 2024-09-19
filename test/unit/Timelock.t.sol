@@ -12,7 +12,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
             PAUSE_DURATION,
             "pause duration incorrectly set"
         );
-        assertFalse(timelock.pauseStartTime() != 0, "pause should not be used yet");
+        assertFalse(
+            timelock.pauseStartTime() != 0, "pause should not be used yet"
+        );
         assertEq(timelock.pauseStartTime(), 0, "pauseStartTime should be 0");
         assertEq(
             timelock.expirationPeriod(),
