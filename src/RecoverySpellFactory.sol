@@ -132,5 +132,8 @@ contract RecoverySpellFactory {
 
         require(threshold != 0, "RecoverySpell: Threshold must be gt 0");
         require(delay <= 365 days, "RecoverySpell: Delay must be lte a year");
+        for (uint256 i = 0; i < owners.length; i++) {
+            require(owners[i] != address(0), "RecoverySpell: Owner cannot be 0");
+        }
     }
 }
