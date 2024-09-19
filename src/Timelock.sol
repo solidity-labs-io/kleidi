@@ -19,7 +19,7 @@ import {EnumerableSet} from
 import {Safe} from "@safe/Safe.sol";
 
 import {BytesHelper} from "src/BytesHelper.sol";
-import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
+import {ConfigurablePause} from "src/ConfigurablePause.sol";
 import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 
 /// @notice DO NOT DEPLOY OUTSIDE OF INSTANCE DEPLOYER
@@ -68,7 +68,7 @@ import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 /// tasks have to go through the timelock process. The gnosis safe can
 /// propose timelocked operations which then modify the timelock parameters.
 contract Timelock is
-    ConfigurablePauseGuardian,
+    ConfigurablePause,
     AccessControlEnumerable,
     IERC1155Receiver,
     IERC721Receiver
