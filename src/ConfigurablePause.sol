@@ -120,13 +120,11 @@ contract ConfigurablePause {
 
     /// @notice helper function to update the pause start time. used to pause the contract
     /// @param newPauseStartTime new pause start time
-    function _setPauseTime(uint128 newPauseStartTime) private {
+    function _setPauseTime(uint128 newPauseStartTime) internal {
         pauseStartTime = newPauseStartTime;
 
         emit PauseTimeUpdated(newPauseStartTime);
     }
-
-    /// TODO maybe we do not automatically unpause when calling this function
 
     /// @dev when a new guardian is granted, the contract is automatically unpaused
     /// @notice grant pause guardian role to a new address
@@ -136,9 +134,6 @@ contract ConfigurablePause {
     function _grantGuardian(address newPauseGuardian) internal {
         address previousPauseGuardian = pauseGuardian;
         pauseGuardian = newPauseGuardian;
-
-        /// if a new guardian is granted, the contract is automatically unpaused
-        _setPauseTime(0);
 
         emit PauseGuardianUpdated(previousPauseGuardian, newPauseGuardian);
     }
