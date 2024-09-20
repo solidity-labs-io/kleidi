@@ -122,7 +122,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         calls3[1].target = address(safe);
         calls3[1].allowFailure = false;
 
-
         calls3[0].callData = abi.encodeWithSelector(
             GuardManager.setGuard.selector, address(guard)
         );
