@@ -173,9 +173,9 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
 
         /// fails if recovery already executed due to math overflow
         /// even if delay is 0, uint256.max + 1 will always revert
+        /// recovery initiated will always be lte block timestamp before the recovery is executed
         require(
-            recoveryInitiated != 0
-                && block.timestamp > recoveryInitiated + delay,
+            block.timestamp > recoveryInitiated + delay,
             "RecoverySpell: Recovery not ready"
         );
         require(
