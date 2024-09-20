@@ -25,6 +25,15 @@ contract RecoverySpellFactoryUnitTest is Test {
         );
     }
 
+    function testCalculateAddressFailsAddressZeroOwners() public {
+        address[] memory owners = new address[](1);
+
+        vm.expectRevert("RecoverySpell: Owner cannot be 0");
+        recoveryFactory.calculateAddress(
+            bytes32(0), owners, address(0), 1, 1, 1
+        );
+    }
+
     function testDeployTwiceSameParamsFails(
         bytes32 salt,
         uint8 ownerLength,
