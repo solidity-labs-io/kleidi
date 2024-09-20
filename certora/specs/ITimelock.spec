@@ -8,6 +8,7 @@ methods {
     function expirationPeriod()                    external returns (uint256) envfree;
     function isOperationReady(bytes32)             external returns (bool)           ;
     function HOT_SIGNER_ROLE()                     external returns (bytes32) envfree;
+    function MAX_PAUSE_DURATION()                  external returns (uint256) envfree;
     function getAllProposals()                     external returns (bytes32[]) envfree;
     function pauseStartTime()                      external returns (uint128) envfree;
     function pauseDuration()                       external returns (uint128) envfree;
