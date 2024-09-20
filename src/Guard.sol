@@ -37,48 +37,6 @@ import {BytesHelper} from "src/BytesHelper.sol";
 contract Guard is BaseGuard {
     using BytesHelper for bytes;
 
-    /// @notice storage slot for the fallback handler
-    /// keccak256("fallback_manager.handler.address")
-    uint256 private constant FALLBACK_HANDLER_STORAGE_SLOT =
-        0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
-
-    /// @notice Emitted when the guard is added to a safe
-    /// @param safe address of the safe
-    event GuardEnabled(address indexed safe);
-
-    /// -----------------------------------------------------
-    /// -----------------------------------------------------
-    /// ---------------- Initialize Function ----------------
-    /// -----------------------------------------------------
-    /// -----------------------------------------------------
-
-    /// @notice initialize configuration for a safe as the gnosis safe
-
-    function checkSafe() external {
-        require(msg.sender.code.length != 0, "Guard: invalid safe");
-
-        /// it's really hard to reason about what a fallback handler could do
-        /// so do not accept a safe that has an active fallback handler to
-        /// initialize itself with this guard.
-        ///   some ideas of what could go wrong:
-        /// 1. a fallback handler allows accepting 721 and 1155 tokens, which
-        /// the safe should not be accepting as it does not hold assets.
-        /// 2. a malicious fallback handler could be used to bypass the guard
-        /// through self calls.
-        bytes memory fallBackHandlerBytes = Safe(payable(msg.sender))
-            .getStorageAt(FALLBACK_HANDLER_STORAGE_SLOT, 1);
-
-        address fallbackHandler =
-            address(uint160(uint256(fallBackHandlerBytes.getFirstWord())));
-
-        require(
-            fallbackHandler == address(0),
-            "Guard: cannot initialize with fallback handler"
-        );
-
-        emit GuardEnabled(msg.sender);
-    }
-
     /// -----------------------------------------------------
     /// -----------------------------------------------------
     /// ----------------- Safe Hooks ------------------------
