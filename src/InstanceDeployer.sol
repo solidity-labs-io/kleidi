@@ -248,22 +248,15 @@ contract InstanceDeployer {
         assert(address(walletInstance.timelock).code.length != 0);
         assert(address(walletInstance.safe).code.length != 0);
 
-        /// 1. checkSafe
-        /// 2. setGuard
-        /// 3. enable timelock as a module in the safe
+        /// 1. setGuard
+        /// 2. enable timelock as a module in the safe
         IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](
-            3 + instance.recoverySpells.length + instance.owners.length
+            2 + instance.recoverySpells.length + instance.owners.length
         );
         {
             uint256 index = 0;
 
-            calls3[0].target = guard;
-            calls3[0].allowFailure = false;
-
-            calls3[index++].callData =
-                abi.encodeWithSelector(Guard.checkSafe.selector);
-
-            for (uint256 i = 1; i < calls3.length; i++) {
+            for (uint256 i = 0; i < calls3.length; i++) {
                 calls3[i].target = address(walletInstance.safe);
                 calls3[i].allowFailure = false;
             }
@@ -319,8 +312,6 @@ contract InstanceDeployer {
                     1
                 );
             }
-
-            /// TODO test this with multiple owner lengths
 
             /// if there is only one owner, the threshold is set to 1
             /// if there are more than one owner, add the final owner with the
