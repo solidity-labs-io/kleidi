@@ -25,6 +25,10 @@ Alternative order of operations for deployment (expected):
 1. Deploy system instance
 2. Deploy recovery spell
 
+# Malicious Collusion
+
+If both the guardian and recovery signers are malicious, they could collude to take over the system. The guardian could pause the system and the recovery signers could execute a recovery spell to drain the timelock, which the cold signers could not counter. This can be mitigated by having a trusted guardian and recovery signers and neither having knowledge of the other, so in case one defects, funds are still safe. Alternatively, a user could opt to only have a guardian or recovery signers, but not both.
+
 # Proposal Lifecycle
 
 This section will explore the lifecycle of the proposal from scheduling to execution and describe all of the system states along the way.
@@ -39,7 +43,7 @@ The two variables timestamps and _liveProposals are closely related. When a prop
 
 ### Executed
 - **timestamps[id]**: 1
-- **_liveProposals**: does not contain id
+- **_liveProposals**: does not contain id`
 
 ### Canceled
 - **timestamps[id]**: 0
