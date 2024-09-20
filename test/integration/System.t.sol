@@ -863,8 +863,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             address(recovery).code.length != 0, "recovery spell not created"
         );
 
-        recovery.initiateRecovery();
-
         assertEq(
             recovery.recoveryInitiated(),
             block.timestamp,

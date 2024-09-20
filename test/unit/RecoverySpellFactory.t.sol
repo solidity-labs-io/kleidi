@@ -79,7 +79,7 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address[] memory owners = new address[](ownerLength);
         for (uint8 i = 0; i < ownerLength; i++) {
-            owners[i] = address(uint160(i));
+            owners[i] = address(uint160(i + 1));
         }
 
         RecoverySpell spell =

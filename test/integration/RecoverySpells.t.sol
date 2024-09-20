@@ -34,9 +34,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         RecoverySpell spell = RecoverySpell(recoverySpellAddress);
         assertEq(spell.delay(), recoveryDelay, "delay mismatch");
 
-        /// initiate recovery
-        spell.initiateRecovery();
-
         vm.warp(spell.delay() + block.timestamp + 1);
 
         /// sign recovery transaction
@@ -106,8 +103,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         assertTrue(
             address(recovery).code.length != 0, "recovery spell not created"
         );
-
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),
@@ -183,8 +178,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             recoveryDelay
         );
 
-        recovery.initiateRecovery();
-
         vm.warp(block.timestamp + recoveryDelay - 1);
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
@@ -201,9 +194,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
 
         /// now timestamp is exactly 1 second past recovery delay and recovery can commence
         vm.warp(block.timestamp + 1);
-
-        vm.expectRevert("RecoverySpell: Signatures required");
-        recovery.executeRecovery(address(1));
 
         vm.expectRevert("RecoverySpell: Not enough signatures");
         recovery.executeRecovery(
@@ -237,20 +227,14 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         recovery.executeRecovery(address(1), v, r, s);
     }
 
-    function testInitiateRecoveryPostRecoveryFails() public {
-        RecoverySpell recovery =
-            testRecoverySpellNoSignersNeededRotatesSafeSigners();
-
-        vm.expectRevert("RecoverySpell: Recovery already initiated");
-        recovery.initiateRecovery();
-    }
-
     function testExecuteRecoveryPostRecoveryFails() public {
         RecoverySpell recovery =
             testRecoverySpellNoSignersNeededRotatesSafeSigners();
 
-        vm.expectRevert(stdError.arithmeticError);
-        recovery.executeRecovery(address(1));
+        vm.expectRevert("RecoverySpell: Already recovered");
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
     }
 
     function testAddRecoverySpellNoSignersNeeded()
@@ -359,8 +343,6 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
             "expected recovery address not correct"
         );
 
-        recovery.initiateRecovery();
-
         assertEq(
             recovery.recoveryInitiated(),
             block.timestamp,
@@ -369,7 +351,9 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
 
         vm.warp(block.timestamp + recoveryDelay + 1);
 
-        recovery.executeRecovery(address(1));
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
 
         assertEq(safe.getThreshold(), recoveryThreshold, "quorum not updated");
         assertEq(

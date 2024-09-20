@@ -51,7 +51,7 @@ contract RecoverySpellUnitTest is Test {
 
     /// recovery tests
 
-    function testInitiateRecoverySucceedsOwner()
+    function testInitiateRecoverySucceeds()
         public
         returns (RecoverySpell recovery)
     {
@@ -64,7 +64,6 @@ contract RecoverySpellUnitTest is Test {
         recovery = new RecoverySpell(owners, address(safe), 2, 0, recoveryDelay);
 
         vm.prank(owners[0]);
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),
@@ -73,34 +72,29 @@ contract RecoverySpellUnitTest is Test {
         );
     }
 
-    function testInitiateRecoveryFailsRecoveryInitiated() public {
-        RecoverySpell recovery = testInitiateRecoverySucceedsOwner();
-
-        vm.expectRevert("RecoverySpell: Recovery already initiated");
-        recovery.initiateRecovery();
-    }
-
     function testExecuteRecoveryFailsNotInitiated() public {
         RecoverySpell recovery =
             new RecoverySpell(new address[](1), address(safe), 0, 0, 1);
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
-        recovery.executeRecovery(address(1));
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
     }
 
     function testExecuteRecoveryFailsNotPassedDelay() public {
-        RecoverySpell recovery = testInitiateRecoverySucceedsOwner();
+        RecoverySpell recovery = testInitiateRecoverySucceeds();
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
-        recovery.executeRecovery(address(1));
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
     }
 
-    function testRecoveryFailsNotPassedDelaySignatures() public {
+    function testRecoveryFailsNotPassedDelay() public {
         RecoverySpell recovery = new RecoverySpell(
             recoveryOwners, address(safe), 2, 4, recoveryDelay
         );
-
-        recovery.initiateRecovery();
 
         vm.expectRevert("RecoverySpell: Recovery not ready");
         recovery.executeRecovery(
@@ -109,7 +103,7 @@ contract RecoverySpellUnitTest is Test {
     }
 
     function testRecoverySucceeds() public returns (RecoverySpell recovery) {
-        recovery = testInitiateRecoverySucceedsOwner();
+        recovery = testInitiateRecoverySucceeds();
 
         vm.warp(block.timestamp + recoveryDelay + 1);
 
@@ -118,7 +112,9 @@ contract RecoverySpellUnitTest is Test {
         vm.expectEmit(true, true, true, true, address(recovery));
         emit SafeRecovered(block.timestamp);
 
-        recovery.executeRecovery(address(1));
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
 
         assertEq(recovery.getOwners().length, 0, "Owners not removed");
         assertEq(
@@ -132,8 +128,6 @@ contract RecoverySpellUnitTest is Test {
         RecoverySpell recovery = new RecoverySpell(
             recoveryOwners, address(safe), 2, 4, recoveryDelay
         );
-
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),
@@ -167,22 +161,10 @@ contract RecoverySpellUnitTest is Test {
         );
     }
 
-    function testRecoveryFailsSignaturesRequired() public {
-        /// recovery threshold is 4, so 4/5 signatures are required
-        RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 5, 4, recoveryDelay
-        );
-
-        vm.expectRevert("RecoverySpell: Signatures required");
-        recovery.executeRecovery(address(1));
-    }
-
     function testRecoveryFailsDuplicateSignature() public {
         RecoverySpell recovery = new RecoverySpell(
             recoveryOwners, address(safe), 2, 4, recoveryDelay
         );
-
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),
@@ -214,8 +196,6 @@ contract RecoverySpellUnitTest is Test {
         RecoverySpell recovery = new RecoverySpell(
             recoveryOwners, address(safe), 2, 4, recoveryDelay
         );
-
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),
@@ -254,37 +234,32 @@ contract RecoverySpellUnitTest is Test {
         recovery.executeRecovery(address(1), v, r, s);
     }
 
-    function testInitiateRecoveryFailsPostRecovery() public {
-        RecoverySpell recovery = testRecoverySucceeds();
-
-        vm.expectRevert("RecoverySpell: Recovery already initiated");
-        recovery.initiateRecovery();
-    }
-
     function testExecuteRecoveryFailsPostRecoverySuccess() public {
         RecoverySpell recovery = testRecoverySucceeds();
 
-        vm.expectRevert(stdError.arithmeticError);
-        recovery.executeRecovery(address(1));
+        vm.expectRevert("RecoverySpell: Already recovered");
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
     }
 
     function testRecoveryNoSignaturesFailsMulticall() public {
-        RecoverySpell recovery = testInitiateRecoverySucceedsOwner();
+        RecoverySpell recovery = testInitiateRecoverySucceeds();
 
         vm.warp(block.timestamp + recoveryDelay + 1);
 
         safe.setExecTransactionModuleSuccess(false);
 
         vm.expectRevert("RecoverySpell: Recovery failed");
-        recovery.executeRecovery(address(1));
+        recovery.executeRecovery(
+            address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
+        );
     }
 
     function testRecoveryWithSignaturesFailsMulticall() public {
         RecoverySpell recovery = new RecoverySpell(
             recoveryOwners, address(safe), 2, 4, recoveryDelay
         );
-
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),
@@ -314,8 +289,6 @@ contract RecoverySpellUnitTest is Test {
             recoveryOwners, address(safe), 2, 5, recoveryDelay
         );
 
-        recovery.initiateRecovery();
-
         assertEq(
             recovery.recoveryInitiated(),
             block.timestamp,
@@ -341,8 +314,6 @@ contract RecoverySpellUnitTest is Test {
         RecoverySpell recovery = new RecoverySpell(
             recoveryOwners, address(safe), 2, 5, recoveryDelay
         );
-
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),
@@ -392,18 +363,5 @@ contract RecoverySpellUnitTest is Test {
             vm.expectRevert("RecoverySpell: Invalid signature parameters");
             recovery.executeRecovery(address(1), v, r, s);
         }
-    }
-
-    function testExecuteRecoveryWithSignaturesFailsNoSignaturesNeeded()
-        public
-    {
-        RecoverySpell recovery = new RecoverySpell(
-            recoveryOwners, address(safe), 3, 0, recoveryDelay
-        );
-
-        vm.expectRevert("RecoverySpell: No signatures needed");
-        recovery.executeRecovery(
-            address(1), new uint8[](1), new bytes32[](1), new bytes32[](1)
-        );
     }
 }
