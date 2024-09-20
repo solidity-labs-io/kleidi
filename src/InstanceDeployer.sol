@@ -248,6 +248,9 @@ contract InstanceDeployer {
         assert(address(walletInstance.timelock).code.length != 0);
         assert(address(walletInstance.safe).code.length != 0);
 
+        /// 1. checkSafe
+        /// 2. setGuard
+        /// 3. enable timelock as a module in the safe
         IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](
             3 + instance.recoverySpells.length + instance.owners.length
         );
@@ -316,6 +319,8 @@ contract InstanceDeployer {
                     1
                 );
             }
+
+            /// TODO test this with multiple owner lengths
 
             /// if there is only one owner, the threshold is set to 1
             /// if there are more than one owner, add the final owner with the

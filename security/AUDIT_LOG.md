@@ -37,3 +37,5 @@ Timelock contract had its Access Controls checked to ensure only authorized user
 Contracts `Guard`, `InstanceDeployer` had all of their lines of code reviewed.
 
 Timelock specification was reviewed and re-run with a minor [specification change](https://prover.certora.com/output/651303/d811372eab754157862d4db4937f6500?anonymousKey=24e38bec8ccd5467acec7d2b311a76b092227624) to ensure the `setLength` function in the formal specification was correct. The specification was found to be correct in its `setLength` function because the induction base case in the constructor with concrete values failed, and the remaining cases failed the vaccuity check, which means they always were false for any input. This confirms that this function worked as expected.
+
+**09/18/24** - RecoverySpell contract was found to have issues with the way it calculated the number of calls. If the recovery spell only had a single signer, it would try to add that signer two times, which would fail and cause the recovery to not work. It was also found that owners in the recovery spell could be the 0 address, so a check was added in the factory to prevent this.

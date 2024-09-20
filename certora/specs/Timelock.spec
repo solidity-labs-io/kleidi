@@ -143,6 +143,9 @@ invariant pauseImpliesEmptySet(env e)
         }
         preserved updatePauseDuration(uint128 newPauseDuration) with (env e1) {
             require e1.block.timestamp == e.block.timestamp;
+            require e.block.timestamp > assert_uint256(MAX_PAUSE_DURATION()) && e.block.timestamp <= assert_uint256(timestampMax() - oneMonth());
+            require to_mathint(pauseDuration()) >= to_mathint(oneDay()) &&
+             to_mathint(pauseDuration()) <= to_mathint(oneMonth());
         }
         preserved cancel(bytes32 cancelProposalId) with (env e1) {
             require e1.block.timestamp == e.block.timestamp;
