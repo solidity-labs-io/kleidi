@@ -28,16 +28,14 @@ import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 /// - a malicious pauser can cancel all in flight proposals,
 /// for the pause duration, effectively locking funds for
 /// this period.
-/// - a recovery spell or other gnosis safe module could bypass all time
-/// checked restrictions on proposing actions to the timelock. This is
+/// - a recovery spell or other gnosis safe module could bypass all
+/// pause restrictions on proposing actions to the timelock. This is
 /// because module transactions are not checked against a guard. The
 /// current implemention of recovery spells bypass the waiting period to
 /// rotate signers.
 /// - incorrectly formed whitelisted calldata can allow safe
 /// owners the ability to steal funds. E.g. whitelist a calldata
 /// to approve a token transfer to an arbitrary address.
-/// - incorrect calldata can allow any safe owner to arbitrarily change
-/// date/time restrictions on the multisig guard.
 /// the owner must ensure no calldata is created that allows this.
 /// There are no checks on native asset balance enshrined into this contract
 /// because it is impossible to reason about the state of the native asset
