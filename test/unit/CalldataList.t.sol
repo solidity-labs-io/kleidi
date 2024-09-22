@@ -44,10 +44,10 @@ contract CalldataListUnitTest is Test {
     /// @notice the 3 hot signers that can execute whitelisted actions
     address[] public hotSigners;
 
-    /// @notice address of the guardian that can pause and break glass in case of emergency
+    /// @notice address of the guardian that can pause in case of emergency
     address public guardian = address(0x11111);
 
-    /// @notice duration of pause once glass is broken in seconds
+    /// @notice duration of pause
     uint128 public constant PAUSE_DURATION = 10 days;
 
     /// @notice minimum delay for a timelocked transaction in seconds

@@ -175,7 +175,9 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             "timelock expiration period"
         );
         assertEq(newTimelock.getAllProposals().length, 0, "proposal length 0");
-        assertFalse(newTimelock.pauseUsed(), "pause should not be used yet");
+        assertFalse(
+            newTimelock.pauseStartTime() != 0, "pause should not be used yet"
+        );
         assertEq(newTimelock.pauseStartTime(), 0, "pauseStartTime should be 0");
         assertEq(
             newTimelock.pauseGuardian(), guardian, "guardian incorrectly set"
@@ -308,7 +310,10 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             assertEq(
                 newTimelock.getAllProposals().length, 0, "proposal length 0"
             );
-            assertFalse(newTimelock.pauseUsed(), "pause should not be used yet");
+            assertFalse(
+                newTimelock.pauseStartTime() != 0,
+                "pause should not be used yet"
+            );
             assertEq(
                 newTimelock.pauseStartTime(), 0, "pauseStartTime should be 0"
             );

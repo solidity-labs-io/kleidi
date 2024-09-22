@@ -12,7 +12,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
             PAUSE_DURATION,
             "pause duration incorrectly set"
         );
-        assertFalse(timelock.pauseUsed(), "pause should not be used yet");
+        assertFalse(
+            timelock.pauseStartTime() != 0, "pause should not be used yet"
+        );
         assertEq(timelock.pauseStartTime(), 0, "pauseStartTime should be 0");
         assertEq(
             timelock.expirationPeriod(),
@@ -260,7 +262,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.pause();
 
         assertEq(timelock.pauseStartTime(), block.timestamp, "pauseStartTime");
-        assertTrue(timelock.pauseUsed(), "pause should be used");
+        assertTrue(timelock.pauseStartTime() != 0, "pause should be used");
         assertTrue(timelock.paused(), "timelock should be paused");
 
         assertEq(timelock.timestamps(id), 0, "operation should be pending");
@@ -304,8 +306,15 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.renounceRole(role, address(1));
     }
 
-    function testGrantRoleFails() public {
+    function testGrantHotSignerRoleFails() public {
         bytes32 role = timelock.HOT_SIGNER_ROLE();
+        vm.expectRevert();
+        timelock.grantRole(role, address(1));
+    }
+
+    function testGrantNewRoleAsHotSignerFails() public {
+        bytes32 role = keccak256("testing123");
+        vm.prank(hotSigners[0]);
         vm.expectRevert();
         timelock.grantRole(role, address(1));
     }
@@ -501,7 +510,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
         assertEq(timelock.pauseStartTime(), 0, "pauseStartTime should be 0");
         assertFalse(timelock.paused(), "timelock should not be paused");
-        assertFalse(timelock.pauseUsed(), "pause should not be used");
+        assertFalse(timelock.pauseStartTime() != 0, "pause should not be used");
     }
 
     function testSetGuardianSucceedsAsTimelockAndUnpauses(address newGuardian)
@@ -511,7 +520,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.pause();
 
         assertTrue(timelock.paused(), "not paused");
-        assertTrue(timelock.pauseUsed(), "pause should not be used");
+        assertTrue(timelock.pauseStartTime() != 0, "pause should not be used");
         assertEq(
             timelock.pauseStartTime(),
             block.timestamp,

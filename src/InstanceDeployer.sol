@@ -248,19 +248,15 @@ contract InstanceDeployer {
         assert(address(walletInstance.timelock).code.length != 0);
         assert(address(walletInstance.safe).code.length != 0);
 
+        /// 1. setGuard
+        /// 2. enable timelock as a module in the safe
         IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](
-            3 + instance.recoverySpells.length + instance.owners.length
+            2 + instance.recoverySpells.length + instance.owners.length
         );
         {
             uint256 index = 0;
 
-            calls3[0].target = guard;
-            calls3[0].allowFailure = false;
-
-            calls3[index++].callData =
-                abi.encodeWithSelector(Guard.checkSafe.selector);
-
-            for (uint256 i = 1; i < calls3.length; i++) {
+            for (uint256 i = 0; i < calls3.length; i++) {
                 calls3[i].target = address(walletInstance.safe);
                 calls3[i].allowFailure = false;
             }
@@ -322,6 +318,9 @@ contract InstanceDeployer {
             /// updated threshold
             if (instance.owners.length > 1) {
                 /// add final owner with the updated threshold
+                /// if threshold is greater than the number of owners, that
+                /// will be caught in the addOwnerWithThreshold function with
+                /// error "GS201"
                 calls3[index++].callData = abi.encodeWithSelector(
                     OwnerManager.addOwnerWithThreshold.selector,
                     instance.owners[instance.owners.length - 1],
@@ -371,7 +370,7 @@ contract InstanceDeployer {
                 /// store r at offset 32 to 64 in the allocated pointer
                 mstore(add(ptr, 0x20), r)
 
-                /// no need to store s
+                /// no need to store s, this should be 0 bytes
 
                 /// store v at offset 96 to 97 in the allocated pointer
                 mstore8(add(ptr, 0x60), v)
