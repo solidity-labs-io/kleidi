@@ -1,5 +1,7 @@
 # System Edge Cases
 
+## Malicious Hot Signer
+
 If a user's hot signer key is compromised, funds are sent to the timelock address on another chain where the wallet has yet to be created, and a malicious user creates a wallet with the same address as the timelock, the malicious user can drain the timelock. They can call InstanceDeployer and create a new Instance, passing their own calldata, which will allow them to drain all funds from the timelock.
 
 # Wrapped vs Raw Ether
