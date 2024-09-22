@@ -15,23 +15,25 @@ The DeFi Self Custody Protocol is a collection of smart contracts that can be us
 
 Each system component works together to ensure a user cannot be coerced into signing actions they do not want to take. 
 
-- **Guard Contract**: This contract restricts the the multisig by disallowing delegate and self calls. This removes multicall functionality from the Gnosis Safe while enabled. Additionally, it stops owners from being rotated out of the multisig (except by modules), stops additional modules from being added or removed during a transaction, and prevents the guard from being disabled by a transaction. With these checks in place, it is impossible to remove the guard, rotate signers, or add new modules to the multisig without a timelocked transaction passing.
-- **Timelock Contract**: This contract requires a delay before a transaction can be executed. This delay can be set to any time period between 1 and 30 days. This delay prevents an attacker from immediately executing a transaction after coercing a user into signing a transaction. The timelock can whitelist contract calls and calldata, this allows safe signers to execute interactions with other smart contracts as long as the contract, function signature, and certain parts of the calldata are whitelisted.
-- **Recovery Spells**: Recovery spells are custom recovery mechanisms that can be used to recover funds in case of lost keys. They can be used to rotate the signers of a multisig, or to create other custom recovery logic. This allows users to craft custom recovery flows that can be used to recover funds in case of lost keys. Recovery spells can be used to create a recovery mechanism that is resistant to $5 wrench attacks, and can be used to recover funds in case of lost keys. A social recovery recovery spell could allow the recovery members to rotate the signers of the multisig after a predefined timelock. This would allow the multisig owner to cancel the recovery spell if they still had access to their keys, but would allow the recovery members to rotate the signers if the multisig owner lost their keys.
+- **[Guard](src/Guard.sol)**: This contract restricts the the multisig by disallowing delegate and self calls. This removes multicall functionality from the Gnosis Safe while enabled. Additionally, it stops owners from being rotated out of the multisig (except by modules), stops additional modules from being added or removed during a transaction, and prevents the guard from being disabled by a transaction. With these checks in place, it is impossible to remove the guard, rotate signers, or add new modules to the multisig without a timelocked transaction passing.
+- **[Timelock](src/Timelock.sol)**: This contract holds all funds and requires a delay before a transaction can be executed. This delay can be set to any time period between 1 and 30 days. This delay prevents an attacker from immediately executing a transaction after coercing a user into signing a transaction. The timelock can whitelist contract calls and calldata, this allows hot signers to execute interactions with other smart contracts as long as the contract, function signature, and certain parts of the calldata are whitelisted.
+- **[Recovery Spells](src/RecoverySpell.sol)**: Recovery spells are custom recovery mechanisms that can be used to recover funds in case of lost keys. They can be used to rotate the signers of a multisig, or to create other custom recovery logic. This allows users to craft custom recovery flows that can be used to recover funds in case of lost keys. Recovery spells can be used to create a recovery mechanism that is resistant to $5 wrench attacks, and can be used to recover funds in case of lost keys. A social recovery recovery spell could allow the recovery members to rotate the signers of the multisig after a predefined timelock. This would allow the multisig owner to cancel the recovery spell if they still had access to their keys, but would allow the recovery members to rotate the signers if the multisig owner lost their keys.
 
 ## Usage
 
-In order to use this system, it is recommended to use the factory contract to deploy a new system instance. The Instance Deployer contract will have the ability to deploy a new system instance atomically and deterministically with the desired configuration. The configuration will include the timelock delay, guardian, pause duration, whitelisted targets, calldatas, and the users' Gnosis Safe as the owner. The Instance Deployer contract will have no permission in the deployed contracts once the deployment is finalized.
+The only safe way to create a new wallet is through the [InstanceDeployer](src/InstanceDeployer.sol) contract. Wallet contracts created outside of the InstanceDeployer should be assumed to be unsafe. The InstanceDeployer deploys a system instance atomically and deterministically with the desired configuration. The configuration will include the timelock delay, guardian, pause duration, whitelisted targets, calldatas, and the users' Gnosis Safe as the owner. The Instance Deployer contract will have no permission in the deployed contracts once the deployment transaction is completed.
 
 Instance deployer will 
 
 1. Deploy a timelock contract with the desired delay, guardian, pause duration, whitelisted targets, calldatas, with the users' Gnosis Safe as the owner.
-2. Execute a transaction in the Gnosis Safe to perform the following actions:
-   - initialize configuration with the timelock address, and signers
+2. Execute a transaction through the Gnosis Safe to perform the following actions:
+   - initialize the timelock with the specified protocols and hot signers
    - add the Guard to the Safe
    - add the Timelock as a Safe module
-3. Execute the queued transaction. This will set the timelock as a module of the Safe, and the Safe will now only allow transactions to be executed that do not make self or delegate calls.
-
+   - add the recovery spells to the Safe as modules
+   - remove the InstanceDeployer as an owner of the Safe
+   - add the specified owners to the Safe
+   - set the specified Safe threshold
 
 ## Edge Cases
 

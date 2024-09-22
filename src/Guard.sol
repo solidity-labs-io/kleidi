@@ -7,7 +7,7 @@ import {Safe} from "@safe/Safe.sol";
 import {BytesHelper} from "src/BytesHelper.sol";
 
 /// @notice This guard restricts changing owners and modules. It enforces
-/// that the owners and modules remain the same after a transaction is
+/// that the owners and modules remain the same after a safe transaction is
 /// executed by not allowing self or delegate calls.
 
 /// Config:
