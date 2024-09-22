@@ -24,7 +24,12 @@ Conversely, if the Safe keys are compromised, and the recovery spell time delay 
 
 ## Guardian
 
-If the guardian is set, as long as a social recovery module is set, and the guardian can be reached before a malicious proposal becomes executable, and a recovery spell exists whose time delay is shorter than the guardian pause duration, the guardian can pause the timelock, cancelling all malicious proposals, which stops them from being executed, and then the recovery spell can execute and rotate signing keys.
+Given the following scenario:
+
+1. Guardian and social recovery module are set
+2. Recovery spell delay is shorter than guardian pause duration
+
+The guardian can pause the timelock, cancelling all malicious proposals, which stops them from being executed, and then the recovery spell can execute and rotate signing keys.
 
 ### Malicious Recovery Spell Scenario with Guardian
 
