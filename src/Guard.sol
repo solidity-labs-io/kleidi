@@ -12,18 +12,13 @@ import {BytesHelper} from "src/BytesHelper.sol";
 
 /// Config:
 ///  - the timelock must be a module of the safe to enact changes to the owners and modules
-///  - the safe must not be the only executor on the timelock, otherwise the safe could be
-///  locked out of making changes, except recovery spells
+///  - the safe must be the only executor on the timelock
 
 /// no new modules, upgrades, owners, or fallback handlers can be added or
 /// removed by a transaction because all self calls are disallowed.
 /// this implies that the only way these values can be set are through
 /// the timelock, which can call back into the safe and use delegatecall
 /// if needed.
-
-/// after the transaction in checkAfterExecution, check that the number of modules
-/// and the actual module addresses are the same
-/// check that the owners are the same
 
 /// Blocks all delegate calls, as the owners and modules could be changed.
 /// Does not allow changing of the implementation contract either through
@@ -44,9 +39,7 @@ contract Guard is BaseGuard {
     /// -----------------------------------------------------
 
     /// @notice function that restricts Gnosis Safe interaction
-    /// to only a specific time range in specified days.
-    /// no granularity to specify different hours for different allowed days.
-    /// all allowed days have the same allowed hours.
+    /// to external calls only, and disallows self and delegate calls.
     function checkTransaction(
         address to,
         uint256 value,
