@@ -21,5 +21,5 @@ rule pausingRevokesGuardian(env e) {
     assert pauseGuardian() == 0, "pause guardian not revoked";
     assert to_mathint(pauseStartTime()) == to_mathint(e.block.timestamp), "pause start time not set";
     assert paused(e), "contract not paused";
-    assert pauseUsed(), "contract not paused";
+    assert pauseStartTime() != 0, "contract not paused";
 }

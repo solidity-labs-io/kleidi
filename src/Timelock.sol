@@ -19,7 +19,7 @@ import {EnumerableSet} from
 import {Safe} from "@safe/Safe.sol";
 
 import {BytesHelper} from "src/BytesHelper.sol";
-import {ConfigurablePauseGuardian} from "src/ConfigurablePauseGuardian.sol";
+import {ConfigurablePause} from "src/ConfigurablePause.sol";
 import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 
 /// @notice DO NOT DEPLOY OUTSIDE OF INSTANCE DEPLOYER
@@ -28,16 +28,14 @@ import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 /// - a malicious pauser can cancel all in flight proposals,
 /// for the pause duration, effectively locking funds for
 /// this period.
-/// - a recovery spell or other gnosis safe module could bypass all time
-/// checked restrictions on proposing actions to the timelock. This is
+/// - a recovery spell or other gnosis safe module could bypass all
+/// pause restrictions on proposing actions to the timelock. This is
 /// because module transactions are not checked against a guard. The
 /// current implemention of recovery spells bypass the waiting period to
 /// rotate signers.
 /// - incorrectly formed whitelisted calldata can allow safe
 /// owners the ability to steal funds. E.g. whitelist a calldata
 /// to approve a token transfer to an arbitrary address.
-/// - incorrect calldata can allow any safe owner to arbitrarily change
-/// date/time restrictions on the multisig guard.
 /// the owner must ensure no calldata is created that allows this.
 /// There are no checks on native asset balance enshrined into this contract
 /// because it is impossible to reason about the state of the native asset
@@ -68,7 +66,7 @@ import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
 /// tasks have to go through the timelock process. The gnosis safe can
 /// propose timelocked operations which then modify the timelock parameters.
 contract Timelock is
-    ConfigurablePauseGuardian,
+    ConfigurablePause,
     AccessControlEnumerable,
     IERC1155Receiver,
     IERC721Receiver
@@ -528,6 +526,9 @@ contract Timelock is
     /// Callable only by the safe and when the contract is not paused
     /// @param target to call
     /// @param value amount of native token to spend
+    /// @param data calldata to send target
+    /// @param salt to be used in the operation
+    /// @param delay the delay before the operation becomes valid
     function schedule(
         address target,
         uint256 value,
@@ -711,13 +712,13 @@ contract Timelock is
 
     /// ----------------------------------------------------------
     /// ----------------------------------------------------------
-    /// ------------------ SAFE OWNER FUNCTIONS ------------------
+    /// ------------------ HOT SIGNER FUNCTIONS ------------------
     /// ----------------------------------------------------------
     /// ----------------------------------------------------------
 
-    /// @notice any safe owner can call this function and execute
+    /// @notice any hot signer can call this function and execute
     /// a call to whitelisted contracts with whitelisted calldatas
-    /// no reentrancy checks needed here as the safe owners can execute this
+    /// no reentrancy checks needed here as the hot signers can execute this
     /// whitelisted calldata as many times as they want
     /// @param target the addresses of the contracts to call
     /// @param value the values to send in the calls
@@ -767,8 +768,9 @@ contract Timelock is
     /// Access Control Enumerable Overrides
 
     /// @notice function to grant a role to an address
+    /// callable only by the timelock as timelock is the only role with admin
     /// @param role the role to grant
-    /// @param account the address to grant the role to
+    /// @param account to grant the role to
     function grantRole(bytes32 role, address account)
         public
         override(AccessControl, IAccessControl)
@@ -822,6 +824,9 @@ contract Timelock is
     /// resets the pauseStartTime to 0, which unpauses the contract
     /// @param newGuardian the address of the new guardian
     function setGuardian(address newGuardian) public onlyTimelock {
+        /// if a new guardian is granted, the contract is automatically unpaused
+        _setPauseTime(0);
+
         _grantGuardian(newGuardian);
     }
 

@@ -29,7 +29,9 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             timelockFactory.factoryCreated(address(timelock)),
             "timelock should be created by factory"
         );
-        assertFalse(timelock.pauseUsed(), "timelock pause should not be used");
+        assertFalse(
+            timelock.pauseStartTime() != 0, "timelock pause should not be used"
+        );
         assertFalse(timelock.paused(), "timelock should not be paused");
 
         assertTrue(

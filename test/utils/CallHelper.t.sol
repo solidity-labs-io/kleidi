@@ -89,17 +89,6 @@ contract CallHelper is Test {
     );
 
     /**
-     * Guard helper functions to check emitted events *
-     */
-    function _initializeConfiguration(address caller, address guard) internal {
-        vm.expectEmit(true, true, true, true, guard);
-        emit GuardEnabled(caller);
-
-        vm.prank(caller);
-        Guard(guard).checkSafe();
-    }
-
-    /**
      * Timelock helper functions to check emitted events *
      */
     function _schedule(
