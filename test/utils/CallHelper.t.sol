@@ -10,40 +10,6 @@ contract CallHelper is Test {
      * Guard events *
      */
 
-    /// @notice Emitted when a time range is added to the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to modify transactions allow time
-    /// @param startHour start hour of the allowed time range
-    /// @param endHour end hour of the allowed time range
-    event TimeRangeAdded(
-        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
-    );
-
-    /// @notice Emitted when a time range is updated for the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to modify transactions allow time
-    /// @param oldStartHour old start hour of the allowed time range
-    /// @param newStartHour new start hour of the allowed time range
-    /// @param oldEndHour old end hour of the allowed time range
-    /// @param newEndHour new end hour of the allowed time range
-    event TimeRangeUpdated(
-        address indexed safe,
-        uint8 dayOfWeek,
-        uint8 oldStartHour,
-        uint8 newStartHour,
-        uint8 oldEndHour,
-        uint8 newEndHour
-    );
-
-    /// @notice Emitted when a time range is removed from the allowed days
-    /// @param safe address of the safe
-    /// @param dayOfWeek day of the week to remove
-    /// @param startHour previous start hour of the allowed time range
-    /// @param endHour previous end hour of the allowed time range
-    event TimeRangeDeleted(
-        address indexed safe, uint8 dayOfWeek, uint8 startHour, uint8 endHour
-    );
-
     /// @notice Emitted when the guard is removed from a safe
     /// @param safe address of the safe
     event GuardDisabled(address indexed safe);
@@ -67,7 +33,7 @@ contract CallHelper is Test {
     event CallScheduled(
         bytes32 indexed id,
         uint256 indexed index,
-        address target,
+        address indexed target,
         uint256 value,
         bytes data,
         bytes32 salt,
@@ -87,17 +53,6 @@ contract CallHelper is Test {
         uint256 value,
         bytes data
     );
-
-    /**
-     * Guard helper functions to check emitted events *
-     */
-    function _initializeConfiguration(address caller, address guard) internal {
-        vm.expectEmit(true, true, true, true, guard);
-        emit GuardEnabled(caller);
-
-        vm.prank(caller);
-        Guard(guard).checkSafe();
-    }
 
     /**
      * Timelock helper functions to check emitted events *

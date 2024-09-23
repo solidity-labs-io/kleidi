@@ -111,31 +111,26 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
     ///
     ///
     function testInitializeViaDelegateCallFails() public {
-        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](4);
+        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](3);
 
-        calls3[0].target = address(guard);
+        calls3[0].target = address(safe);
         calls3[0].allowFailure = false;
 
         calls3[1].target = address(safe);
         calls3[1].allowFailure = false;
 
-        calls3[2].target = address(safe);
-        calls3[2].allowFailure = false;
+        calls3[1].target = address(safe);
+        calls3[1].allowFailure = false;
 
-        calls3[3].target = address(safe);
-        calls3[3].allowFailure = false;
-
-        calls3[0].callData = abi.encodeWithSelector(Guard.checkSafe.selector);
-
-        calls3[1].callData = abi.encodeWithSelector(
+        calls3[0].callData = abi.encodeWithSelector(
             GuardManager.setGuard.selector, address(guard)
         );
 
-        calls3[2].callData = abi.encodeWithSelector(
+        calls3[1].callData = abi.encodeWithSelector(
             ModuleManager.enableModule.selector, address(timelock)
         );
 
-        calls3[3].callData = abi.encodeWithSelector(
+        calls3[2].callData = abi.encodeWithSelector(
             ModuleManager.enableModule.selector, recoverySpellAddress
         );
 
@@ -862,8 +857,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         assertTrue(
             address(recovery).code.length != 0, "recovery spell not created"
         );
-
-        recovery.initiateRecovery();
 
         assertEq(
             recovery.recoveryInitiated(),

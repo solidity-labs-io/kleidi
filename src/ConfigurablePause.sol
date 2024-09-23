@@ -1,10 +1,12 @@
 pragma solidity 0.8.25;
 
+/// naming: rename to pausable
+
 /// @notice possible states for this contract to be in:
 ///     1. paused, pauseStartTime != 0, guardian == address(0)
 ///     2. unpaused, pauseStartTime == 0, guardian != address(0)
 ///     3. unpaused, pauseStartTime <= block.timestamp - pauseDuration, guardian == address(0)
-contract ConfigurablePauseGuardian {
+contract ConfigurablePause {
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
     /// ------------------- STORAGE VARIABLES -------------------
@@ -47,14 +49,11 @@ contract ConfigurablePauseGuardian {
     /// @param oldPauseDuration old pause duration
     /// @param newPauseDuration new pause duration
     event PauseDurationUpdated(
-        uint256 oldPauseDuration, uint256 newPauseDuration
+        uint256 indexed oldPauseDuration, uint256 newPauseDuration
     );
 
     /// @dev Emitted when the pause is triggered by `account`.
-    event Paused(address account);
-
-    /// @dev Emitted when the pause is lifted by `account`.
-    event Unpaused(address account);
+    event Paused(address indexed account);
 
     /// @dev Modifier to make a function callable only when the contract is not paused.
     modifier whenNotPaused() {
@@ -64,25 +63,18 @@ contract ConfigurablePauseGuardian {
 
     /// ------------- VIEW ONLY FUNCTIONS -------------
 
-    /// @notice returns whether the pause has been used by the pause guardian
-    /// if pauseStartTime is 0, contract pause is not used, if non zero, it is used
-    function pauseUsed() public view returns (bool) {
-        return pauseStartTime != 0;
-    }
-
     /// @notice return the current pause status
     /// if pauseStartTime is 0, contract is not paused
     /// if pauseStartTime is not 0, contract could be paused in the pauseDuration window
     function paused() public view returns (bool) {
-        return pauseStartTime == 0
-            ? false
-            : block.timestamp <= pauseStartTime + pauseDuration;
+        return block.timestamp <= pauseStartTime + pauseDuration;
     }
 
     /// ------------- PAUSE FUNCTION -------------
 
     /// @notice pause the contracts, can only pause while the contracts are unpaused
     /// uses up the pause, and starts the pause timer
+    /// calling removes the pause guardian
     function pause() public virtual whenNotPaused {
         /// if msg.sender == pause guardian, contract is not paused
         /// this implies that pause is not used
@@ -92,6 +84,8 @@ contract ConfigurablePauseGuardian {
         );
 
         /// pause, set pauseStartTime to current block timestamp
+        /// safe unchecked downcast because maximum would be 2^128 - 1 which is
+        /// a very large number and very far in the future
         _setPauseTime(uint128(block.timestamp));
 
         address previousPauseGuardian = pauseGuardian;
@@ -126,7 +120,7 @@ contract ConfigurablePauseGuardian {
 
     /// @notice helper function to update the pause start time. used to pause the contract
     /// @param newPauseStartTime new pause start time
-    function _setPauseTime(uint128 newPauseStartTime) private {
+    function _setPauseTime(uint128 newPauseStartTime) internal {
         pauseStartTime = newPauseStartTime;
 
         emit PauseTimeUpdated(newPauseStartTime);
@@ -140,9 +134,6 @@ contract ConfigurablePauseGuardian {
     function _grantGuardian(address newPauseGuardian) internal {
         address previousPauseGuardian = pauseGuardian;
         pauseGuardian = newPauseGuardian;
-
-        /// if a new guardian is granted, the contract is automatically unpaused
-        _setPauseTime(0);
 
         emit PauseGuardianUpdated(previousPauseGuardian, newPauseGuardian);
     }

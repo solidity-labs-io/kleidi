@@ -30,10 +30,10 @@ contract TimelockReceivingUnitTest is Test {
     /// @notice reference to the MockERC721 contract
     MockERC721 private erc721;
 
-    /// @notice address of the guardian that can pause and break glass in case of emergency
+    /// @notice address of the guardian that can pause in case of emergency
     address public guardian = address(0x11111);
 
-    /// @notice duration of pause once glass is broken in seconds
+    /// @notice duration of pause
     uint128 public constant PAUSE_DURATION = 10 days;
 
     /// @notice expiration period for a timelocked transaction in seconds

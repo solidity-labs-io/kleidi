@@ -16,9 +16,21 @@ contract RecoverySpellFactoryUnitTest is Test {
     }
 
     function testDeployRecoverySpellFailsNonExistentSafe() public {
+        address[] memory owners = new address[](1);
+        owners[0] = address(0x1);
+
         vm.expectRevert("RecoverySpell: safe non-existent");
         recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](1), address(0), 1, 1, 1
+            bytes32(0), owners, address(0), 1, 1, 1
+        );
+    }
+
+    function testCalculateAddressFailsAddressZeroOwners() public {
+        address[] memory owners = new address[](1);
+
+        vm.expectRevert("RecoverySpell: Owner cannot be 0");
+        recoveryFactory.calculateAddress(
+            bytes32(0), owners, address(0), 1, 1, 1
         );
     }
 
@@ -36,7 +48,7 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address[] memory owners = new address[](ownerLength);
         for (uint8 i = 0; i < ownerLength; i++) {
-            owners[i] = address(uint160(i));
+            owners[i] = address(uint160(i + 1));
         }
 
         RecoverySpell recovery1 = recoveryFactory.createRecoverySpell(
@@ -76,7 +88,7 @@ contract RecoverySpellFactoryUnitTest is Test {
 
         address[] memory owners = new address[](ownerLength);
         for (uint8 i = 0; i < ownerLength; i++) {
-            owners[i] = address(uint160(i));
+            owners[i] = address(uint160(i + 1));
         }
 
         RecoverySpell spell =
@@ -186,6 +198,9 @@ contract RecoverySpellFactoryUnitTest is Test {
     }
 
     function testCreateFunctionFailsThresholdEqZero() public {
+        address[] memory recoveryOwners = new address[](1);
+        recoveryOwners[0] = address(0x1);
+
         vm.expectRevert("RecoverySpell: Threshold must be gt 0");
         recoveryFactory.createRecoverySpell(
             bytes32(0), new address[](1), SAFE, 0, 0, 1
@@ -193,16 +208,26 @@ contract RecoverySpellFactoryUnitTest is Test {
     }
 
     function testCreateFunctionFailsDuplicateOwner() public {
+        address[] memory recoveryOwners = new address[](3);
+        recoveryOwners[0] = address(0x1);
+        recoveryOwners[1] = address(0x2);
+        recoveryOwners[2] = address(0x1);
+
         vm.expectRevert("RecoverySpell: Duplicate owner");
         recoveryFactory.createRecoverySpell(
-            bytes32(0), new address[](3), SAFE, 1, 1, 10 days
+            bytes32(0), recoveryOwners, SAFE, 1, 1, 10 days
         );
     }
 
     function testCalculateAddressFailsDuplicateOwner() public {
+        address[] memory recoveryOwners = new address[](3);
+        recoveryOwners[0] = address(0x1);
+        recoveryOwners[1] = address(0x2);
+        recoveryOwners[2] = address(0x2);
+
         vm.expectRevert("RecoverySpell: Duplicate owner");
         recoveryFactory.calculateAddress(
-            bytes32(0), new address[](3), SAFE, 1, 1, 10 days
+            bytes32(0), recoveryOwners, SAFE, 1, 1, 10 days
         );
     }
 

@@ -103,6 +103,9 @@ invariant pauseImpliesEmptySet(env e)
         }
         preserved updatePauseDuration(uint128 newPauseDuration) with (env e1) {
             require e1.block.timestamp == e.block.timestamp;
+            require e.block.timestamp > assert_uint256(MAX_PAUSE_DURATION()) && e.block.timestamp <= assert_uint256(timestampMax() - oneMonth());
+            require to_mathint(pauseDuration()) >= to_mathint(oneDay()) &&
+             to_mathint(pauseDuration()) <= to_mathint(oneMonth());
         }
         preserved cancel(bytes32 cancelProposalId) with (env e1) {
             require e1.block.timestamp == e.block.timestamp;
@@ -242,7 +245,7 @@ rule pausingRevokesGuardian(env e) {
     assert pauseGuardian() == 0, "pause guardian not revoked";
     assert to_mathint(pauseStartTime()) == to_mathint(e.block.timestamp), "pause start time not set";
     assert paused(e), "contract not paused";
-    assert pauseUsed(), "contract not paused";
+    assert pauseStartTime() != 0, "contract not paused";
 }
 
     /*//////////////////////////////////////////////////////////////

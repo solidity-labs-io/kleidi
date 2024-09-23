@@ -29,26 +29,6 @@ contract GuardUnitTest is CallHelper {
         owners = new address[](0);
     }
 
-    function testEnableSafe() public {
-        _initializeConfiguration({caller: address(this), guard: address(guard)});
-    }
-
-    function testInitializeFailsSafeNoBytecode() public {
-        vm.prank(address(100000000));
-        vm.expectRevert("Guard: invalid safe");
-        guard.checkSafe();
-    }
-
-    function testInitializeFailsSafeHasFallbackHandler() public {
-        uint256 slot = FALLBACK_HANDLER_STORAGE_SLOT;
-        assembly ("memory-safe") {
-            sstore(slot, 1)
-        }
-
-        vm.expectRevert("Guard: cannot initialize with fallback handler");
-        guard.checkSafe();
-    }
-
     function testCheckTransaction() public {
         guard.checkTransaction(
             address(0),
@@ -63,8 +43,6 @@ contract GuardUnitTest is CallHelper {
             "",
             address(0)
         );
-
-        testEnableSafe();
 
         /// transaction is fine within the allowed time range
         guard.checkTransaction(

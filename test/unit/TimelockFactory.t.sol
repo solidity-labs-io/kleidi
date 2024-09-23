@@ -8,7 +8,7 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
     /// @param creationTime of the new timelock
     /// @param sender that called the contract to create the timelock
     event TimelockCreated(
-        address indexed timelock, uint256 creationTime, address sender
+        address indexed timelock, uint256 creationTime, address indexed sender
     );
 
     function testTimelockCreation() public view {
@@ -29,7 +29,9 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             timelockFactory.factoryCreated(address(timelock)),
             "timelock should be created by factory"
         );
-        assertFalse(timelock.pauseUsed(), "timelock pause should not be used");
+        assertFalse(
+            timelock.pauseStartTime() != 0, "timelock pause should not be used"
+        );
         assertFalse(timelock.paused(), "timelock should not be paused");
 
         assertTrue(

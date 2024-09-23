@@ -2,6 +2,9 @@ pragma solidity 0.8.25;
 
 import {EIP712} from
     "@openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {ECDSA} from
+    "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
 
@@ -117,6 +120,10 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         threshold = _safeThreshold;
         recoveryThreshold = _recoveryThreshold;
         delay = _delay;
+
+        recoveryInitiated = block.timestamp;
+
+        emit RecoveryInitiated(block.timestamp, msg.sender);
     }
 
     /// @notice get the owners of the contract
@@ -144,31 +151,16 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         );
     }
 
-    /// @notice initiate the recovery process
-    /// can only be called by a new safe owner when the recovery has not been
-    /// initiated or executed yet
-    /// if there are no owners, recovery can never be initiated
-    function initiateRecovery() external {
-        require(
-            recoveryInitiated == 0, "RecoverySpell: Recovery already initiated"
-        );
-
-        recoveryInitiated = block.timestamp;
-
-        emit RecoveryInitiated(block.timestamp, msg.sender);
-    }
-
     /// @notice execute the recovery process, can only be called
-    /// after the recovery delay has passed, and the recovery
-    /// has been initiated. Callable by any address
+    /// after the recovery delay has passed. Callable by any address
     /// @param previousModule the address of the previous module
     /// if the previous module is incorrect, this function will fail
     ///
     /// this function executes actions in the following order:
-    ///   1). remove all but final existing owner, set owner threshold to 1
+    ///   1). remove all but final existing owner, sets owner threshold to 1
     ///   2). swap final existing owner for the first new owner
-    ///   3). add the remaining new owners to the safe, with the
-    ///   last owner being added updating the threshold to the new value
+    ///   3). add the remaining new owners to the safe
+    ///   4). update the quorum to the new value
     ///   4). remove the recovery module from the safe
     function executeRecovery(
         address previousModule,
@@ -177,15 +169,16 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         bytes32[] calldata s
     ) external {
         /// checks
-
-        /// only call this function if recovery threshold is non-zero
-        require(recoveryThreshold != 0, "RecoverySpell: No signatures needed");
+        require(
+            recoveryInitiated != type(uint256).max,
+            "RecoverySpell: Already recovered"
+        );
 
         /// fails if recovery already executed due to math overflow
         /// even if delay is 0, uint256.max + 1 will always revert
+        /// recovery initiated will always be lte block timestamp before the recovery is executed
         require(
-            recoveryInitiated != 0
-                && block.timestamp >= recoveryInitiated + delay + 1,
+            block.timestamp > recoveryInitiated + delay,
             "RecoverySpell: Recovery not ready"
         );
         require(
@@ -219,13 +212,9 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
 
         bytes32 digest = getDigest();
         for (uint256 i = 0; i < v.length; i++) {
-            address recoveredAddress = ecrecover(digest, v[i], r[i], s[i]);
-            require(
-                recoveredAddress != address(0),
-                "RecoverySpell: Invalid signature"
-            );
-
+            address recoveredAddress = ECDSA.recover(digest, v[i], r[i], s[i]);
             bool valid;
+
             assembly ("memory-safe") {
                 valid := tload(recoveredAddress)
                 if eq(valid, 1) { tstore(recoveredAddress, 0) }
@@ -235,57 +224,34 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
             /// be 0 and the require will fail.
             /// if the address of the signer duplicated signatures, the value
             /// will be 0 on the second retrieval and the require will fail.
-            require(valid, "RecoverySpell: Duplicate signature");
+            require(
+                valid && recoveredAddress != address(0),
+                "RecoverySpell: Invalid signature"
+            );
         }
 
-        _executeRecovery(previousModule);
-    }
+        /// @notice execute the recovery process, can only be called
+        /// after the recovery delay has passed. Callable by any address
 
-    /// @notice execute the recovery process, can only be called
-    /// after the recovery delay has passed, and the recovery
-    /// has been initiated. Callable by any address
-    /// @dev can only be called if the recovery threshold is 0,
-    /// otherwise executeRecovery must be called with signatures
-    /// @param previousModule the address of the previous module
-    /// if the previous module is incorrect, this function will fail
-    ///
-    /// this function executes actions in the following order:
-    ///   1). remove all but final existing owner, set owner threshold to 1
-    ///   2). swap final existing owner for the first new owner
-    ///   3). add the remaining new owners to the safe, with the
-    ///   last owner being added updating the threshold to the new value
-    ///   4). remove the recovery module from the safe
-    function executeRecovery(address previousModule) external {
-        require(recoveryThreshold == 0, "RecoverySpell: Signatures required");
-        /// fails if recovery already executed due to math overflow
-        /// even if delay is 0, uint256.max + 1 will always revert
-        require(
-            recoveryInitiated != 0
-                && block.timestamp >= recoveryInitiated + delay + 1,
-            "RecoverySpell: Recovery not ready"
-        );
-
-        _executeRecovery(previousModule);
-    }
-
-    function _executeRecovery(address previousModule) private {
-        address[] memory newOwners = owners;
+        /// @param previousModule the address of the previous module
+        /// if the previous module is incorrect, this function will fail
+        ///
+        /// this function executes actions in the following order:
+        ///   1). remove all but final existing owner, set owner threshold to 1
+        ///   2). swap final existing owner for the first new owner
+        ///   3). add the remaining new owners to the safe, with the
+        ///   last owner being added updating the threshold to the new value
+        ///   4). remove the recovery module from the safe
         address[] memory existingOwners = safe.getOwners();
         uint256 existingOwnersLength = existingOwners.length;
 
+        /// + 1 is for the module removal
+        /// new owner length = 1
+        /// existing owner length = 1
         IMulticall3.Call3[] memory calls3 =
-            new IMulticall3.Call3[](newOwners.length + existingOwnersLength + 1);
+            new IMulticall3.Call3[](owners.length + existingOwnersLength + 1);
 
         uint256 index = 0;
-
-        /// effects
-        /// now impossible to call initiate recovery as owners array is empty
-        delete owners;
-
-        /// array length is set to 0
-        /// impossible for executeRecovery to be callable again as the
-        /// require check will always revert with a math overflow error
-        recoveryInitiated = type(uint256).max;
 
         /// build interactions
 
@@ -303,21 +269,19 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
             OwnerManager.swapOwner.selector,
             SENTINEL,
             existingOwners[existingOwnersLength - 1],
-            newOwners[0]
+            owners[0]
         );
 
-        /// only cover indexes 1 through newOwners.length - 1
-        for (uint256 i = 1; i < newOwners.length - 1; i++) {
+        /// only cover indexes 1 through new owners length
+        for (uint256 i = 1; i < owners.length; i++) {
             calls3[index++].callData = abi.encodeWithSelector(
-                OwnerManager.addOwnerWithThreshold.selector, newOwners[i], 1
+                OwnerManager.addOwnerWithThreshold.selector, owners[i], 1
             );
         }
 
         /// add new owner with the updated threshold
         calls3[index++].callData = abi.encodeWithSelector(
-            OwnerManager.addOwnerWithThreshold.selector,
-            newOwners[newOwners.length - 1],
-            threshold
+            OwnerManager.changeThreshold.selector, threshold
         );
 
         calls3[index].callData = abi.encodeWithSelector(
@@ -328,6 +292,14 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
             calls3[i].allowFailure = false;
             calls3[i].target = address(safe);
         }
+
+        /// effects
+        /// now impossible to call initiate recovery as owners array is empty
+        delete owners;
+
+        /// array length is set to 0 impossible for executeRecovery to be
+        /// callable again as the require check will always revert
+        recoveryInitiated = type(uint256).max;
 
         /// interactions
 
