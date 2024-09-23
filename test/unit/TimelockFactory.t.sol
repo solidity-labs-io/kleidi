@@ -8,7 +8,7 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
     /// @param creationTime of the new timelock
     /// @param sender that called the contract to create the timelock
     event TimelockCreated(
-        address indexed timelock, uint256 creationTime, address sender
+        address indexed timelock, uint256 creationTime, address indexed sender
     );
 
     function testTimelockCreation() public view {

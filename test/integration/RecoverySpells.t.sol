@@ -195,7 +195,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         /// now timestamp is exactly 1 second past recovery delay and recovery can commence
         vm.warp(block.timestamp + 1);
 
-        vm.expectRevert("RecoverySpell: Not enough signatures");
+        vm.expectRevert("ECDSAInvalidSignature()");
         recovery.executeRecovery(
             address(1), new uint8[](0), new bytes32[](0), new bytes32[](0)
         );
