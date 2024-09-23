@@ -1,5 +1,8 @@
 pragma solidity 0.8.25;
 
+import {ECDSA} from
+    "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 import {Test, stdError} from "forge-std/Test.sol";
 
 import {MockSafe} from "test/mock/MockSafe.sol";
@@ -216,21 +219,21 @@ contract RecoverySpellUnitTest is Test {
         /// invalid signature
         v[v.length - 1] = v[v.length - 1] + 1;
 
-        vm.expectRevert("RecoverySpell: Invalid signature");
+        vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         recovery.executeRecovery(address(1), v, r, s);
 
         v[v.length - 1] = v[v.length - 1] - 1;
         bytes32 rval = r[0];
         r[0] = bytes32(uint256(21));
 
-        vm.expectRevert("RecoverySpell: Invalid signature");
+        vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         recovery.executeRecovery(address(1), v, r, s);
 
         v[v.length - 1] = v[v.length - 1] - 1;
         r[r.length - 1] = bytes32(uint256(21));
         r[0] = rval;
 
-        vm.expectRevert("RecoverySpell: Invalid signature");
+        vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         recovery.executeRecovery(address(1), v, r, s);
     }
 

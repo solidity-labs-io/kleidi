@@ -1,5 +1,8 @@
 pragma solidity 0.8.25;
 
+import {ECDSA} from
+    "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 import "test/utils/SystemIntegrationFixture.sol";
 
 contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
@@ -223,7 +226,7 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         recovery.executeRecovery(address(1), v, r, s);
 
         v[0] += 2;
-        vm.expectRevert("RecoverySpell: Invalid signature");
+        vm.expectRevert(ECDSA.ECDSAInvalidSignature.selector);
         recovery.executeRecovery(address(1), v, r, s);
     }
 
