@@ -106,7 +106,7 @@ process_test_output() {
 
 target_file="src/Timelock.sol"
 target_dir="MutationTestOutput"
-num_files=150
+num_files=288
 
 # Create directory for output files if it doesn't exist
 mkdir -p "$target_dir"
@@ -125,7 +125,7 @@ skip_indexes=(21 56 64 77 97 117 126 145 238 241 248 268 283 286)
 output_title "Mutation Results\n"
 
 # Loop through the number of files
-for (( i=35; i <= num_files; i++ )); do
+for (( i=1; i <= num_files; i++ )); do
   # Check if the current index should be skipped
   if should_skip "$i"; then
     echo "Skipping mutation $i as it's in the skip list."
