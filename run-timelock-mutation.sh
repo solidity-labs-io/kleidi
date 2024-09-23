@@ -106,7 +106,7 @@ process_test_output() {
 
 target_file="src/Timelock.sol"
 target_dir="MutationTestOutput"
-num_files=288
+num_files=289
 
 # Create directory for output files if it doesn't exist
 mkdir -p "$target_dir"
@@ -118,7 +118,7 @@ is_current_mutation_failed=0 # Intialized as false
 
 # Array of mutation indexes to skip
 # Skip these mutations to avoid infinite for and while loop
-skip_indexes=(21 56 64 77 97 117 126 145 238 241 248 268 283 286)
+skip_indexes=(21 56 64 77 97 117 126 146 239 242 249 269 284 287)
 # skip_indexes=(1 2)
 
 # Append Mutation Result to TimelockResult.md with desired format
