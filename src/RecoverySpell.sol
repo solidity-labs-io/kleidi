@@ -2,6 +2,9 @@ pragma solidity 0.8.25;
 
 import {EIP712} from
     "@openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {ECDSA} from
+    "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
 
@@ -209,7 +212,7 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
 
         bytes32 digest = getDigest();
         for (uint256 i = 0; i < v.length; i++) {
-            address recoveredAddress = ecrecover(digest, v[i], r[i], s[i]);
+            address recoveredAddress = ECDSA.recover(digest, v[i], r[i], s[i]);
             bool valid;
 
             assembly ("memory-safe") {

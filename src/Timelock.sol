@@ -176,7 +176,7 @@ contract Timelock is
     event CallScheduled(
         bytes32 indexed id,
         uint256 indexed index,
-        address target,
+        address indexed target,
         uint256 value,
         bytes data,
         bytes32 salt,
@@ -208,12 +208,12 @@ contract Timelock is
     /// @notice Emitted when the minimum delay for future operations is modified.
     /// @param oldDuration old minimum delay
     /// @param newDuration new minimum delay
-    event MinDelayChange(uint256 oldDuration, uint256 newDuration);
+    event MinDelayChange(uint256 indexed oldDuration, uint256 newDuration);
 
     /// @notice Emitted when the expiration period is modified
     /// @param oldPeriod old expiration period
     /// @param newPeriod new expiration period
-    event ExpirationPeriodChange(uint256 oldPeriod, uint256 newPeriod);
+    event ExpirationPeriodChange(uint256 indexed oldPeriod, uint256 newPeriod);
 
     /// @notice Emitted when native currency is received
     /// @param sender the address that sent the native currency

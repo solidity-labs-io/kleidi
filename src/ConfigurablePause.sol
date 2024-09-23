@@ -49,11 +49,11 @@ contract ConfigurablePause {
     /// @param oldPauseDuration old pause duration
     /// @param newPauseDuration new pause duration
     event PauseDurationUpdated(
-        uint256 oldPauseDuration, uint256 newPauseDuration
+        uint256 indexed oldPauseDuration, uint256 newPauseDuration
     );
 
     /// @dev Emitted when the pause is triggered by `account`.
-    event Paused(address account);
+    event Paused(address indexed account);
 
     /// @dev Modifier to make a function callable only when the contract is not paused.
     modifier whenNotPaused() {
