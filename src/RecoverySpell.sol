@@ -1,7 +1,8 @@
 pragma solidity 0.8.25;
 
-import {EIP712} from
-    "@openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {EIP712} from "@openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {ECDSA} from "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
 
@@ -70,9 +71,10 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     address public constant SENTINEL = address(0x1);
 
     /// @notice the recovery type hash for the EIP712 domain separator
-    bytes32 public constant RECOVERY_TYPEHASH = keccak256(
-        "Recovery(address safe,uint256 newSafeThreshold,uint256 newRecoveryThreshold,uint256 delay)"
-    );
+    bytes32 public constant RECOVERY_TYPEHASH =
+        keccak256(
+            "Recovery(address safe,uint256 newSafeThreshold,uint256 newRecoveryThreshold,uint256 delay)"
+        );
 
     /// -------------------------------------------------------
     /// -------------------------------------------------------
@@ -131,21 +133,22 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     /// @notice get the digest for the EIP712 domain separator
     /// @return the digest for the EIP712 domain separator
     function getDigest() public view returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                _domainSeparatorV4(),
-                keccak256(
-                    abi.encode(
-                        RECOVERY_TYPEHASH,
-                        safe,
-                        threshold,
-                        recoveryThreshold,
-                        delay
+        return
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    _domainSeparatorV4(),
+                    keccak256(
+                        abi.encode(
+                            RECOVERY_TYPEHASH,
+                            safe,
+                            threshold,
+                            recoveryThreshold,
+                            delay
+                        )
                     )
                 )
-            )
-        );
+            );
     }
 
     /// @notice execute the recovery process, can only be called
@@ -209,12 +212,14 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
 
         bytes32 digest = getDigest();
         for (uint256 i = 0; i < v.length; i++) {
-            address recoveredAddress = ecrecover(digest, v[i], r[i], s[i]);
+            address recoveredAddress = ECDSA.recover(digest, v[i], r[i], s[i]);
             bool valid;
 
             assembly ("memory-safe") {
                 valid := tload(recoveredAddress)
-                if eq(valid, 1) { tstore(recoveredAddress, 0) }
+                if eq(valid, 1) {
+                    tstore(recoveredAddress, 0)
+                }
             }
 
             /// if the address of the signer was not in storage, the value will
@@ -245,8 +250,9 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         /// + 1 is for the module removal
         /// new owner length = 1
         /// existing owner length = 1
-        IMulticall3.Call3[] memory calls3 =
-            new IMulticall3.Call3[](owners.length + existingOwnersLength + 1);
+        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](
+            owners.length + existingOwnersLength + 1
+        );
 
         uint256 index = 0;
 
@@ -272,17 +278,22 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         /// only cover indexes 1 through new owners length
         for (uint256 i = 1; i < owners.length; i++) {
             calls3[index++].callData = abi.encodeWithSelector(
-                OwnerManager.addOwnerWithThreshold.selector, owners[i], 1
+                OwnerManager.addOwnerWithThreshold.selector,
+                owners[i],
+                1
             );
         }
 
         /// add new owner with the updated threshold
         calls3[index++].callData = abi.encodeWithSelector(
-            OwnerManager.changeThreshold.selector, threshold
+            OwnerManager.changeThreshold.selector,
+            threshold
         );
 
         calls3[index].callData = abi.encodeWithSelector(
-            ModuleManager.disableModule.selector, previousModule, address(this)
+            ModuleManager.disableModule.selector,
+            previousModule,
+            address(this)
         );
 
         for (uint256 i = 0; i < calls3.length; i++) {
