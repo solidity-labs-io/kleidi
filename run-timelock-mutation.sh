@@ -117,6 +117,7 @@ failed_mutation=0
 is_current_mutation_failed=0 # Intialized as false
 
 # Array of mutation indexes to skip
+# Skip these mutations to avoid infinite for and while loop
 skip_indexes=(21 56 64 77 97 117 126 145 238 241 248 268 283 286)
 # skip_indexes=(1 2)
 
