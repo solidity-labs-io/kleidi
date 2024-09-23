@@ -171,7 +171,6 @@ for (( i=1; i <= num_files; i++ )); do
     echo "Running certora prover"
     output_heading "Certora Prover Results: \n"
     certora_run_output=$(certoraRun certora/confs/TimelockMutations.conf --wait_for_results)
-    echo "$certora_run_output"
     echo "$certora_run_output" > "$temp_output_file"
     echo "Certora prover run ended"
 
