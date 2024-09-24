@@ -170,7 +170,8 @@ for (( i=1; i <= num_files; i++ )); do
     # Run certora prover and capture output
     echo "Running certora prover"
     output_heading "Certora Prover Results: \n"
-    certora_run_output=$(certoraRun certora/confs/TimelockMutations.conf --wait_for_results)
+    # exclude sanity check failures while mutation testing
+    certora_run_output=$(certoraRun certora/confs/Timelock.conf --wait_for_results --exclude_rule setLengthInvariant operationExpired operationInSet removeAllCalldataChecks timestampInvariant)
     echo "$certora_run_output" > "$temp_output_file"
     echo "Certora prover run ended"
 
