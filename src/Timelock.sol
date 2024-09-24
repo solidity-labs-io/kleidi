@@ -944,7 +944,7 @@ contract Timelock is
         {
             bytes32[] memory dataHashes = new bytes32[](1);
             dataHashes[0] = dataHash;
-    
+
             emit CalldataRemoved(
                 contractAddress,
                 selector,
