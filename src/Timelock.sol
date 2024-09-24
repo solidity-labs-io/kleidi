@@ -921,7 +921,11 @@ contract Timelock is
         uint16 removedStartIndex = indexCheck.startIndex;
         uint16 removedEndIndex = indexCheck.endIndex;
 
-        assert(indexCheck.dataHashes.remove(dataHash));
+        /// require instead of assert to have clear error messages
+        require(
+            indexCheck.dataHashes.remove(dataHash),
+            "CalldataList: DataHash does not exist"
+        );
 
         /// remove the index check if the dataHashes are empty
         if (indexCheck.dataHashes.length() == 0) {
@@ -935,6 +939,7 @@ contract Timelock is
 
             for (uint256 i = 0; i < dataHashes.length; i++) {
                 assert(indexCheck.dataHashes.add(dataHashes[i]));
+                assert(lastIndexCheck.dataHashes.remove(dataHashes[i]));
             }
 
             /// remove the last index check for the specified function
@@ -1062,6 +1067,11 @@ contract Timelock is
         bytes[] memory data,
         bool[] memory isSelfAddressCheck
     ) private {
+        require(
+            contractAddress != address(0),
+            "CalldataList: Address cannot be zero"
+        );
+        require(selector != bytes4(0), "CalldataList: Selector cannot be empty");
         require(
             startIndex >= 4, "CalldataList: Start index must be greater than 3"
         );
