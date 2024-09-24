@@ -22,6 +22,10 @@ function setLength() returns uint256 {
     return t._liveProposals._inner._values.length;
 }
 
+    /*//////////////////////////////////////////////////////////////
+                                    Timelock
+    //////////////////////////////////////////////////////////////*/
+
 /// check that CVL allows direct storage lookup
 invariant setLengthInvariant()
     setLength() == getAllProposals().length;
@@ -258,4 +262,121 @@ rule setChange(env e, method f, calldataarg args, bytes32 proposalId) {
         f.selector == sig:execute(address,uint256,bytes,bytes32).selector ||
         f.selector == sig:executeBatch(address[],uint256[],bytes[],bytes32).selector
     ), "only cleanup, pause, cancel, execute and executeBatch should remove from proposal set";
+}
+
+    /*//////////////////////////////////////////////////////////////
+                                    Pause
+    //////////////////////////////////////////////////////////////*/
+
+invariant pauseDuration()
+    to_mathint(pauseDuration()) >= to_mathint(oneDay()) &&
+    to_mathint(pauseDuration()) <= to_mathint(oneMonth());
+
+rule pausingCancelsAllInflightProposals(env e) {
+    require getAllProposals().length > 0;
+
+    pause(e);
+
+    assert getAllProposals().length == 0, "proposals not cancelled post pause";
+}
+
+rule pausingRevokesGuardian(env e) {
+    require pauseGuardian() != 0;
+    require e.block.timestamp <= timestampMax() && e.block.timestamp > 0;
+
+    pause(e);
+
+    assert pauseGuardian() == 0, "pause guardian not revoked";
+    assert to_mathint(pauseStartTime()) == to_mathint(e.block.timestamp), "pause start time not set";
+    assert paused(e), "contract not paused";
+    assert pauseStartTime() != 0, "contract not paused";
+}
+
+    /*//////////////////////////////////////////////////////////////
+                                    Calldata
+    //////////////////////////////////////////////////////////////*/
+
+invariant noSelfWhitelisting(bytes4 selector)
+    t._calldataList[timelockAddress()][selector].length == 0;
+
+invariant noSafeWhitelisting(bytes4 selector)
+    t._calldataList[safe()][selector].length == 0;
+
+invariant calldataIndexesInvariant(address contract, bytes4 selector, uint256 index)
+    (t._calldataList[contract][selector].length > index) =>
+    (
+        t._calldataList[contract][selector][index].startIndex >= 4 &&
+        t._calldataList[contract][selector][index].endIndex >= t._calldataList[contract][selector][index].startIndex
+    ) {
+        preserved {
+            if (t._calldataList[contract][selector].length >= 1) {
+                requireInvariant calldataIndexesInvariant(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            }
+        }
+    }
+
+invariant singleCheckIfWildcard(address contract, bytes4 selector, uint256 index)
+    (t._calldataList[contract][selector].length > index && 
+    t._calldataList[contract][selector][index].endIndex == t._calldataList[contract][selector][index].startIndex) =>
+    (
+       t._calldataList[contract][selector][index].startIndex == 4 &&
+       t._calldataList[contract][selector].length == 1
+    ) {
+        preserved {
+            if (t._calldataList[contract][selector].length >= 1) {
+                requireInvariant singleCheckIfWildcard(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            }
+        }
+    }
+
+/// removeCalldataCheck removes 1 calldata check
+rule removeCalldataCheck(env e, address target, bytes4 selector, uint256 index) {
+    mathint len = t._calldataList[target][selector].length;
+
+    removeCalldataCheck(e, target, selector, index);
+
+    /// verify all state transitions
+    assert to_mathint(t._calldataList[target][selector].length) == len - 1, "calldata list should be empty";
+}
+
+/// addCalldataCheck add 1 calldata check
+rule addCalldataCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data, bool[] isSelfAddressCheck) {
+    mathint len = t._calldataList[target][selector].length;
+    uint256 uint256Len = t._calldataList[target][selector].length;
+    uint256 numberValues = t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length;
+    require numberValues + data.length <= to_mathint(uintMax());
+
+    addCalldataCheck(e, target, selector, startIndex, endIndex, data, isSelfAddressCheck);
+
+    /// verify all state transitions
+    assert to_mathint(t._calldataList[target][selector].length) == len + 1, "one calldata check should be added";
+    assert startIndex >= 4, "start index should be greater than 3";
+    assert endIndex >= startIndex, "end index should be greater than equal to start index";
+    assert t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length == assert_uint256(data.length + numberValues), "All OR data should be added for the check";
+}
+
+/// addCalldataCheck add 1 calldata check
+rule addWildcardCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data, bool[] isSelfAddressCheck) {
+    require startIndex == endIndex;
+
+    mathint len = t._calldataList[target][selector].length;
+
+    addCalldataCheck(e, target, selector, startIndex, endIndex, data, isSelfAddressCheck);
+
+    /// verify all state transitions
+    assert to_mathint(t._calldataList[target][selector].length) == len + 1, "one calldata check should be added";
+    assert startIndex == 4, "indexes should be 4 for wildcard";
+    assert len == 0, "wildcard check can only be added if no checks";
+}
+
+/// removeAllCalldataChecks removes all calldata checks
+rule removeAllCalldataChecks(env e, address[] targets, bytes4[] selectors) {
+    require targets.length == 3 && selectors.length == 3;
+
+    removeAllCalldataChecks(e, targets, selectors);
+
+    /// verify all state transitions
+    assert to_mathint(t._calldataList[targets[0]][selectors[0]].length) == 0, "calldata list should be empty";
+    assert to_mathint(t._calldataList[targets[1]][selectors[1]].length) == 0, "calldata list should be empty";
+    assert to_mathint(t._calldataList[targets[2]][selectors[2]].length) == 0, "calldata list should be empty";
 }

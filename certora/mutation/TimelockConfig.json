@@ -1,0 +1,13 @@
+{
+    "filename": "../../src/Timelock.sol",
+    "sourceroot": "../..",
+    "solc_remappings": [
+        "@openzeppelin-contracts=../../lib/openzeppelin-contracts/",
+        "@safe=../../lib/safe-smart-account/contracts/",
+        "@src/=../../src/",
+        "@forge-std/=../../lib/forge-std/src/",
+        "@interface/=../../src/interface/",
+        "@forge-proposal-simulator=../../lib/forge-proposal-simulator/"
+    ],
+    "outdir": "../../gambit_out_Timelock"
+}
