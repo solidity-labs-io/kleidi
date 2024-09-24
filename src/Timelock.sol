@@ -1077,11 +1077,11 @@ contract Timelock is
                 require(
                     (
                         startIndex > indexes[i].endIndex
-                            || startIndex < indexes[i].startIndex
+                            && endIndex > indexes[i].endIndex
                     )
-                        && (
-                            endIndex > indexes[i].endIndex
-                                || endIndex < indexes[i].startIndex
+                        || (
+                            endIndex < indexes[i].startIndex
+                                && startIndex < indexes[i].startIndex
                         ),
                     "CalldataList: Partial check overlap"
                 );
