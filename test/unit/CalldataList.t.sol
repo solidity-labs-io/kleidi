@@ -28,6 +28,7 @@ contract CalldataListUnitTest is Test {
     struct CheckDataFuzzParams {
         address target;
         bytes4 selector;
+        uint16 calldataLength;
         bytes singleCalldata;
     }
 
@@ -60,8 +61,12 @@ contract CalldataListUnitTest is Test {
     address public constant HOT_SIGNER_TWO = address(0x22222);
     address public constant HOT_SIGNER_THREE = address(0x33333);
 
-    // nonce for generating random numbers
+    /// @notice nonce for generating random numbers
     uint256 internal _nonce = 0;
+
+    /// @notice mapping used in testAddAndRemoveCalldataFuzzy
+    mapping(address target => mapping(bytes4 selector => uint256 count)) private
+        checksCount;
 
     function setUp() public {
         hotSigners.push(HOT_SIGNER_ONE);
@@ -183,7 +188,6 @@ contract CalldataListUnitTest is Test {
         );
     }
 
-
     function testAddAndRemoveCalldataFuzzy(
         CheckDataFuzzParams[] memory fuzzyCheckData
     ) public {
@@ -192,6 +196,11 @@ contract CalldataListUnitTest is Test {
             fuzzyLength = fuzzyCheckData.length;
 
             vm.assume(fuzzyLength > 0);
+
+            for (uint256 len = 0; len < fuzzyLength; len++) {
+                fuzzyCheckData[len].calldataLength =
+                    uint16(bound(fuzzyCheckData[len].calldataLength, 4, 32));
+            }
 
             // number of checks for each contract address and function selector pair
             uint256 checkCount = randomInRange(1, 10, true);
@@ -208,34 +217,70 @@ contract CalldataListUnitTest is Test {
                 vm.assume(
                     fuzzyCheckData[i].target != address(safe)
                         && fuzzyCheckData[i].target != address(timelock)
+                        && fuzzyCheckData[i].target != address(0)
+                        && fuzzyCheckData[i].selector != bytes4(0)
                 );
 
-                // generate checkCount number of checks
-                for (uint256 j = 0; j < checkCount; j++) {
-                    // index where the new check is added
-                    uint256 index = i * checkCount + j;
-
-                    checkData.targets[index] = fuzzyCheckData[i].target;
-                    checkData.selectors[index] = fuzzyCheckData[i].selector;
-                    // checkData.startIndexes[index] =
-                    //     uint16(bound(fuzzyCheckData[i].startIndex + j, 4, 100));
-                    checkData.calldatas = generateCalldatas(
-                        checkData.calldatas,
-                        abi.encodePacked(fuzzyCheckData[i].singleCalldata, j),
-                        randomInRange(1, 32, true),
-                        index
-                    );
-                    checkData.startIndexes[index] = currentStartIndex;
-                    // set end index to start index + calldata length
-                    checkData.endIndexes[index] = checkData.startIndexes[index]
-                        + uint16(checkData.calldatas[index][0].length);
+                if (randomInRange(1, 100, true) % 5 == 0) {
+                    // generate checkCount number of checks
+                    for (uint256 j = 0; j < checkCount; j++) {
+                        // index where the new check is added
+                        uint256 index = i * checkCount + j;
+                        checkData.targets[index] = fuzzyCheckData[i].target;
+                        checkData.selectors[index] = fuzzyCheckData[i].selector;
+                        checkData.calldatas = generateCalldatas(
+                            checkData.calldatas,
+                            abi.encodePacked(
+                                fuzzyCheckData[i].singleCalldata, j
+                            ),
+                            fuzzyCheckData[i].calldataLength,
+                            index
+                        );
+                        checkData.startIndexes[index] = currentStartIndex;
+                        // set end index to start index + calldata length
+                        checkData.endIndexes[index] = checkData.startIndexes[index]
+                            + fuzzyCheckData[i].calldataLength;
+                        checkData.isSelfAddressChecks =
+                        generateSelfAddressChecks(
+                            checkData.isSelfAddressChecks,
+                            checkData.calldatas[index].length,
+                            index
+                        );
+                    }
+                    checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
+                        .selector] += 1;
                     //update start index for next check to avoid overlap
-                    currentStartIndex = checkData.endIndexes[index] + 1;
-                    checkData.isSelfAddressChecks = generateSelfAddressChecks(
-                        checkData.isSelfAddressChecks,
-                        checkData.calldatas[index].length,
-                        index
-                    );
+                    currentStartIndex = checkData.endIndexes[i * checkCount] + 1;
+                } else {
+                    // generate checkCount number of checks
+                    for (uint256 j = 0; j < checkCount; j++) {
+                        // index where the new check is added
+                        uint256 index = i * checkCount + j;
+                        checkData.targets[index] = fuzzyCheckData[i].target;
+                        checkData.selectors[index] = fuzzyCheckData[i].selector;
+                        checkData.calldatas = generateCalldatas(
+                            checkData.calldatas,
+                            abi.encodePacked(
+                                fuzzyCheckData[i].singleCalldata, j
+                            ),
+                            fuzzyCheckData[i].calldataLength,
+                            index
+                        );
+                        checkData.startIndexes[index] = currentStartIndex;
+                        // set end index to start index + calldata length
+                        checkData.endIndexes[index] = checkData.startIndexes[index]
+                            + fuzzyCheckData[i].calldataLength;
+                        //update start index for next check to avoid overlap
+                        currentStartIndex = checkData.endIndexes[index] + 1;
+                        checkData.isSelfAddressChecks =
+                        generateSelfAddressChecks(
+                            checkData.isSelfAddressChecks,
+                            checkData.calldatas[index].length,
+                            index
+                        );
+                    }
+                    checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
+                        .selector] += checkCount;
                 }
             }
 
@@ -257,7 +302,9 @@ contract CalldataListUnitTest is Test {
                 // finalCheckLength % checkCount to cover case where a pair of
                 // contract address and selector is repeated in fuzzed array
                 assertTrue(
-                    finalCheckLength != 0 && finalCheckLength % checkCount == 0
+                    finalCheckLength
+                        == checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
+                            .selector]
                 );
             }
         }
@@ -270,12 +317,36 @@ contract CalldataListUnitTest is Test {
                 uint256 index;
                 while (checksLength > 0) {
                     index = randomInRange(0, checksLength - 1, false);
-                    vm.prank(address(timelock));
-                    timelock.removeCalldataCheck(
-                        fuzzyCheckData[i].target,
-                        fuzzyCheckData[i].selector,
-                        index
-                    );
+                    if (randomInRange(1, 100, true) % 2 == 0) {
+                        vm.prank(address(timelock));
+                        timelock.removeCalldataCheck(
+                            fuzzyCheckData[i].target,
+                            fuzzyCheckData[i].selector,
+                            index
+                        );
+                    } else {
+                        uint256 dataHashesLength = timelock.getCalldataChecks(
+                            fuzzyCheckData[i].target, fuzzyCheckData[i].selector
+                        )[index].dataHashes.length;
+                        uint256 indexDataHashes;
+                        while (dataHashesLength > 0) {
+                            bytes32[] memory dataHashes = timelock
+                                .getCalldataChecks(
+                                fuzzyCheckData[i].target,
+                                fuzzyCheckData[i].selector
+                            )[index].dataHashes;
+                            indexDataHashes =
+                                randomInRange(0, dataHashesLength - 1, false);
+                            vm.prank(address(timelock));
+                            timelock.removeCalldataCheckDatahash(
+                                fuzzyCheckData[i].target,
+                                fuzzyCheckData[i].selector,
+                                index,
+                                dataHashes[indexDataHashes]
+                            );
+                            dataHashesLength--;
+                        }
+                    }
                     checksLength--;
                 }
                 // assert calldata checks removed
