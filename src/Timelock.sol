@@ -1045,13 +1045,57 @@ contract Timelock is
         }
 
         Index[] storage indexes = _calldataList[contractAddress][selector];
-        uint256 indexLength = indexes.length;
+        uint256 targetIndex = indexes.length;
+        {
+            bool found;
+            for (uint256 i = 0; i < indexes.length; i++) {
+                if (
+                    indexes[i].startIndex == startIndex
+                        && indexes[i].endIndex == endIndex
+                ) {
+                    targetIndex = i;
+                    found = true;
+                    break;
+                }
+                /// all calldata checks must be isolated to predefined calldata segments
+                /// for example given calldata with three parameters:
 
-        indexes.push();
-        indexes[indexLength].startIndex = startIndex;
-        indexes[indexLength].endIndex = endIndex;
+                ///                    1.                              2.                             3.
+                ///       000000000000000112818929111111
+                ///                                     000000000000000112818929111111
+                ///                                                                   000000000000000112818929111111
+
+                /// checks must be applied in a way such that they do not overlap with each other.
+                /// having checks that check 1 and 2 together as a single parameter would be valid,
+                /// but having checks that check 1 and 2 together, and then check one separately
+                /// would be invalid.
+                /// checking 1, 2, and 3 separately is valid
+                /// checking 1, 2, and 3 as a single check is valid
+                /// checking 1, 2, and 3 separately, and then the last half of 2 and the first half
+                /// of 3 is invalid
+
+                require(
+                    (
+                        startIndex > indexes[i].endIndex
+                            || startIndex < indexes[i].startIndex
+                    )
+                        && (
+                            endIndex > indexes[i].endIndex
+                                || endIndex < indexes[i].startIndex
+                        ),
+                    "CalldataList: Partial check overlap"
+                );
+            }
+
+            if (!found) {
+                indexes.push();
+                indexes[targetIndex].startIndex = startIndex;
+                indexes[targetIndex].endIndex = endIndex;
+            }
+        }
 
         for (uint256 i = 0; i < data.length; i++) {
+            bytes32 dataHash;
             if (isSelfAddressCheck[i]) {
                 /// self address check, data must be empty
                 require(
@@ -1062,18 +1106,20 @@ contract Timelock is
                     endIndex - startIndex == 20,
                     "CalldataList: Self address check must be 20 bytes"
                 );
+                dataHash = ADDRESS_THIS_HASH;
             } else {
                 /// not self address check, data length must equal delta index
                 require(
                     data[i].length == endIndex - startIndex,
                     "CalldataList: Data length mismatch"
                 );
+                dataHash = keccak256(data[i]);
             }
 
-            bytes32 dataHash =
-                isSelfAddressCheck[i] ? ADDRESS_THIS_HASH : keccak256(data[i]);
-
-            assert(indexes[indexLength].dataHashes.add(dataHash));
+            require(
+                indexes[targetIndex].dataHashes.add(dataHash),
+                "CalldataList: Duplicate data"
+            );
         }
 
         emit CalldataAdded(
@@ -1081,7 +1127,7 @@ contract Timelock is
             selector,
             startIndex,
             endIndex,
-            indexes[indexLength].dataHashes.values()
+            indexes[targetIndex].dataHashes.values()
         );
     }
 
