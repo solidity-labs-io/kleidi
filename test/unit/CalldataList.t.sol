@@ -110,24 +110,28 @@ contract CalldataListUnitTest is Test {
     }
 
     function testAddCalldataCheckAndRemoveCalldataCheckSucceeds() public {
-        address[] memory targetAddresses = new address[](2);
+        address[] memory targetAddresses = new address[](3);
         targetAddresses[0] = address(lending);
         targetAddresses[1] = address(lending);
+        targetAddresses[2] = address(lending);
 
-        bytes4[] memory selectors = new bytes4[](2);
+        bytes4[] memory selectors = new bytes4[](3);
         selectors[0] = MockLending.deposit.selector;
         selectors[1] = MockLending.deposit.selector;
+        selectors[2] = MockLending.deposit.selector;
 
         /// compare first 20 bytes
-        uint16[] memory startIndexes = new uint16[](2);
+        uint16[] memory startIndexes = new uint16[](3);
         startIndexes[0] = 16;
         startIndexes[1] = 16;
+        startIndexes[2] = 40;
 
-        uint16[] memory endIndexes = new uint16[](2);
+        uint16[] memory endIndexes = new uint16[](3);
         endIndexes[0] = 36;
         endIndexes[1] = 36;
+        endIndexes[2] = 60;
 
-        bytes[][] memory checkedCalldatas = new bytes[][](2);
+        bytes[][] memory checkedCalldatas = new bytes[][](3);
         bytes[] memory checkedCalldata1 = new bytes[](1);
         checkedCalldata1[0] = abi.encodePacked(address(this));
         checkedCalldatas[0] = checkedCalldata1;
@@ -136,11 +140,16 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
+        bytes[] memory checkedCalldata3 = new bytes[](1);
+        checkedCalldata3[0] = abi.encodePacked(address(timelock));
+        checkedCalldatas[2] = checkedCalldata3;
+
+        bool[][] memory isSelfAddressChecks = new bool[][](3);
         bool[] memory isSelfAddressCheck = new bool[](1);
         isSelfAddressCheck[0] = false;
         isSelfAddressChecks[0] = isSelfAddressCheck;
         isSelfAddressChecks[1] = isSelfAddressCheck;
+        isSelfAddressChecks[2] = isSelfAddressCheck;
 
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
@@ -156,7 +165,7 @@ contract CalldataListUnitTest is Test {
             timelock.getCalldataChecks(
                 address(lending), MockLending.deposit.selector
             ).length,
-            1,
+            2,
             "calldata checks not added"
         );
 
@@ -166,6 +175,19 @@ contract CalldataListUnitTest is Test {
             )[0].dataHashes.length,
             2,
             "calldata checks not added"
+        );
+
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheck(
+            address(lending), MockLending.deposit.selector, 0
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            1,
+            "calldata check not removed"
         );
 
         vm.prank(address(timelock));
