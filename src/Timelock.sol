@@ -895,6 +895,66 @@ contract Timelock is
         _removeCalldataCheck(contractAddress, selector, index);
     }
 
+    /// @notice remove a calldata check by index
+    /// @param contractAddress the address of the contract that the calldata check is removed from
+    /// @param selector the function selector of the function that the calldata check is removed from
+    /// @param index the index of the calldata check to remove
+    /// @param dataHash the hash of the calldata that is stored
+    function removeCalldataCheckDatahash(
+        address contractAddress,
+        bytes4 selector,
+        uint256 index,
+        bytes32 dataHash
+    ) external onlyTimelock {
+        Index[] storage calldataChecks =
+            _calldataList[contractAddress][selector];
+        /// if no calldata checks are found, this check will fail because
+        /// calldataChecks.length will be 0, and no uint value can be lt 0
+        require(
+            index < calldataChecks.length,
+            "CalldataList: Calldata index out of bounds"
+        );
+
+        /// index check to remove the datahash from
+        Index storage indexCheck = calldataChecks[index];
+
+        uint16 removedStartIndex = indexCheck.startIndex;
+        uint16 removedEndIndex = indexCheck.endIndex;
+
+        assert(indexCheck.dataHashes.remove(dataHash));
+
+        /// remove the index check if the dataHashes are empty
+        if (indexCheck.dataHashes.length() == 0) {
+            /// index check to overwrite the specified index check with
+            Index storage lastIndexCheck =
+                calldataChecks[calldataChecks.length - 1];
+
+            indexCheck.startIndex = lastIndexCheck.startIndex;
+            indexCheck.endIndex = lastIndexCheck.endIndex;
+            bytes32[] memory dataHashes = lastIndexCheck.dataHashes.values();
+
+            for (uint256 i = 0; i < dataHashes.length; i++) {
+                assert(indexCheck.dataHashes.add(dataHashes[i]));
+            }
+
+            /// remove the last index check for the specified function
+            calldataChecks.pop();
+        }
+
+        {
+            bytes32[] memory dataHashes = new bytes32[](1);
+            dataHashes[0] = dataHash;
+    
+            emit CalldataRemoved(
+                contractAddress,
+                selector,
+                removedStartIndex,
+                removedEndIndex,
+                dataHashes
+            );
+        }
+    }
+
     /// @notice remove all calldata checks for a given contract address
     /// @param contractAddresses the address of the contract that the
     /// calldata checks are removed from
@@ -1075,14 +1135,8 @@ contract Timelock is
                 /// of 3 is invalid
 
                 require(
-                    (
-                        startIndex > indexes[i].endIndex
-                            && endIndex > indexes[i].endIndex
-                    )
-                        || (
-                            endIndex < indexes[i].startIndex
-                                && startIndex < indexes[i].startIndex
-                        ),
+                    startIndex > indexes[i].endIndex
+                        || endIndex < indexes[i].startIndex,
                     "CalldataList: Partial check overlap"
                 );
             }
@@ -1116,6 +1170,7 @@ contract Timelock is
                 dataHash = keccak256(data[i]);
             }
 
+            /// make require instead of assert to have clear error messages
             require(
                 indexes[targetIndex].dataHashes.add(dataHash),
                 "CalldataList: Duplicate data"
