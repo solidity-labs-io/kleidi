@@ -921,7 +921,11 @@ contract Timelock is
         uint16 removedStartIndex = indexCheck.startIndex;
         uint16 removedEndIndex = indexCheck.endIndex;
 
-        assert(indexCheck.dataHashes.remove(dataHash));
+        /// require instead of assert to have clear error messages
+        require(
+            indexCheck.dataHashes.remove(dataHash),
+            "CalldataList: DataHash does not exist"
+        );
 
         /// remove the index check if the dataHashes are empty
         if (indexCheck.dataHashes.length() == 0) {
