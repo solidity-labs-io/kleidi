@@ -356,7 +356,9 @@ contract DeploymentMultichainTest is SystemDeploy {
 
         /// change the whitelisted calldata before deployment on base
         instance.timelockParams.contractAddresses = new address[](1);
+        instance.timelockParams.contractAddresses[0] = address(1);
         instance.timelockParams.selectors = new bytes4[](1);
+        instance.timelockParams.selectors[0] = bytes4("1");
 
         instance.timelockParams.startIndexes = new uint16[](1);
         instance.timelockParams.startIndexes[0] = 4;
