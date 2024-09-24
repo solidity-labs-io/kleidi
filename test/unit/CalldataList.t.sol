@@ -29,6 +29,7 @@ contract CalldataListUnitTest is Test {
         address target;
         bytes4 selector;
         uint16 startIndex;
+        uint16 endIndex;
         bytes singleCalldata;
     }
 
@@ -122,22 +123,25 @@ contract CalldataListUnitTest is Test {
 
         /// compare first 20 bytes
         uint16[] memory startIndexes = new uint16[](2);
-        startIndexes[0] = 12;
+        startIndexes[0] = 16;
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 32;
+        endIndexes[0] = 36;
         endIndexes[1] = 36;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
-        bytes[] memory checkedCalldata = new bytes[](1);
-        checkedCalldata[0] = "";
-        checkedCalldatas[0] = checkedCalldata;
-        checkedCalldatas[1] = checkedCalldata;
+        bytes[] memory checkedCalldata1 = new bytes[](1);
+        checkedCalldata1[0] = abi.encodePacked(address(this));
+        checkedCalldatas[0] = checkedCalldata1;
+
+        bytes[] memory checkedCalldata2 = new bytes[](1);
+        checkedCalldata2[0] = abi.encodePacked(address(timelock));
+        checkedCalldatas[1] = checkedCalldata2;
 
         bool[][] memory isSelfAddressChecks = new bool[][](2);
         bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = true;
+        isSelfAddressCheck[0] = false;
         isSelfAddressChecks[0] = isSelfAddressCheck;
         isSelfAddressChecks[1] = isSelfAddressCheck;
 
@@ -155,35 +159,16 @@ contract CalldataListUnitTest is Test {
             timelock.getCalldataChecks(
                 address(lending), MockLending.deposit.selector
             ).length,
-            2,
+            1,
             "calldata checks not added"
         );
 
-        vm.prank(address(timelock));
-        timelock.removeCalldataCheck(
-            address(lending), MockLending.deposit.selector, 0
-        );
-
         assertEq(
             timelock.getCalldataChecks(
                 address(lending), MockLending.deposit.selector
-            ).length,
-            1,
-            "calldata check not removed"
-        );
-        assertEq(
-            timelock.getCalldataChecks(
-                address(lending), MockLending.deposit.selector
-            )[0].startIndex,
-            16,
-            "calldata check not removed"
-        );
-        assertEq(
-            timelock.getCalldataChecks(
-                address(lending), MockLending.deposit.selector
-            )[0].endIndex,
-            36,
-            "calldata check not removed"
+            )[0].dataHashes.length,
+            2,
+            "calldata checks not added"
         );
 
         vm.prank(address(timelock));
@@ -200,6 +185,11 @@ contract CalldataListUnitTest is Test {
         );
     }
 
+    struct Indexes {
+        uint16 startIndex;
+        uint16 endIndex;
+    }
+
     function testAddAndRemoveCalldataFuzzy(
         CheckDataFuzzParams[] memory fuzzyCheckData
     ) public {
@@ -208,6 +198,13 @@ contract CalldataListUnitTest is Test {
             fuzzyLength = fuzzyCheckData.length;
 
             vm.assume(fuzzyLength > 0);
+
+            Indexes[] memory indexes = new Indexes[](5);
+            indexes[0] = Indexes({startIndex: 4, endIndex: 36});
+            indexes[1] = Indexes({startIndex: 37, endIndex: 40});
+            indexes[2] = Indexes({startIndex: 41, endIndex: 60});
+            indexes[3] = Indexes({startIndex: 61, endIndex: 80});
+            indexes[4] = Indexes({startIndex: 81, endIndex: 100});
 
             // number of checks for each contract address and function selector pair
             uint256 checkCount = bound(fuzzyCheckData[0].startIndex, 1, 10);
@@ -231,17 +228,26 @@ contract CalldataListUnitTest is Test {
 
                     checkData.targets[index] = fuzzyCheckData[i].target;
                     checkData.selectors[index] = fuzzyCheckData[i].selector;
-                    checkData.startIndexes[index] =
-                        uint16(bound(fuzzyCheckData[i].startIndex + j, 4, 100));
-                    checkData.calldatas = generateCalldatas(
-                        checkData.calldatas,
-                        abi.encodePacked(fuzzyCheckData[i].singleCalldata, j),
-                        fuzzyCheckData[i].startIndex + j,
-                        index
-                    );
-                    // set end index to start index + calldata length
-                    checkData.endIndexes[index] = checkData.startIndexes[index]
-                        + uint16(checkData.calldatas[index][0].length);
+
+                    {
+                        uint256 boundIndex = bound(j, 0, 4);
+
+                        checkData.startIndexes[index] =
+                            indexes[boundIndex].startIndex;
+                        checkData.endIndexes[index] =
+                            indexes[boundIndex].endIndex;
+
+                        checkData.calldatas = generateCalldatas(
+                            checkData.calldatas,
+                            abi.encodePacked(
+                                fuzzyCheckData[i].singleCalldata, j
+                            ),
+                            indexes[boundIndex].endIndex
+                                - indexes[boundIndex].startIndex,
+                            index
+                        );
+                    }
+
                     checkData.isSelfAddressChecks = generateSelfAddressChecks(
                         checkData.isSelfAddressChecks,
                         checkData.calldatas[index].length,
@@ -265,10 +271,20 @@ contract CalldataListUnitTest is Test {
                 uint256 finalCheckLength = timelock.getCalldataChecks(
                     fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                 ).length;
+                console.log("finalCheckLength: ", finalCheckLength);
+                console.log("checkCount: ", checkCount);
+
+                /// this check fails now
+                console.log(
+                    "finalCheckLength % checkCount: ",
+                    finalCheckLength % checkCount
+                );
+
                 // finalCheckLength % checkCount to cover case where a pair of
                 // contract address and selector is repeated in fuzzed array
                 assertTrue(
-                    finalCheckLength != 0 && finalCheckLength % checkCount == 0
+                    finalCheckLength != 0 && finalCheckLength % checkCount == 0,
+                    "calldata checks not added"
                 );
             }
         }
@@ -561,6 +577,7 @@ contract CalldataListUnitTest is Test {
         pure
         returns (bytes memory)
     {
+        require(length <= 32, "sliceBytes32: length must be <= 32");
         bytes memory slicedData = new bytes(length);
         for (uint256 i = 0; i < length; i++) {
             slicedData[i] = data[i];
@@ -575,7 +592,7 @@ contract CalldataListUnitTest is Test {
         uint256 index
     ) internal pure returns (bytes[][] memory) {
         // length of each calldata for a check
-        uint256 calldataLength = bound(count, 4, 32);
+        uint256 calldataLength = count;
         // number of calldatas for each check
         count = bound(count, 1, 10);
 

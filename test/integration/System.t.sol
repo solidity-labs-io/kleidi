@@ -463,6 +463,190 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         timelock.execute(address(timelock), 0, contractCall, bytes32(0));
     }
 
+    function testAddSameChecksTwiceFails() public {
+        /// proposal #1
+
+        address[] memory calls = new address[](1);
+        calls[0] = address(timelock);
+
+        bytes memory innerCalldatas;
+        bytes memory contractCall;
+        {
+            /// each morpho blue function call needs two checks:
+            /// 1). check the pool id where funds are being deposited is whitelisted.
+            /// 2). check the recipient of the funds is whitelisted whether withdrawing
+            /// or depositing.
+
+            uint16[] memory startIndexes = new uint16[](2);
+            /// morpho blue supply
+            startIndexes[0] = 4;
+            /// only grab last twenty bytes of the 8th argument
+            startIndexes[1] = 4 + 32 * 7 + 12;
+
+            uint16[] memory endIndexes = new uint16[](2);
+            /// morpho blue supply
+            endIndexes[0] = startIndexes[0] + 32 * 5;
+            /// last twenty bytes represents who supplying on behalf of
+            endIndexes[1] = startIndexes[1] + 20;
+
+            bytes4[] memory selectors = new bytes4[](2);
+            selectors[0] = IMorphoBase.supply.selector;
+            selectors[1] = IMorphoBase.supply.selector;
+
+            bytes[][] memory calldatas = new bytes[][](2);
+            bytes memory singleCalldata;
+
+            /// can only deposit to dai/eusd pool
+            bytes[] memory approvedPools = new bytes[](2);
+            approvedPools[0] =
+                abi.encode(dai, ethenaUsd, oracleEusdDai, irm, lltv);
+            approvedPools[1] =
+                abi.encode(weth, wbtc, oracleWbtcdWeth, irm, lltv);
+            calldatas[0] = approvedPools;
+
+            /// can only deposit to timelock
+            singleCalldata = "";
+
+            calldatas = generateCalldatas(calldatas, singleCalldata, 1);
+
+            address[] memory targets = new address[](2);
+            targets[0] = morphoBlue;
+            targets[1] = morphoBlue;
+            console.log("8");
+
+            bool[][] memory isSelfAddressChecks = new bool[][](2);
+            isSelfAddressChecks =
+                generateSelfAddressChecks(isSelfAddressChecks, false, 0);
+
+            isSelfAddressChecks =
+                generateSelfAddressChecks(isSelfAddressChecks, true, 1);
+            console.log("9");
+
+            bool[] memory approveSelfAddressChecks = new bool[](2);
+            approveSelfAddressChecks[0] = false;
+            approveSelfAddressChecks[1] = false;
+            isSelfAddressChecks[0] = approveSelfAddressChecks;
+            isSelfAddressChecks[1] = new bool[](1);
+            isSelfAddressChecks[1][0] = true;
+
+            contractCall = abi.encodeWithSelector(
+                Timelock.addCalldataChecks.selector,
+                targets,
+                selectors,
+                startIndexes,
+                endIndexes,
+                calldatas,
+                isSelfAddressChecks
+            );
+
+            /// inner calldata
+            innerCalldatas = abi.encodeWithSelector(
+                Timelock.schedule.selector,
+                address(timelock),
+                0,
+                contractCall,
+                bytes32(uint256(1)),
+                timelock.minDelay()
+            );
+        }
+
+        {
+            bytes32 transactionHash = safe.getTransactionHash(
+                address(timelock),
+                0,
+                innerCalldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                address(0),
+                safe.nonce()
+            );
+
+            bytes memory collatedSignatures =
+                signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+            safe.checkNSignatures(
+                transactionHash, innerCalldatas, collatedSignatures, 3
+            );
+
+            safe.execTransaction(
+                address(timelock),
+                0,
+                innerCalldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                collatedSignatures
+            );
+
+            vm.warp(block.timestamp + timelock.minDelay());
+
+            vm.prank(owners[0]);
+            timelock.execute(
+                address(timelock), 0, contractCall, bytes32(uint256(1))
+            );
+        }
+
+        /// proposal #2
+
+        {
+            /// inner calldata
+            innerCalldatas = abi.encodeWithSelector(
+                Timelock.schedule.selector,
+                address(timelock),
+                0,
+                contractCall,
+                bytes32(0),
+                timelock.minDelay()
+            );
+        }
+        {
+            bytes32 transactionHash = safe.getTransactionHash(
+                address(timelock),
+                0,
+                innerCalldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                address(0),
+                safe.nonce()
+            );
+
+            bytes memory collatedSignatures =
+                signTxAllOwners(transactionHash, pk1, pk2, pk3);
+
+            safe.checkNSignatures(
+                transactionHash, innerCalldatas, collatedSignatures, 3
+            );
+
+            safe.execTransaction(
+                address(timelock),
+                0,
+                innerCalldatas,
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(address(0)),
+                collatedSignatures
+            );
+
+            vm.warp(block.timestamp + timelock.minDelay());
+
+            vm.expectRevert("Timelock: underlying transaction reverted");
+            vm.prank(owners[0]);
+            timelock.execute(address(timelock), 0, contractCall, bytes32(0));
+        }
+    }
+
     function testSetFallbackHandlerFails() public {
         bytes memory calldatas = abi.encodeWithSelector(
             FallbackManager.setFallbackHandler.selector, address(0)
