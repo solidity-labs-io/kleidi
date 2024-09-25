@@ -10,3 +10,4 @@ The following are known issues with the Kleidi system:
 - the system only works on EVM compatible chains, does not work on chains that have not undergone the Shanghai EVM upgrade
 - the system only works with contracts that have a known ABI, it does not work with contracts that have dynamic ABIs
 - the return value of token transfers are unchecked, however the call to the token contract is checked, the timelock has no accounting mechanisms
+- salt in the DeploymentParams struct is not used in the call to createSystemInstance, this is a known issue, but is not a security concern. The same system instance with the same parameters can only be deployed once.
