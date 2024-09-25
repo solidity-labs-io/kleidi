@@ -306,6 +306,117 @@ contract CalldataListUnitTest is Test {
         );
     }
 
+
+    function testAddCalldataCheckAndRemoveCalldataCheckDatahashMultipleIndecesSucceeds()
+        public
+    {
+        address[] memory targetAddresses = new address[](2);
+        targetAddresses[0] = address(lending);
+        targetAddresses[1] = address(lending);
+
+        bytes4[] memory selectors = new bytes4[](2);
+        selectors[0] = MockLending.deposit.selector;
+        selectors[1] = MockLending.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](2);
+        startIndexes[0] = 16;
+        startIndexes[1] = 37;
+
+        uint16[] memory endIndexes = new uint16[](2);
+        endIndexes[0] = 36;
+        endIndexes[1] = 57;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](2);
+        bytes[] memory checkedCalldata1 = new bytes[](1);
+        checkedCalldata1[0] = abi.encodePacked(address(this));
+        checkedCalldatas[0] = checkedCalldata1;
+
+        bytes[] memory checkedCalldata2 = new bytes[](1);
+        checkedCalldata2[0] = abi.encodePacked(address(timelock));
+        checkedCalldatas[1] = checkedCalldata2;
+
+        bool[][] memory isSelfAddressChecks = new bool[][](2);
+        bool[] memory isSelfAddressCheck = new bool[](1);
+        isSelfAddressCheck[0] = false;
+        isSelfAddressChecks[0] = isSelfAddressCheck;
+        isSelfAddressChecks[1] = isSelfAddressCheck;
+
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas,
+            isSelfAddressChecks
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            2,
+            "calldata checks not added"
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            )[0].dataHashes.length,
+            1,
+            "first calldata checks not added"
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            )[1].dataHashes.length,
+            1,
+            "second calldata checks not added"
+        );
+
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheckDatahash(
+            address(lending),
+            MockLending.deposit.selector,
+            0,
+            keccak256(checkedCalldata1[0])
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            1,
+            "calldata checks not added"
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            )[0].dataHashes.length,
+            1,
+            "calldata checks not added"
+        );
+
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheckDatahash(
+            address(lending),
+            MockLending.deposit.selector,
+            0,
+            keccak256(checkedCalldata2[0])
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            ).length,
+            0,
+            "calldata check not removed"
+        );
+    }
+
     function testAddCalldataCheckFailsWhenOverlap() public {
         address[] memory targetAddresses = new address[](2);
         targetAddresses[0] = address(lending);

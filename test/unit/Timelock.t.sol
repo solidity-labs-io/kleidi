@@ -22,10 +22,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "expirationPeriod incorrectly set"
         );
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
-        assertTrue(
-            timelockFactory.factoryCreated(address(timelock)),
-            "timelock incorrectly registered in factory"
-        );
         assertEq(
             timelock.ADDRESS_THIS_HASH(),
             keccak256(abi.encodePacked(address(timelock))),
@@ -361,6 +357,13 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.setGuardian(address(0));
     }
 
+    function testRemoveCalldataCheckFailsNonTimelock() public {
+        vm.expectRevert("Timelock: caller is not the timelock");
+        timelock.removeCalldataCheckDatahash(
+            address(0), bytes4(0), 0, bytes32(0)
+        );
+    }
+
     function testAddCalldataCheckFailsNonTimelock() public {
         bytes[] memory datas = new bytes[](1);
         bool[] memory selfAddressChecks = new bool[](1);
@@ -496,6 +499,42 @@ contract TimelockUnitTest is TimelockUnitFixture {
             3129,
             datas,
             selfAddressChecks
+        );
+    }
+
+    function testAddCalldataCheckEmptyCalldataFails() public {
+        vm.prank(address(timelock));
+        vm.expectRevert("CalldataList: Data empty");
+        timelock.addCalldataCheck(
+            address(10000),
+            timelock.addCalldataCheck.selector,
+            10,
+            30,
+            new bytes[](0),
+            new bool[](0)
+        );
+    }
+
+    function testAddCalldataChecksEmptyCalldataFails() public {
+        address[] memory targets = new address[](1);
+        targets[0] = address(10000);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = timelock.addCalldataCheck.selector;
+
+        uint16[] memory startIndexes = new uint16[](1);
+        startIndexes[0] = 20;
+        uint16[] memory endIndexes = new uint16[](1);
+        endIndexes[0] = 30;
+
+        vm.prank(address(timelock));
+        vm.expectRevert("CalldataList: Data empty");
+        timelock.addCalldataChecks(
+            targets,
+            selectors,
+            startIndexes,
+            endIndexes,
+            new bytes[][](1),
+            new bool[][](1)
         );
     }
 

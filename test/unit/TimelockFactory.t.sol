@@ -25,10 +25,6 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             "Pause duration should be set"
         );
 
-        assertTrue(
-            timelockFactory.factoryCreated(address(timelock)),
-            "timelock should be created by factory"
-        );
         assertFalse(
             timelock.pauseStartTime() != 0, "timelock pause should not be used"
         );
@@ -67,10 +63,6 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
         address newTimelock =
             timelockFactory.createTimelock(address(this), params);
 
-        assertTrue(
-            timelockFactory.factoryCreated(newTimelock),
-            "Timelock should be created by factory"
-        );
         assertTrue(newTimelock.code.length > 0, "Timelock not created");
     }
 
@@ -96,20 +88,12 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
         address newTimelockSenderOne =
             timelockFactory.createTimelock(address(this), params);
 
-        assertTrue(
-            timelockFactory.factoryCreated(newTimelockSenderOne),
-            "Timelock should be created by factory"
-        );
         assertTrue(newTimelockSenderOne.code.length > 0, "Timelock not created");
 
         vm.prank(address(2000000000));
         address newTimelockSenderTwo =
             timelockFactory.createTimelock(address(this), params);
 
-        assertTrue(
-            timelockFactory.factoryCreated(newTimelockSenderTwo),
-            "Timelock should be created by factory"
-        );
         assertTrue(newTimelockSenderTwo.code.length > 0, "Timelock not created");
 
         assertNotEq(

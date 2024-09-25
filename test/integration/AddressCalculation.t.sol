@@ -192,7 +192,7 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         addressCalculation.calculateAddress(instance);
     }
 
-    function testTimelockBytecodeUnsetFactorySet() public {
+    function testTimelockBytecodeUnset() public {
         address[] memory recoverySpell = new address[](1);
         recoverySpell[0] = recoverySpellAddress;
 
@@ -232,7 +232,7 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         vm.etch(address(contracts.safe), "");
         vm.etch(address(contracts.timelock), "");
 
-        vm.expectRevert("InstanceDeployer: timelock already created");
+        /// call succeeds
         addressCalculation.calculateAddress(instance);
     }
 

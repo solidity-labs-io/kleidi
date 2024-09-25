@@ -512,7 +512,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             address[] memory targets = new address[](2);
             targets[0] = morphoBlue;
             targets[1] = morphoBlue;
-            console.log("8");
 
             bool[][] memory isSelfAddressChecks = new bool[][](2);
             isSelfAddressChecks =
@@ -520,7 +519,6 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             isSelfAddressChecks =
                 generateSelfAddressChecks(isSelfAddressChecks, true, 1);
-            console.log("9");
 
             bool[] memory approveSelfAddressChecks = new bool[](2);
             approveSelfAddressChecks[0] = false;
