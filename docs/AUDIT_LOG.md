@@ -40,4 +40,6 @@ Timelock specification was reviewed and re-run with a minor [specification chang
 
 **09/18/24** - RecoverySpell contract was found to have issues with the way it calculated the number of calls. If the recovery spell only had a single signer, it would try to add that signer two times, which would fail and cause the recovery to not work. It was also found that owners in the recovery spell could be the 0 address, so a check was added in the factory to prevent this.
 
+**09/22/24** - The RecoverySpell contract was found to have an issue with how it recovered signatures, making it vulnerable to signature malleability. This was fixed by using the OZ ecrecover library which checks for manipulated signatures. Events that were not being indexed were also fixed to be indexed to make it easier for the front end to search and filter events.
+
 **09/24/24** - Calldatacheck logic in Timelock contract was found to have issue where a duplicate AND check can be added for the same start and end indexes for a selector. It would make it impossible for a hot signer to take actions for the given protocol. Also, it was found that overlapping index ranges could be added which should not be possible. Also, the removal of a single OR check is not possible, first all the OR checks have to be removed and then re add the needed checks, which should not be the case.
