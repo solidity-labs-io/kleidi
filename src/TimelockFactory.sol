@@ -22,15 +22,6 @@ struct DeploymentParams {
 contract TimelockFactory {
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
-    /// -------------------- STORAGE VARIABLE -------------------
-    /// ---------------------------------------------------------
-    /// ---------------------------------------------------------
-
-    /// @notice mapping of timelock address to whether factory created
-    mapping(address timelock => bool created) public factoryCreated;
-
-    /// ---------------------------------------------------------
-    /// ---------------------------------------------------------
     /// ------------------------- EVENT -------------------------
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
@@ -60,8 +51,6 @@ contract TimelockFactory {
                 params.hotSigners
             )
         );
-
-        factoryCreated[timelock] = true;
 
         emit TimelockCreated(timelock, block.timestamp, msg.sender);
     }
