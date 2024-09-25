@@ -1112,6 +1112,9 @@ contract Timelock is
                 endIndex > startIndex,
                 "CalldataList: End index must be greater than start index"
             );
+            /// if we are adding a concrete check and not a wildcard, then the
+            /// calldata must not be empty
+            require(data.length != 0, "CalldataList: Data empty");
         }
 
         Index[] storage indexes = _calldataList[contractAddress][selector];
