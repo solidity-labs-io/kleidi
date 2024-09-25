@@ -30,6 +30,25 @@ The two variables timestamps and _liveProposals are closely related. When a prop
 
 The timelock can never have whitelisted calldata to the safe or the timelock itself. This is to prevent the hot signers from being able to execute arbitrary transactions on the safe or itself.
 
+## Timelock Calldata
+
+All calldata checks must be isolated to predefined calldata segments, for example given calldata with three parameters:
+
+```
+                    1.                              2.                             3.
+       000000000000000112818929111111
+                                     000000000000000112818929111111
+                                                                   000000000000000112818929111111
+                    
+                    A                               B                              C
+                    D                               E                              F
+                 a || d           &&             b || e             &&          c || f
+```
+
+checks must be applied in a way such that they do not overlap with each other. It is important that the calldata checks are isolated to specific segments of the calldata to ensure no duplicate checks are allowed.
+
+A given function on a contract can have multiple calldata checks for different indexes, but they must not share the same start or end indexes or overlap.
+
 ## Recovery Spells
 
 Recovery spells are modules that are authorized to make changes to the Safe contract without the Timelock. These are used to recover the Safe contract in the event that the safe signers permanently go offline.

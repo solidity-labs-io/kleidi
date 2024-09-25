@@ -53,14 +53,6 @@ contract AddressCalculation {
             address(walletInstance.timelock).code.length == 0,
             "InstanceDeployer: timelock already created"
         );
-
-        /// timelock created in factory implies that it has bytecode
-        require(
-            !TimelockFactory(
-                InstanceDeployer(instanceDeployer).timelockFactory()
-            ).factoryCreated(address(walletInstance.timelock)),
-            "InstanceDeployer: timelock already created"
-        );
     }
 
     /// @notice calculate address without safety checks

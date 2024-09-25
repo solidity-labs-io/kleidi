@@ -29,7 +29,7 @@ contract GuardUnitTest is CallHelper {
         owners = new address[](0);
     }
 
-    function testCheckTransaction() public {
+    function testCheckTransaction() public view {
         guard.checkTransaction(
             address(0),
             0,

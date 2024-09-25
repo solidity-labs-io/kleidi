@@ -187,10 +187,6 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             instance.timelockParams.pauseDuration,
             "pause duration incorrectly set"
         );
-        assertTrue(
-            timelockFactory.factoryCreated(address(newTimelock)),
-            "timelock incorrectly registered in factory"
-        );
     }
 
     function testCreateSystemDifferentParamsTwice() public {
@@ -326,10 +322,6 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
                 newTimelock.pauseDuration(),
                 instance.timelockParams.pauseDuration,
                 "pause duration incorrectly set"
-            );
-            assertTrue(
-                timelockFactory.factoryCreated(address(newTimelock)),
-                "timelock incorrectly registered in factory"
             );
         }
     }
