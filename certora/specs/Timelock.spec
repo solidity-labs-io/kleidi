@@ -299,6 +299,12 @@ rule pausingRevokesGuardian(env e) {
 invariant noSelfWhitelisting(bytes4 selector)
     t._calldataList[timelockAddress()][selector].length == 0;
 
+invariant noZeroAddressWhitelisting(bytes4 selector)
+    t._calldataList[0][selector].length == 0;
+
+invariant noEmptySelectorWhitelisting(address contract)
+    t._calldataList[contract][to_bytes4(0)].length == 0;
+
 invariant noSafeWhitelisting(bytes4 selector)
     t._calldataList[safe()][selector].length == 0;
 
@@ -325,6 +331,53 @@ invariant singleCheckIfWildcard(address contract, bytes4 selector, uint256 index
         preserved {
             if (t._calldataList[contract][selector].length >= 1) {
                 requireInvariant singleCheckIfWildcard(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            }
+        }
+    }
+
+invariant isolatedChecks(address contract, bytes4 selector, uint256 index1, uint256 index2)
+    ((index1 != index2) && (index1 < getCalldataChecks(contract, selector).length &&
+     index2 < getCalldataChecks(contract, selector).length)) =>
+    (getCalldataChecks(contract, selector)[index1].endIndex < getCalldataChecks(contract, selector)[index2].startIndex ||
+     getCalldataChecks(contract, selector)[index1].startIndex > getCalldataChecks(contract, selector)[index2].endIndex)
+        filtered {
+            f -> f.selector != sig:addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector &&
+            f.selector != sig:initialize(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector
+      } {
+        preserved {
+            require getCalldataChecks(contract, selector).length < uintMax();
+            if (t._calldataList[contract][selector].length >= 1) {
+                requireInvariant isolatedChecks(contract, selector, index1, assert_uint256(t._calldataList[contract][selector].length - 1));
+                requireInvariant isolatedChecks(contract, selector, index2, assert_uint256(t._calldataList[contract][selector].length - 1));
+            }
+        }
+        preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas, bool[] isSelfAddressCheck) with (env e1) {
+            require getCalldataChecks(c1, s1).length < uintMax();
+            if (t._calldataList[c1][s1].length >= 1) {
+                requireInvariant isolatedChecks(c1, s1, index1, assert_uint256(t._calldataList[c1][s1].length - 1));
+                requireInvariant isolatedChecks(c1, s1, index2, assert_uint256(t._calldataList[c1][s1].length - 1));
+            }
+        }
+    }
+
+invariant noEmptyChecks(address contract, bytes4 selector, uint256 index)
+    (getCalldataChecks(contract, selector).length > index
+    && getCalldataChecks(contract, selector)[index].endIndex != 4) =>
+      getCalldataChecks(contract, selector)[index].dataHashes.length > 0 
+      filtered {
+            f -> f.selector != sig:addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector &&
+            f.selector != sig:initialize(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector
+      }{
+        preserved {
+            require getCalldataChecks(contract, selector).length < uintMax();
+            if (t._calldataList[contract][selector].length >= 1) {
+                requireInvariant noEmptyChecks(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
+            }
+        }
+        preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas, bool[] isSelfAddressCheck) with (env e1) {
+            require getCalldataChecks(c1, s1).length < uintMax();
+            if (t._calldataList[c1][s1].length >= 1) {
+                requireInvariant noEmptyChecks(c1, s1, assert_uint256(t._calldataList[c1][s1].length - 1));
             }
         }
     }

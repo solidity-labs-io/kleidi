@@ -3,6 +3,7 @@ methods {
     function addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]) external;
     function removeCalldataCheck(address,bytes4,uint256) external                    ;
     function removeAllCalldataChecks(address[],bytes4[]) external                    ;
+    function getCalldataChecks(address,bytes4) external returns (Timelock.IndexData[]) envfree;
     function getRoleMemberCount(bytes32)           external returns (uint256) envfree;
     function DEFAULT_ADMIN_ROLE()                  external returns (bytes32) envfree;
     function expirationPeriod()                    external returns (uint256) envfree;
