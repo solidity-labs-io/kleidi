@@ -306,10 +306,8 @@ contract CalldataListUnitTest is Test {
         );
     }
 
-
-    function testAddCalldataCheckAndRemoveCalldataCheckDatahashMultipleIndecesSucceeds()
-        public
-    {
+    function testAddCalldataCheckAndRemoveCalldataCheckDatahashMultipleIndecesSucceeds(
+    ) public {
         address[] memory targetAddresses = new address[](2);
         targetAddresses[0] = address(lending);
         targetAddresses[1] = address(lending);
