@@ -750,7 +750,7 @@ contract CalldataListUnitTest is Test {
             }
 
             // number of checks for each contract address and function selector pair
-            uint256 checkCount = randomInRange(1, 10, true);
+            uint256 checkCount = randomInRange(4, 20, true);
             // total length of all the checks
             uint256 length = checkCount * fuzzyLength;
             // initial start index for first check
@@ -768,66 +768,33 @@ contract CalldataListUnitTest is Test {
                         && fuzzyCheckData[i].selector != bytes4(0)
                 );
 
-                if (randomInRange(1, 100, true) % 5 == 0) {
-                    // generate checkCount number of checks
-                    for (uint256 j = 0; j < checkCount; j++) {
-                        // index where the new check is added
-                        uint256 index = i * checkCount + j;
-                        checkData.targets[index] = fuzzyCheckData[i].target;
-                        checkData.selectors[index] = fuzzyCheckData[i].selector;
-                        checkData.calldatas = generateCalldatas(
-                            checkData.calldatas,
-                            abi.encodePacked(
-                                fuzzyCheckData[i].singleCalldata, j
-                            ),
-                            fuzzyCheckData[i].calldataLength,
-                            index
-                        );
-                        checkData.startIndexes[index] = currentStartIndex;
-                        // set end index to start index + calldata length
-                        checkData.endIndexes[index] = checkData.startIndexes[index]
-                            + fuzzyCheckData[i].calldataLength;
-                        checkData.isSelfAddressChecks =
-                        generateSelfAddressChecks(
-                            checkData.isSelfAddressChecks,
-                            checkData.calldatas[index].length,
-                            index
-                        );
-                    }
-                    checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
-                        .selector] += 1;
-                    //update start index for next check to avoid overlap
-                    currentStartIndex = checkData.endIndexes[i * checkCount] + 1;
-                } else {
-                    // generate checkCount number of checks
-                    for (uint256 j = 0; j < checkCount; j++) {
-                        // index where the new check is added
-                        uint256 index = i * checkCount + j;
-                        checkData.targets[index] = fuzzyCheckData[i].target;
-                        checkData.selectors[index] = fuzzyCheckData[i].selector;
-                        checkData.calldatas = generateCalldatas(
-                            checkData.calldatas,
-                            abi.encodePacked(
-                                fuzzyCheckData[i].singleCalldata, j
-                            ),
-                            fuzzyCheckData[i].calldataLength,
-                            index
-                        );
-                        checkData.startIndexes[index] = currentStartIndex;
-                        // set end index to start index + calldata length
-                        checkData.endIndexes[index] = checkData.startIndexes[index]
-                            + fuzzyCheckData[i].calldataLength;
+                // generate checkCount number of checks
+                for (uint256 j = 0; j < checkCount; j++) {
+                    // index where the new check is added
+                    uint256 index = i * checkCount + j;
+                    checkData.targets[index] = fuzzyCheckData[i].target;
+                    checkData.selectors[index] = fuzzyCheckData[i].selector;
+                    checkData.calldatas = generateCalldatas(
+                        checkData.calldatas,
+                        abi.encodePacked(fuzzyCheckData[i].singleCalldata, j),
+                        fuzzyCheckData[i].calldataLength,
+                        index
+                    );
+                    checkData.startIndexes[index] = currentStartIndex;
+                    // set end index to start index + calldata length
+                    checkData.endIndexes[index] = checkData.startIndexes[index]
+                        + fuzzyCheckData[i].calldataLength;
+                    if (j > checkCount / 2) {
                         //update start index for next check to avoid overlap
                         currentStartIndex = checkData.endIndexes[index] + 1;
-                        checkData.isSelfAddressChecks =
-                        generateSelfAddressChecks(
-                            checkData.isSelfAddressChecks,
-                            checkData.calldatas[index].length,
-                            index
-                        );
+                        checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
+                            .selector] += 1;
                     }
-                    checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
-                        .selector] += checkCount;
+                    checkData.isSelfAddressChecks = generateSelfAddressChecks(
+                        checkData.isSelfAddressChecks,
+                        checkData.calldatas[index].length,
+                        index
+                    );
                 }
             }
 
@@ -848,6 +815,12 @@ contract CalldataListUnitTest is Test {
                 ).length;
                 // finalCheckLength % checkCount to cover case where a pair of
                 // contract address and selector is repeated in fuzzed array
+                console.log(
+                    finalCheckLength,
+                    checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
+                        .selector],
+                    "++++++++++++++++++++++++++++"
+                );
                 assertTrue(
                     finalCheckLength
                         == checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
