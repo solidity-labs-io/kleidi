@@ -87,10 +87,6 @@ contract Timelock is
     /// in DeFi
     bytes32 public constant HOT_SIGNER_ROLE = keccak256("HOT_SIGNER_ROLE");
 
-    /// @notice constant hash of the address of this contract
-    bytes32 public immutable ADDRESS_THIS_HASH =
-        keccak256(abi.encodePacked(address(this)));
-
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
     /// ------------------- STORAGE VARIABLES -------------------
