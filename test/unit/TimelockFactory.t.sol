@@ -56,7 +56,6 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             startIndexes: new uint16[](0),
             endIndexes: new uint16[](0),
             datas: new bytes[][](0),
-            isSelfAddressCheck: new bool[][](0),
             salt: salt
         });
 
@@ -80,7 +79,6 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             startIndexes: new uint16[](0),
             endIndexes: new uint16[](0),
             datas: new bytes[][](0),
-            isSelfAddressCheck: new bool[][](0),
             salt: salt
         });
 
@@ -128,7 +126,6 @@ contract TimelockFactoryUnitTest is TimelockUnitFixture {
             startIndexes: new uint16[](0),
             endIndexes: new uint16[](0),
             datas: new bytes[][](0),
-            isSelfAddressCheck: new bool[][](0),
             salt: salt
         });
 

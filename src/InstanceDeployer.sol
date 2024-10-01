@@ -240,8 +240,7 @@ contract InstanceDeployer {
             instance.timelockParams.selectors,
             instance.timelockParams.startIndexes,
             instance.timelockParams.endIndexes,
-            instance.timelockParams.datas,
-            instance.timelockParams.isSelfAddressCheck
+            instance.timelockParams.datas
         );
 
         /// checks that contracts successfully deployed

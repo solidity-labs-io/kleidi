@@ -11,13 +11,11 @@ function generateCalldatas(
     return calldatas;
 }
 
-function generateSelfAddressChecks(
-    bool[][] memory selfAddressChecks,
-    bool check,
+function generateCalldatasWildcard(
+    bytes[][] memory calldatas,
+    bytes memory,
     uint256 index
-) pure returns (bool[][] memory) {
-    bool[] memory checkArray = new bool[](1);
-    checkArray[0] = check;
-    selfAddressChecks[index] = checkArray;
-    return selfAddressChecks;
+) pure returns (bytes[][] memory) {
+    calldatas[index] = new bytes[](0);
+    return calldatas;
 }
