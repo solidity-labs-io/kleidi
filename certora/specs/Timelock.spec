@@ -341,8 +341,8 @@ invariant isolatedChecks(address contract, bytes4 selector, uint256 index1, uint
     (getCalldataChecks(contract, selector)[index1].endIndex < getCalldataChecks(contract, selector)[index2].startIndex ||
      getCalldataChecks(contract, selector)[index1].startIndex > getCalldataChecks(contract, selector)[index2].endIndex)
         filtered {
-            f -> f.selector != sig:addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector &&
-            f.selector != sig:initialize(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector
+            f -> f.selector != sig:addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][]).selector &&
+            f.selector != sig:initialize(address[],bytes4[],uint16[],uint16[],bytes[][]).selector
       } {
         preserved {
             require getCalldataChecks(contract, selector).length < uintMax();
@@ -351,7 +351,7 @@ invariant isolatedChecks(address contract, bytes4 selector, uint256 index1, uint
                 requireInvariant isolatedChecks(contract, selector, index2, assert_uint256(t._calldataList[contract][selector].length - 1));
             }
         }
-        preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas, bool[] isSelfAddressCheck) with (env e1) {
+        preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas) with (env e1) {
             require getCalldataChecks(c1, s1).length < uintMax();
             if (t._calldataList[c1][s1].length >= 1) {
                 requireInvariant isolatedChecks(c1, s1, index1, assert_uint256(t._calldataList[c1][s1].length - 1));
@@ -365,8 +365,8 @@ invariant noEmptyChecks(address contract, bytes4 selector, uint256 index)
     && getCalldataChecks(contract, selector)[index].endIndex != 4) =>
       getCalldataChecks(contract, selector)[index].dataHashes.length > 0 
       filtered {
-            f -> f.selector != sig:addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector &&
-            f.selector != sig:initialize(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]).selector
+            f -> f.selector != sig:addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][]).selector &&
+            f.selector != sig:initialize(address[],bytes4[],uint16[],uint16[],bytes[][]).selector
       }{
         preserved {
             require getCalldataChecks(contract, selector).length < uintMax();
@@ -374,7 +374,7 @@ invariant noEmptyChecks(address contract, bytes4 selector, uint256 index)
                 requireInvariant noEmptyChecks(contract, selector, assert_uint256(t._calldataList[contract][selector].length - 1));
             }
         }
-        preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas, bool[] isSelfAddressCheck) with (env e1) {
+        preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas) with (env e1) {
             require getCalldataChecks(c1, s1).length < uintMax();
             if (t._calldataList[c1][s1].length >= 1) {
                 requireInvariant noEmptyChecks(c1, s1, assert_uint256(t._calldataList[c1][s1].length - 1));
@@ -393,13 +393,13 @@ rule removeCalldataCheck(env e, address target, bytes4 selector, uint256 index) 
 }
 
 /// addCalldataCheck add 1 calldata check
-rule addCalldataCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data, bool[] isSelfAddressCheck) {
+rule addCalldataCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data) {
     mathint len = t._calldataList[target][selector].length;
     uint256 uint256Len = t._calldataList[target][selector].length;
     uint256 numberValues = t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length;
     require numberValues + data.length <= to_mathint(uintMax());
 
-    addCalldataCheck(e, target, selector, startIndex, endIndex, data, isSelfAddressCheck);
+    addCalldataCheck(e, target, selector, startIndex, endIndex, data);
 
     /// verify all state transitions
     assert to_mathint(t._calldataList[target][selector].length) == len + 1, "one calldata check should be added";
@@ -409,12 +409,12 @@ rule addCalldataCheck(env e, address target, bytes4 selector, uint16 startIndex,
 }
 
 /// addCalldataCheck add 1 calldata check
-rule addWildcardCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data, bool[] isSelfAddressCheck) {
+rule addWildcardCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data) {
     require startIndex == endIndex;
 
     mathint len = t._calldataList[target][selector].length;
 
-    addCalldataCheck(e, target, selector, startIndex, endIndex, data, isSelfAddressCheck);
+    addCalldataCheck(e, target, selector, startIndex, endIndex, data);
 
     /// verify all state transitions
     assert to_mathint(t._calldataList[target][selector].length) == len + 1, "one calldata check should be added";
