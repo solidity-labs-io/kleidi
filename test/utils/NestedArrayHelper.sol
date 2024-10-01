@@ -10,14 +10,3 @@ function generateCalldatas(
     calldatas[index] = dataArray;
     return calldatas;
 }
-
-function generateSelfAddressChecks(
-    bool[][] memory selfAddressChecks,
-    bool check,
-    uint256 index
-) pure returns (bool[][] memory) {
-    bool[] memory checkArray = new bool[](1);
-    checkArray[0] = check;
-    selfAddressChecks[index] = checkArray;
-    return selfAddressChecks;
-}

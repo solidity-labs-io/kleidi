@@ -16,10 +16,7 @@ import {RecoverySpell} from "src/RecoverySpell.sol";
 import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
-import {
-    generateCalldatas,
-    generateSelfAddressChecks
-} from "test/utils/NestedArrayHelper.sol";
+import {generateCalldatas} from "test/utils/NestedArrayHelper.sol";
 import {
     InstanceDeployer,
     NewInstance,
@@ -141,6 +138,31 @@ contract DeploymentMultichainTest is SystemDeploy {
         hotSigners[0] = vm.addr(1111111);
         hotSigners[1] = vm.addr(2222222);
 
+        instance = NewInstance(
+            owners,
+            2,
+            recoverySpells,
+            DeploymentParams(
+                2 days,
+                /// min delay
+                7 days,
+                /// expiration period
+                vm.addr(13),
+                28 days,
+                /// pause duration
+                hotSigners,
+                new address[](0),
+                new bytes4[](0),
+                new uint16[](0),
+                new uint16[](0),
+                new bytes[][](0),
+                bytes32(0)
+            )
+        );
+
+        SystemInstance memory calculatedInstance =
+            addressCalculation.calculateAddress(instance);
+
         {
             /// each morpho blue function call needs two checks:
             /// 1). check the pool id where funds are being deposited is whitelisted.
@@ -222,7 +244,7 @@ contract DeploymentMultichainTest is SystemDeploy {
             calldatas = generateCalldatas(calldatas, singleCalldata, 0);
 
             /// can only deposit to timelock
-            singleCalldata = "";
+            singleCalldata = abi.encodePacked(calculatedInstance.timelock);
             calldatas = generateCalldatas(calldatas, singleCalldata, 1);
 
             /// morpho blue address can be approved to spend eUSD
@@ -230,23 +252,19 @@ contract DeploymentMultichainTest is SystemDeploy {
             calldatas = generateCalldatas(calldatas, singleCalldata, 2);
 
             /// can only borrow on behalf of timelock
-            singleCalldata = "";
+            singleCalldata = abi.encodePacked(calculatedInstance.timelock);
             calldatas = generateCalldatas(calldatas, singleCalldata, 3);
 
             /// can only deposit to timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 4);
 
             /// can only repay on behalf of timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 5);
 
             /// can only supply collateral on behalf of timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 6);
 
             /// can only withdraw collateral back to timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 7);
 
             address[] memory targets = new address[](8);
@@ -258,62 +276,7 @@ contract DeploymentMultichainTest is SystemDeploy {
             targets[5] = morphoBlue;
             targets[6] = morphoBlue;
             targets[7] = morphoBlue;
-
-            bool[][] memory isSelfAddressChecks = new bool[][](8);
-            bool isSelfAddressCheck = false;
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 0
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 2
-            );
-
-            isSelfAddressCheck = true;
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 1
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 3
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 4
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 5
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 6
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 7
-            );
-
-            instance = NewInstance(
-                owners,
-                2,
-                recoverySpells,
-                DeploymentParams(
-                    2 days,
-                    /// min delay
-                    7 days,
-                    /// expiration period
-                    vm.addr(13),
-                    28 days,
-                    /// pause duration
-                    hotSigners,
-                    targets,
-                    selectors,
-                    startIndexes,
-                    endIndexes,
-                    calldatas,
-                    isSelfAddressChecks,
-                    bytes32(0)
-                )
-            );
         }
-
-        SystemInstance memory calculatedInstance =
-            addressCalculation.calculateAddress(instance);
 
         instance.recoverySpells = new address[](1);
         instance.recoverySpells[0] = address(111111111111);
@@ -370,11 +333,6 @@ contract DeploymentMultichainTest is SystemDeploy {
         bytes[] memory data = new bytes[](1);
         data[0] = new bytes(6);
         instance.timelockParams.datas[0] = data;
-
-        instance.timelockParams.isSelfAddressCheck = new bool[][](1);
-        bool[] memory check = new bool[](1);
-        check[0] = false;
-        instance.timelockParams.isSelfAddressCheck[0] = check;
 
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
@@ -433,7 +391,32 @@ contract DeploymentMultichainTest is SystemDeploy {
         address[] memory recoverySpells = new address[](0);
         address[] memory hotSigners = new address[](2);
         hotSigners[0] = vm.addr(1111111);
-        hotSigners[1] = vm.addr(2222222);
+        hotSigners[1] = vm.addr(2222222);  
+
+        instance = NewInstance(
+            owners,
+            2,
+            recoverySpells,
+            DeploymentParams(
+                2 days,
+                /// min delay
+                7 days,
+                /// expiration period
+                vm.addr(13),
+                28 days,
+                /// pause duration
+                hotSigners,
+                new address[](0),
+                new bytes4[](0),
+                new uint16[](0),
+                new uint16[](0),
+                new bytes[][](0),
+                bytes32(0)
+            )
+        );
+
+        SystemInstance memory calculatedInstance =
+        addressCalculation.calculateAddress(instance);
 
         {
             /// each morpho blue function call needs two checks:
@@ -516,7 +499,7 @@ contract DeploymentMultichainTest is SystemDeploy {
             calldatas = generateCalldatas(calldatas, singleCalldata, 0);
 
             /// can only deposit to timelock
-            singleCalldata = "";
+            singleCalldata = abi.encodePacked(calculatedInstance.timelock);
             calldatas = generateCalldatas(calldatas, singleCalldata, 1);
 
             /// morpho blue address can be approved to spend eUSD
@@ -524,23 +507,19 @@ contract DeploymentMultichainTest is SystemDeploy {
             calldatas = generateCalldatas(calldatas, singleCalldata, 2);
 
             // /// can only borrow on behalf of timelock
-            singleCalldata = "";
+            singleCalldata = abi.encodePacked(calculatedInstance.timelock);
             calldatas = generateCalldatas(calldatas, singleCalldata, 3);
 
             // /// can only deposit to timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 4);
 
             // /// can only repay on behalf of timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 5);
 
             // /// can only supply collateral on behalf of timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 6);
 
             // /// can only withdraw collateral back to timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 7);
 
             address[] memory targets = new address[](8);
@@ -552,63 +531,9 @@ contract DeploymentMultichainTest is SystemDeploy {
             targets[5] = morphoBlue;
             targets[6] = morphoBlue;
             targets[7] = morphoBlue;
-
-            bool[][] memory isSelfAddressChecks = new bool[][](8);
-            bool isSelfAddressCheck = false;
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 0
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 2
-            );
-
-            isSelfAddressCheck = true;
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 1
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 3
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 4
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 5
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 6
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 7
-            );
-
-            instance = NewInstance(
-                owners,
-                2,
-                recoverySpells,
-                DeploymentParams(
-                    2 days,
-                    /// min delay
-                    7 days,
-                    /// expiration period
-                    vm.addr(13),
-                    28 days,
-                    /// pause duration
-                    hotSigners,
-                    targets,
-                    selectors,
-                    startIndexes,
-                    endIndexes,
-                    calldatas,
-                    isSelfAddressChecks,
-                    bytes32(0)
-                )
-            );
         }
 
-        SystemInstance memory calculatedInstance =
-            addressCalculation.calculateAddress(instance);
-
+       
         instance.recoverySpells = new address[](1);
         instance.recoverySpells[0] = address(111111111111);
 
