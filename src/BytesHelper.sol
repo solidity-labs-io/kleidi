@@ -10,10 +10,7 @@ library BytesHelper {
         returns (bytes4 functionSignature)
     {
         require(toSlice.length >= 4, "No function signature");
-
-        assembly ("memory-safe") {
-            functionSignature := mload(add(toSlice, 0x20))
-        }
+        functionSignature = bytes4(toSlice);
     }
 
     /// @notice function to grab the first 32 bytes of returned memory
