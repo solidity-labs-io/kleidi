@@ -10,3 +10,12 @@ function generateCalldatas(
     calldatas[index] = dataArray;
     return calldatas;
 }
+
+function generateCalldatasWildcard(
+    bytes[][] memory calldatas,
+    bytes memory,
+    uint256 index
+) pure returns (bytes[][] memory) {
+    calldatas[index] = new bytes[](0);
+    return calldatas;
+}

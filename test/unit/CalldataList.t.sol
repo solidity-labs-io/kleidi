@@ -991,20 +991,97 @@ contract CalldataListUnitTest is Test {
     }
 
     function testAddCalldataCheckFailsWildcardAlreadyAdded() public {
-        bytes[] memory datas = new bytes[](1);
-        datas[0] = "";
+        bytes[] memory datas = new bytes[](0);
 
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
             address(lending), MockLending.deposit.selector, 4, 4, datas
         );
 
+        datas = new bytes[](1);
         datas[0] = hex"12";
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Cannot add check with wildcard");
         timelock.addCalldataCheck(
             address(lending), MockLending.deposit.selector, 4, 5, datas
+        );
+    }
+
+    function testAddArbitraryCheckSucceeds() public {
+        address[] memory targetAddresses = new address[](1);
+        targetAddresses[0] = address(lending);
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = MockLending.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](1);
+        startIndexes[0] = 4;
+
+        uint16[] memory endIndexes = new uint16[](1);
+        endIndexes[0] = 4;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](1);
+        checkedCalldatas[0] = new bytes[](0);
+
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        // Check that the check is there
+        timelock.checkCalldata(
+            targetAddresses[0], abi.encodePacked(selectors[0])
+        );
+
+        // Remove it
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheck(targetAddresses[0], selectors[0], 0);
+
+        // Show that now it reverts
+        vm.expectRevert("CalldataList: No calldata checks found");
+        timelock.checkCalldata(
+            targetAddresses[0], abi.encodePacked(selectors[0])
+        );
+    }
+
+    function testAddArbitraryCheckWithCalldataFails() public {
+        address[] memory targetAddresses = new address[](1);
+        targetAddresses[0] = address(lending);
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = MockLending.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](1);
+        startIndexes[0] = 4;
+
+        uint16[] memory endIndexes = new uint16[](1);
+        endIndexes[0] = 4;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](1);
+        checkedCalldatas[0] = new bytes[](1);
+        checkedCalldatas[0][0] = abi.encodePacked(address(this));
+
+        vm.prank(address(timelock));
+        vm.expectRevert("CalldataList: Data must be empty");
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        /// Show that now it still reverts
+        vm.expectRevert("CalldataList: No calldata checks found");
+        timelock.checkCalldata(
+            targetAddresses[0], abi.encodePacked(selectors[0])
         );
     }
 

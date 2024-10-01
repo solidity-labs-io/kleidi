@@ -4,7 +4,10 @@ import "test/utils/SystemIntegrationFixture.sol";
 import {WETH9} from "src/interface/WETH9.sol";
 import {CErc20Interface} from "src/interface/CErc20Interface.sol";
 import {CEtherInterface} from "src/interface/CEtherInterface.sol";
-import {generateCalldatas} from "test/utils/NestedArrayHelper.sol";
+import {
+    generateCalldatas,
+    generateCalldatasWildcard
+} from "test/utils/NestedArrayHelper.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
@@ -323,16 +326,16 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             singleCalldata = "";
 
             /// wildcard for cDai mint
-            calldatas = generateCalldatas(calldatas, singleCalldata, 9);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 9);
 
             /// wildcard for deposit to WETH
-            calldatas = generateCalldatas(calldatas, singleCalldata, 10);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 10);
 
             /// wildcard for withdraw from WETH
-            calldatas = generateCalldatas(calldatas, singleCalldata, 11);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 11);
 
             /// wildcard for cEther mint
-            calldatas = generateCalldatas(calldatas, singleCalldata, 13);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 13);
 
             /// morpho blue and cDai address can be approved to spend dai
             bytes[] memory approvedContractsDai = new bytes[](2);
