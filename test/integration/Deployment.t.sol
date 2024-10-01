@@ -391,7 +391,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         address[] memory recoverySpells = new address[](0);
         address[] memory hotSigners = new address[](2);
         hotSigners[0] = vm.addr(1111111);
-        hotSigners[1] = vm.addr(2222222);  
+        hotSigners[1] = vm.addr(2222222);
 
         instance = NewInstance(
             owners,
@@ -416,7 +416,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         );
 
         SystemInstance memory calculatedInstance =
-        addressCalculation.calculateAddress(instance);
+            addressCalculation.calculateAddress(instance);
 
         {
             /// each morpho blue function call needs two checks:
@@ -533,7 +533,6 @@ contract DeploymentMultichainTest is SystemDeploy {
             targets[7] = morphoBlue;
         }
 
-       
         instance.recoverySpells = new address[](1);
         instance.recoverySpells[0] = address(111111111111);
 
