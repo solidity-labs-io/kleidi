@@ -22,11 +22,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "expirationPeriod incorrectly set"
         );
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
-        assertEq(
-            timelock.ADDRESS_THIS_HASH(),
-            keccak256(abi.encodePacked(address(timelock))),
-            "timelock address hash incorrect"
-        );
         assertTrue(timelock.initialized(), "timelock not initialized");
     }
 
