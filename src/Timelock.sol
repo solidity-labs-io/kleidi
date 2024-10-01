@@ -1075,6 +1075,7 @@ contract Timelock is
                 listLength == 0,
                 "CalldataList: Add wildcard only if no existing check"
             );
+            require(data.length == 0, "CalldataList: Data must be empty");
         } else {
             require(
                 endIndex > startIndex,
@@ -1130,7 +1131,7 @@ contract Timelock is
         }
 
         for (uint256 i = 0; i < data.length; i++) {
-            /// not self address check, data length must equal delta index
+            /// data length must equal delta index
             require(
                 data[i].length == endIndex - startIndex,
                 "CalldataList: Data length mismatch"
