@@ -22,7 +22,6 @@ contract CalldataListUnitTest is Test {
         uint16[] startIndexes;
         uint16[] endIndexes;
         bytes[][] calldatas;
-        bool[][] isSelfAddressChecks;
     }
 
     /// @notice struct used to fuzz values for testAddAndRemoveCalldataFuzzy
@@ -101,8 +100,7 @@ contract CalldataListUnitTest is Test {
             new bytes4[](0),
             new uint16[](0),
             new uint16[](0),
-            new bytes[][](0),
-            new bool[][](0)
+            new bytes[][](0)
         );
     }
 
@@ -150,21 +148,13 @@ contract CalldataListUnitTest is Test {
         checkedCalldata3[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[2] = checkedCalldata3;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](3);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-        isSelfAddressChecks[2] = isSelfAddressCheck;
-
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
             targetAddresses,
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
 
         assertEq(
@@ -239,20 +229,13 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
             targetAddresses,
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
 
         assertEq(
@@ -340,20 +323,13 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
             targetAddresses,
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
 
         assertEq(
@@ -448,12 +424,6 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.expectRevert("CalldataList: Partial check overlap");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
@@ -461,8 +431,7 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
     }
 
@@ -493,12 +462,6 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(this));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.expectRevert("CalldataList: Duplicate data");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
@@ -506,8 +469,7 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
     }
 
@@ -538,12 +500,6 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.expectRevert("CalldataList: Address cannot be zero");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
@@ -551,8 +507,7 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
     }
 
@@ -583,12 +538,6 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.expectRevert("CalldataList: Selector cannot be empty");
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
@@ -596,8 +545,7 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
     }
 
@@ -628,20 +576,13 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
             targetAddresses,
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
 
         assertEq(
@@ -699,20 +640,13 @@ contract CalldataListUnitTest is Test {
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
 
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
-
         vm.prank(address(timelock));
         timelock.addCalldataChecks(
             targetAddresses,
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
 
         assertEq(
@@ -815,12 +749,6 @@ contract CalldataListUnitTest is Test {
                         totalChecks[fuzzyCheckData[i].target][fuzzyCheckData[i]
                             .selector] += 1;
                     }
-                    /// set self address checks as false
-                    checkData.isSelfAddressChecks = generateSelfAddressChecks(
-                        checkData.isSelfAddressChecks,
-                        checkData.calldatas[index].length,
-                        index
-                    );
                 }
             }
 
@@ -830,8 +758,7 @@ contract CalldataListUnitTest is Test {
                 checkData.selectors,
                 checkData.startIndexes,
                 checkData.endIndexes,
-                checkData.calldatas,
-                checkData.isSelfAddressChecks
+                checkData.calldatas
             );
 
             // assert calldata checks were added
@@ -935,19 +862,7 @@ contract CalldataListUnitTest is Test {
         endIndexes[0] = 36;
         endIndexes[1] = 36;
 
-        bytes[][] memory checkedCalldatas = new bytes[][](1);
-        bytes[] memory checkedCalldata1 = new bytes[](1);
-        checkedCalldata1[0] = "";
-        checkedCalldatas[0] = checkedCalldata1;
-
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck1 = new bool[](1);
-        bool[] memory isSelfAddressCheck2 = new bool[](2);
-        isSelfAddressCheck1[0] = true;
-        isSelfAddressCheck2[0] = true;
-        isSelfAddressCheck2[1] = false;
-        isSelfAddressChecks[0] = isSelfAddressCheck1;
-        isSelfAddressChecks[1] = isSelfAddressCheck2;
+        bytes[][] memory checkedCalldatas = new bytes[][](0);
 
         vm.expectRevert("CalldataList: Array lengths must be equal");
         vm.prank(address(timelock));
@@ -956,28 +871,28 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
+        );
+
+        checkedCalldatas = new bytes[][](3);
+        checkedCalldatas[0] = new bytes[](1);
+        checkedCalldatas[1] = new bytes[](1);
+
+        vm.expectRevert("CalldataList: Array lengths must be equal");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
         );
 
         checkedCalldatas = new bytes[][](2);
-        checkedCalldatas[0] = checkedCalldata1;
-        checkedCalldatas[1] = checkedCalldata1;
-
-        vm.expectRevert("CalldataList: Array lengths must be equal");
-        vm.prank(address(timelock));
-        timelock.addCalldataChecks(
-            targetAddresses,
-            selectors,
-            startIndexes,
-            endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
-        );
-
         bytes[] memory checkedCalldata2 = new bytes[](2);
-        checkedCalldata2[0] = "";
+        checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldata2[1] = abi.encodePacked(address(lending));
+        checkedCalldatas[0] = checkedCalldata2;
         checkedCalldatas[1] = checkedCalldata2;
 
         vm.prank(address(timelock));
@@ -986,8 +901,7 @@ contract CalldataListUnitTest is Test {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
 
         assertEq(
@@ -1008,19 +922,12 @@ contract CalldataListUnitTest is Test {
 
     function testAddCalldataCheckFailsStartIndexLt4() public {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = true;
+        datas[0] = abi.encodePacked(timelock);
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Start index must be greater than 3");
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            3,
-            4,
-            datas,
-            selfAddressChecks
+            address(lending), MockLending.deposit.selector, 3, 4, datas
         );
     }
 
@@ -1028,137 +935,162 @@ contract CalldataListUnitTest is Test {
         public
     {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
         datas[0] = hex"12";
-        selfAddressChecks[0] = false;
 
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            5,
-            datas,
-            selfAddressChecks
+            address(lending), MockLending.deposit.selector, 4, 5, datas
         );
 
-        datas[0] = "";
+        datas[0] = abi.encodePacked(timelock);
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Add wildcard only if no existing check");
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            4,
-            datas,
-            selfAddressChecks
+            address(lending), MockLending.deposit.selector, 4, 4, datas
         );
     }
 
     function testAddCalldataCheckFailsStartIndexGtEndIndex() public {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = true;
+        datas[0] = abi.encodePacked(timelock);
 
         vm.prank(address(timelock));
         vm.expectRevert(
             "CalldataList: End index must be greater than start index"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            3,
-            datas,
-            selfAddressChecks
+            address(lending), MockLending.deposit.selector, 4, 3, datas
         );
     }
 
     function testAddCalldataCheckFailsWhitelistedCalldataTimelock() public {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = true;
+        datas[0] = abi.encodePacked(timelock);
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be this");
         timelock.addCalldataCheck(
-            address(timelock),
-            Timelock.schedule.selector,
-            4,
-            5,
-            datas,
-            selfAddressChecks
+            address(timelock), Timelock.schedule.selector, 4, 5, datas
         );
     }
 
     function testAddCalldataCheckFailsWhitelistedCalldataSafe() public {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = true;
+        datas[0] = abi.encodePacked(timelock);
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Address cannot be safe");
         timelock.addCalldataCheck(
-            address(safe),
-            Timelock.schedule.selector,
-            4,
-            5,
-            datas,
-            selfAddressChecks
+            address(safe), Timelock.schedule.selector, 4, 5, datas
         );
     }
 
     function testAddCalldataCheckFailsStartIndexEqEndIndexNotEq4() public {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = false;
+        datas[0] = abi.encodePacked(timelock);
 
         vm.prank(address(timelock));
         vm.expectRevert(
             "CalldataList: End index eqauls start index only when 4"
         );
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            5,
-            5,
-            datas,
-            selfAddressChecks
+            address(lending), MockLending.deposit.selector, 5, 5, datas
         );
     }
 
     function testAddCalldataCheckFailsWildcardAlreadyAdded() public {
-        bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = false;
+        bytes[] memory datas = new bytes[](0);
 
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            4,
-            datas,
-            selfAddressChecks
+            address(lending), MockLending.deposit.selector, 4, 4, datas
         );
 
+        datas = new bytes[](1);
         datas[0] = hex"12";
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Cannot add check with wildcard");
         timelock.addCalldataCheck(
-            address(lending),
-            MockLending.deposit.selector,
-            4,
-            5,
-            datas,
-            selfAddressChecks
+            address(lending), MockLending.deposit.selector, 4, 5, datas
+        );
+    }
+
+    function testAddArbitraryCheckSucceeds() public {
+        address[] memory targetAddresses = new address[](1);
+        targetAddresses[0] = address(lending);
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = MockLending.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](1);
+        startIndexes[0] = 4;
+
+        uint16[] memory endIndexes = new uint16[](1);
+        endIndexes[0] = 4;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](1);
+        checkedCalldatas[0] = new bytes[](0);
+
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        // Check that the check is there
+        timelock.checkCalldata(
+            targetAddresses[0], abi.encodePacked(selectors[0])
+        );
+
+        // Remove it
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheck(targetAddresses[0], selectors[0], 0);
+
+        // Show that now it reverts
+        vm.expectRevert("CalldataList: No calldata checks found");
+        timelock.checkCalldata(
+            targetAddresses[0], abi.encodePacked(selectors[0])
+        );
+    }
+
+    function testAddArbitraryCheckWithCalldataFails() public {
+        address[] memory targetAddresses = new address[](1);
+        targetAddresses[0] = address(lending);
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = MockLending.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](1);
+        startIndexes[0] = 4;
+
+        uint16[] memory endIndexes = new uint16[](1);
+        endIndexes[0] = 4;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](1);
+        checkedCalldatas[0] = new bytes[](1);
+        checkedCalldatas[0][0] = abi.encodePacked(address(this));
+
+        vm.prank(address(timelock));
+        vm.expectRevert("CalldataList: Data must be empty");
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        /// Show that now it still reverts
+        vm.expectRevert("CalldataList: No calldata checks found");
+        timelock.checkCalldata(
+            targetAddresses[0], abi.encodePacked(selectors[0])
         );
     }
 
@@ -1202,16 +1134,6 @@ contract CalldataListUnitTest is Test {
         return calldatas;
     }
 
-    function generateSelfAddressChecks(
-        bool[][] memory selfAddressChecks,
-        uint256 length,
-        uint256 index
-    ) internal pure returns (bool[][] memory) {
-        bool[] memory checkArray = new bool[](length);
-        selfAddressChecks[index] = checkArray;
-        return selfAddressChecks;
-    }
-
     function _initializeCheckData(uint256 length)
         internal
         pure
@@ -1222,8 +1144,7 @@ contract CalldataListUnitTest is Test {
             selectors: new bytes4[](length),
             startIndexes: new uint16[](length),
             endIndexes: new uint16[](length),
-            calldatas: new bytes[][](length),
-            isSelfAddressChecks: new bool[][](length)
+            calldatas: new bytes[][](length)
         });
     }
 

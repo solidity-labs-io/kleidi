@@ -63,8 +63,7 @@ contract TimelockReceivingUnitTest is Test {
             new bytes4[](0), // selectors
             new uint16[](0), // startIndexes
             new uint16[](0), // endIndexes
-            new bytes[][](0), // datas
-            new bool[][](0) // isSelfAddressCheck
+            new bytes[][](0) // datas
         );
     }
 

@@ -3,7 +3,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-optimizer_runs = 20
+optimizer_runs = 300
 solc_version = "0.8.25"
 evm_version="Cancun"
 fs_permissions = [{ access = "read", path = "./"}]

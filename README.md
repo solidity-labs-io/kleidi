@@ -4,7 +4,7 @@ The DeFi Self Custody Protocol is a collection of smart contracts that can be us
 
 ## Design Principles
 
-- **Security**: The protocol is designed by the world class Smart Contract engineering team at Solidity Labs. It has had components formally verified, and has been audited twice with no critical or high issues discovered. It is designed to be used with Gnosis Safe multisigs, which are battle-tested and have secured tens of billions of dollars in assets. See our internal audit log [here](docs/security/AUDIT_LOG.md).
+- **Security**: The protocol is designed by the world class Smart Contract engineering team at Solidity Labs. It has had components formally verified, and has been audited twice with no critical or high issues discovered. It is designed to be used with Gnosis Safe multisigs, which are battle-tested and have secured tens of billions of dollars in assets. See our internal audit log [here](docs/AUDIT_LOG.md).
 - **Flexibility**: The protocol is designed to be flexible and can be used in a variety of ways. It can be used by DAOs, individuals, and other entities. Recovery spells allow users the ability to create custom recovery logic or flows to protect their assets.
 - **Self Reliance**: This smart contract system is designed to enable a self custody system that does not require trusted third parties. Funds can be securely managed by a single user in this system setup. Users can recover their funds without needing to rely on a trusted third party, though they can choose to use a social recovery system if they wish.
 - **Wrench Resistant**: One of the guiding principles of this system is to be resistant to $5 wrench attacks. Even if an attacker is able to coerce a user into signing a transaction, the system of recovery spells and guardians slows down an attacker trying to steal funds. With a 30 day timelock as the delay on new transactions, an attacker would need to kidnap a user for a month and remain undetected for the entire period in order to steal funds.
@@ -63,7 +63,7 @@ forge test --mc UnitTest -vvv
 #### Integration Testing
 
 ```
-forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL
+forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL --fork-block-number 20515328
 ```
 
 ### Coverage

@@ -2,10 +2,7 @@ pragma solidity 0.8.25;
 
 import "test/utils/SystemIntegrationFixture.sol";
 
-import {
-    generateCalldatas,
-    generateSelfAddressChecks
-} from "test/utils/NestedArrayHelper.sol";
+import {generateCalldatas} from "test/utils/NestedArrayHelper.sol";
 
 contract SocialRecoveryIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;

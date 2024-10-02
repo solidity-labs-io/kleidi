@@ -1,6 +1,6 @@
 methods {
-    function addCalldataCheck(address,bytes4,uint16,uint16,bytes[],bool[]) external  ;
-    function addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][],bool[][]) external;
+    function addCalldataCheck(address,bytes4,uint16,uint16,bytes[]) external  ;
+    function addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][]) external;
     function removeCalldataCheck(address,bytes4,uint256) external                    ;
     function removeAllCalldataChecks(address[],bytes4[]) external                    ;
     function getCalldataChecks(address,bytes4) external returns (Timelock.IndexData[]) envfree;

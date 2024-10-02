@@ -45,3 +45,5 @@ Timelock specification was reviewed and re-run with a minor [specification chang
 **09/23/24** - Calldatacheck logic in Timelock contract was found to have issue where a duplicate AND check can be added for the same start and end indexes for a selector. It would make it impossible for a hot signer to take actions for the given protocol. Also, it was found that overlapping index ranges could be added which should not be possible. Also, the removal of a single OR check is not possible, first all the OR checks have to be removed and then re add the needed checks, which should not be the case.
 
 **09/24/24** - The Timelock contract was found to have an issue where an empty check could be added by passing an empty array of checks to the addCallDataCheck functions. This empty check would be impossible to fulfill on its own, meaning other checks would need to be added to that same index to make it possible to pass that given index check as a hot signer. Also, the Timelock factory contract had its mapping of deployed contracts removed to cut down on its bytecode size.
+
+**09/30/24** - The selfAddressCheck logic was removed from the timelock to simplify the contract.

@@ -22,11 +22,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "expirationPeriod incorrectly set"
         );
         assertEq(timelock.getAllProposals().length, 0, "no proposals yet");
-        assertEq(
-            timelock.ADDRESS_THIS_HASH(),
-            keccak256(abi.encodePacked(address(timelock))),
-            "timelock address hash incorrect"
-        );
         assertTrue(timelock.initialized(), "timelock not initialized");
     }
 
@@ -54,8 +49,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             new bytes4[](0),
             new uint16[](0),
             new uint16[](0),
-            new bytes[][](0),
-            new bool[][](0)
+            new bytes[][](0)
         );
     }
 
@@ -366,14 +360,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
     function testAddCalldataCheckFailsNonTimelock() public {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = true;
+        datas[0] = abi.encodePacked(timelock);
 
         vm.expectRevert("Timelock: caller is not the timelock");
-        timelock.addCalldataCheck(
-            address(0), bytes4(0xFFFFFFFF), 0, 1, datas, selfAddressChecks
-        );
+        timelock.addCalldataCheck(address(0), bytes4(0xFFFFFFFF), 0, 1, datas);
     }
 
     function testAddCalldataChecksFailsNonTimelock() public {
@@ -383,8 +373,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             new bytes4[](0),
             new uint16[](0),
             new uint16[](0),
-            new bytes[][](0),
-            new bool[][](0)
+            new bytes[][](0)
         );
     }
 
@@ -413,92 +402,20 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.updatePauseDuration(1);
     }
 
-    function testAddCalldataChecksFailsSelfCheckWithCalldata() public {
-        bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = hex"1234";
-        selfAddressChecks[0] = true;
-
-        vm.prank(address(timelock));
-        vm.expectRevert(
-            "CalldataList: Data must be empty for self address check"
-        );
-        timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            10,
-            30,
-            datas,
-            selfAddressChecks
-        );
-    }
-
     function testAddCalldataChecksFailsLengthMismatch() public {
         bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
         datas[0] = hex"1234";
-        selfAddressChecks[0] = false;
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Data length mismatch");
         timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            10,
-            13,
-            datas,
-            selfAddressChecks
+            address(10000), timelock.addCalldataCheck.selector, 10, 13, datas
         );
 
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Data length mismatch");
         timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            9,
-            28,
-            datas,
-            selfAddressChecks
-        );
-    }
-
-    function testAddCalldataChecksFailsSelfCheckDeltaNotTwenty() public {
-        bytes[] memory datas = new bytes[](1);
-        bool[] memory selfAddressChecks = new bool[](1);
-        datas[0] = "";
-        selfAddressChecks[0] = true;
-
-        vm.prank(address(timelock));
-        vm.expectRevert("CalldataList: Self address check must be 20 bytes");
-        timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            10,
-            29,
-            datas,
-            selfAddressChecks
-        );
-
-        vm.prank(address(timelock));
-        vm.expectRevert("CalldataList: Self address check must be 20 bytes");
-        timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            10,
-            31,
-            datas,
-            selfAddressChecks
-        );
-
-        vm.prank(address(timelock));
-        vm.expectRevert("CalldataList: Self address check must be 20 bytes");
-        timelock.addCalldataCheck(
-            address(10000),
-            timelock.addCalldataCheck.selector,
-            10,
-            3129,
-            datas,
-            selfAddressChecks
+            address(10000), timelock.addCalldataCheck.selector, 9, 28, datas
         );
     }
 
@@ -510,8 +427,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             timelock.addCalldataCheck.selector,
             10,
             30,
-            new bytes[](0),
-            new bool[](0)
+            new bytes[](0)
         );
     }
 
@@ -529,12 +445,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.prank(address(timelock));
         vm.expectRevert("CalldataList: Data empty");
         timelock.addCalldataChecks(
-            targets,
-            selectors,
-            startIndexes,
-            endIndexes,
-            new bytes[][](1),
-            new bool[][](1)
+            targets, selectors, startIndexes, endIndexes, new bytes[][](1)
         );
     }
 
@@ -894,15 +805,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata = new bytes[](1);
-        checkedCalldata[0] = "";
+        checkedCalldata[0] = abi.encodePacked(timelock);
         checkedCalldatas[0] = checkedCalldata;
         checkedCalldatas[1] = checkedCalldata;
-
-        bool[][] memory isSelfAddressChecks = new bool[][](2);
-        bool[] memory isSelfAddressCheck = new bool[](1);
-        isSelfAddressCheck[0] = true;
-        isSelfAddressChecks[0] = isSelfAddressCheck;
-        isSelfAddressChecks[1] = isSelfAddressCheck;
 
         bytes[] memory datas = new bytes[](1);
         datas[0] = abi.encodeWithSelector(
@@ -911,8 +816,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             selectors,
             startIndexes,
             endIndexes,
-            checkedCalldatas,
-            isSelfAddressChecks
+            checkedCalldatas
         );
 
         _scheduleBatch({
@@ -1111,15 +1015,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
             bytes[][] memory checkedCalldatas = new bytes[][](2);
             bytes[] memory checkedCalldata = new bytes[](1);
-            checkedCalldata[0] = "";
+            checkedCalldata[0] = abi.encodePacked(address(timelock));
             checkedCalldatas[0] = checkedCalldata;
             checkedCalldatas[1] = checkedCalldata;
-
-            bool[][] memory isSelfAddressChecks = new bool[][](2);
-            bool[] memory isSelfAddressCheck = new bool[](1);
-            isSelfAddressCheck[0] = true;
-            isSelfAddressChecks[0] = isSelfAddressCheck;
-            isSelfAddressChecks[1] = isSelfAddressCheck;
 
             bytes[] memory datas = new bytes[](1);
             datas[0] = abi.encodeWithSelector(
@@ -1128,8 +1026,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
                 selectors,
                 startIndexes,
                 endIndexes,
-                checkedCalldatas,
-                isSelfAddressChecks
+                checkedCalldatas
             );
 
             _scheduleBatch({

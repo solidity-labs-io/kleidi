@@ -14,7 +14,6 @@ struct DeploymentParams {
     uint16[] startIndexes;
     uint16[] endIndexes;
     bytes[][] datas;
-    bool[][] isSelfAddressCheck;
     bytes32 salt;
 }
 

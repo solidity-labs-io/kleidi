@@ -6,7 +6,7 @@ import {CErc20Interface} from "src/interface/CErc20Interface.sol";
 import {CEtherInterface} from "src/interface/CEtherInterface.sol";
 import {
     generateCalldatas,
-    generateSelfAddressChecks
+    generateCalldatasWildcard
 } from "test/utils/NestedArrayHelper.sol";
 
 contract SystemIntegrationTest is SystemIntegrationFixture {
@@ -302,8 +302,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             calldatas = generateCalldatas(calldatas, singleCalldata, 2);
             calldatas = generateCalldatas(calldatas, singleCalldata, 12);
 
+            /// self address checks ///
+            singleCalldata = abi.encodePacked(address(timelock));
+
             /// can only deposit to timelock
-            singleCalldata = "";
             calldatas = generateCalldatas(calldatas, singleCalldata, 1);
 
             /// can only borrow to timelock
@@ -321,17 +323,19 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// can only withdraw collateral back to timelock
             calldatas = generateCalldatas(calldatas, singleCalldata, 7);
 
+            singleCalldata = "";
+
             /// wildcard for cDai mint
-            calldatas = generateCalldatas(calldatas, singleCalldata, 9);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 9);
 
             /// wildcard for deposit to WETH
-            calldatas = generateCalldatas(calldatas, singleCalldata, 10);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 10);
 
             /// wildcard for withdraw from WETH
-            calldatas = generateCalldatas(calldatas, singleCalldata, 11);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 11);
 
             /// wildcard for cEther mint
-            calldatas = generateCalldatas(calldatas, singleCalldata, 13);
+            calldatas = generateCalldatasWildcard(calldatas, singleCalldata, 13);
 
             /// morpho blue and cDai address can be approved to spend dai
             bytes[] memory approvedContractsDai = new bytes[](2);
@@ -355,61 +359,13 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             targets[12] = weth;
             targets[13] = cEther;
 
-            bool[][] memory isSelfAddressChecks = new bool[][](14);
-            bool isSelfAddressCheck = false;
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 2
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 9
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 10
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 11
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 12
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 13
-            );
-
-            isSelfAddressCheck = true;
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 1
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 3
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 4
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 5
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 6
-            );
-            isSelfAddressChecks = generateSelfAddressChecks(
-                isSelfAddressChecks, isSelfAddressCheck, 7
-            );
-
-            bool[] memory approveSelfAddressChecks = new bool[](2);
-            approveSelfAddressChecks[0] = false;
-            approveSelfAddressChecks[1] = false;
-            isSelfAddressChecks[0] = approveSelfAddressChecks;
-            isSelfAddressChecks[8] = approveSelfAddressChecks;
-
             contractCall = abi.encodeWithSelector(
                 Timelock.addCalldataChecks.selector,
                 targets,
                 selectors,
                 startIndexes,
                 endIndexes,
-                calldatas,
-                isSelfAddressChecks
+                calldatas
             );
 
             /// inner calldata
@@ -505,7 +461,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             calldatas[0] = approvedPools;
 
             /// can only deposit to timelock
-            singleCalldata = "";
+            singleCalldata = abi.encodePacked(address(timelock));
 
             calldatas = generateCalldatas(calldatas, singleCalldata, 1);
 
@@ -513,28 +469,13 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             targets[0] = morphoBlue;
             targets[1] = morphoBlue;
 
-            bool[][] memory isSelfAddressChecks = new bool[][](2);
-            isSelfAddressChecks =
-                generateSelfAddressChecks(isSelfAddressChecks, false, 0);
-
-            isSelfAddressChecks =
-                generateSelfAddressChecks(isSelfAddressChecks, true, 1);
-
-            bool[] memory approveSelfAddressChecks = new bool[](2);
-            approveSelfAddressChecks[0] = false;
-            approveSelfAddressChecks[1] = false;
-            isSelfAddressChecks[0] = approveSelfAddressChecks;
-            isSelfAddressChecks[1] = new bool[](1);
-            isSelfAddressChecks[1][0] = true;
-
             contractCall = abi.encodeWithSelector(
                 Timelock.addCalldataChecks.selector,
                 targets,
                 selectors,
                 startIndexes,
                 endIndexes,
-                calldatas,
-                isSelfAddressChecks
+                calldatas
             );
 
             /// inner calldata
