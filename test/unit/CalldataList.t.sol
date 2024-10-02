@@ -24,11 +24,16 @@ contract CalldataListUnitTest is Test {
         bytes[][] calldatas;
     }
 
+    /// @notice struct used to fuzz values for testAddAndRemoveCalldataFuzzy
+    /// target: the contract address to be whitelisted
+    /// selector: the function signature to be whitelisted on target contract
+    /// calldataLength: length of calldata for all the checks for target and selector
+    /// seedCalldata: seed calldata used to generate multiple calldatas for different AND and OR checks
     struct CheckDataFuzzParams {
         address target;
         bytes4 selector;
         uint16 calldataLength;
-        bytes singleCalldata;
+        bytes seedCalldata;
     }
 
     /// @notice reference to the Timelock contract
@@ -63,9 +68,10 @@ contract CalldataListUnitTest is Test {
     /// @notice nonce for generating random numbers
     uint256 internal _nonce = 0;
 
-    /// @notice mapping used in testAddAndRemoveCalldataFuzzy
+    /// @notice mapping used in testAddAndRemoveCalldataFuzzy to store
+    /// total number of AND checks for a contract selector pair
     mapping(address target => mapping(bytes4 selector => uint256 count)) private
-        checksCount;
+        totalChecks;
 
     function setUp() public {
         hotSigners.push(HOT_SIGNER_ONE);
@@ -669,32 +675,43 @@ contract CalldataListUnitTest is Test {
         );
     }
 
+    /// @notice fuzz test adding multiple AND and OR checks for each contract and function selector pair
+    /// and removing all the checks for each pair by using removeCalldataCheck or removeCalldataCheckDatahash chosen randomly
+    /// @param fuzzyCheckData fuzzed CheckDataFuzzParams struct array
     function testAddAndRemoveCalldataFuzzy(
         CheckDataFuzzParams[] memory fuzzyCheckData
     ) public {
+        /// length of fuzzed contract-selector pair
         uint256 fuzzyLength;
+
+        /// adddition of checks
         {
             fuzzyLength = fuzzyCheckData.length;
 
+            /// assume that fuzzyCheckData is not zero length
             vm.assume(fuzzyLength > 0);
 
+            /// bound calldata length for each pair between 4 and 32, max is 32 so that
+            /// multiple calldatas can be generate from the seed calldata using generateCalldatas
+            /// min is 4 so that there are is no collision in generated calldatas
             for (uint256 len = 0; len < fuzzyLength; len++) {
                 fuzzyCheckData[len].calldataLength =
                     uint16(bound(fuzzyCheckData[len].calldataLength, 4, 32));
             }
 
-            // number of checks for each contract address and function selector pair
-            uint256 checkCount = randomInRange(1, 10, true);
-            // total length of all the checks
+            /// number of AND and OR checks for each selected pair
+            uint256 checkCount = randomInRange(4, 20, true);
+            /// total length of all the AND and OR checks
             uint256 length = checkCount * fuzzyLength;
-            // initial start index for first check
+            /// initial start index for first check
             uint16 currentStartIndex = 4;
 
             CheckData memory checkData = _initializeCheckData(length);
 
-            // generate checkCount number of checks for each contract address and function selector pair
+            /// generate checkCount number of checks for each selected pair
             for (uint256 i = 0; i < fuzzyLength; i++) {
-                // target should not be safe or timelock address
+                /// target should not be safe or timelock address or zero address
+                /// selector should not be empty
                 vm.assume(
                     fuzzyCheckData[i].target != address(safe)
                         && fuzzyCheckData[i].target != address(timelock)
@@ -702,54 +719,36 @@ contract CalldataListUnitTest is Test {
                         && fuzzyCheckData[i].selector != bytes4(0)
                 );
 
-                if (randomInRange(1, 100, true) % 5 == 0) {
-                    // generate checkCount number of checks
-                    for (uint256 j = 0; j < checkCount; j++) {
-                        // index where the new check is added
-                        uint256 index = i * checkCount + j;
-                        checkData.targets[index] = fuzzyCheckData[i].target;
-                        checkData.selectors[index] = fuzzyCheckData[i].selector;
-                        checkData.calldatas = generateCalldatas(
-                            checkData.calldatas,
-                            abi.encodePacked(
-                                fuzzyCheckData[i].singleCalldata, j
-                            ),
-                            fuzzyCheckData[i].calldataLength,
-                            index
-                        );
-                        checkData.startIndexes[index] = currentStartIndex;
-                        // set end index to start index + calldata length
-                        checkData.endIndexes[index] = checkData.startIndexes[index]
-                            + fuzzyCheckData[i].calldataLength;
-                    }
-                    checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
-                        .selector] += 1;
-                    //update start index for next check to avoid overlap
-                    currentStartIndex = checkData.endIndexes[i * checkCount] + 1;
-                } else {
-                    // generate checkCount number of checks
-                    for (uint256 j = 0; j < checkCount; j++) {
-                        // index where the new check is added
-                        uint256 index = i * checkCount + j;
-                        checkData.targets[index] = fuzzyCheckData[i].target;
-                        checkData.selectors[index] = fuzzyCheckData[i].selector;
-                        checkData.calldatas = generateCalldatas(
-                            checkData.calldatas,
-                            abi.encodePacked(
-                                fuzzyCheckData[i].singleCalldata, j
-                            ),
-                            fuzzyCheckData[i].calldataLength,
-                            index
-                        );
-                        checkData.startIndexes[index] = currentStartIndex;
-                        // set end index to start index + calldata length
-                        checkData.endIndexes[index] = checkData.startIndexes[index]
-                            + fuzzyCheckData[i].calldataLength;
-                        //update start index for next check to avoid overlap
+                /// generate checkCount number of checks for the selected pair
+                for (uint256 j = 0; j < checkCount; j++) {
+                    /// index where the new check is added
+                    uint256 index = i * checkCount + j;
+                    /// for all the checkCount number of checks target contract is same
+                    checkData.targets[index] = fuzzyCheckData[i].target;
+                    /// for all the checkCount number of checks target selector is same
+                    checkData.selectors[index] = fuzzyCheckData[i].selector;
+                    /// generate multiple OR data hashes corresponding to the current index
+                    checkData.calldatas = generateCalldatas(
+                        checkData.calldatas,
+                        abi.encodePacked(fuzzyCheckData[i].seedCalldata, j),
+                        fuzzyCheckData[i].calldataLength,
+                        index
+                    );
+                    /// set start index
+                    checkData.startIndexes[index] = currentStartIndex;
+                    // set end index to start index + calldata length
+                    checkData.endIndexes[index] = checkData.startIndexes[index]
+                        + fuzzyCheckData[i].calldataLength;
+
+                    /// keep start and end index same for the next check if j <= checkCount / 2
+                    /// update start and end index if j > checkCount / 2
+                    if (j > checkCount / 2) {
+                        /// update start index for next check to avoid overlap
                         currentStartIndex = checkData.endIndexes[index] + 1;
+                        /// AND checks count only increases if j > checkCount / 2
+                        totalChecks[fuzzyCheckData[i].target][fuzzyCheckData[i]
+                            .selector] += 1;
                     }
-                    checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
-                        .selector] += checkCount;
                 }
             }
 
@@ -767,24 +766,30 @@ contract CalldataListUnitTest is Test {
                 uint256 finalCheckLength = timelock.getCalldataChecks(
                     fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                 ).length;
-                // finalCheckLength % checkCount to cover case where a pair of
-                // contract address and selector is repeated in fuzzed array
+                /// assert added checks count is correct
                 assertTrue(
                     finalCheckLength
-                        == checksCount[fuzzyCheckData[i].target][fuzzyCheckData[i]
+                        == totalChecks[fuzzyCheckData[i].target][fuzzyCheckData[i]
                             .selector]
                 );
             }
         }
 
+        /// removal of checks
         {
             for (uint256 i = 0; i < fuzzyLength; i++) {
+                /// get number of AND checks for the selected pair
                 uint256 checksLength = timelock.getCalldataChecks(
                     fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                 ).length;
+
                 uint256 index;
+                /// delete all the AND checks in random order
                 while (checksLength > 0) {
                     index = randomInRange(0, checksLength - 1, false);
+                    /// 50% chance that removeCalldataCheck will be used to remove the complete AND check
+                    /// other 50% chance that removeCalldataCheckDatahash will be used to remove all the
+                    /// OR checks for the AND check, finally removing the end check
                     if (randomInRange(1, 100, true) % 2 == 0) {
                         vm.prank(address(timelock));
                         timelock.removeCalldataCheck(
@@ -793,16 +798,20 @@ contract CalldataListUnitTest is Test {
                             index
                         );
                     } else {
+                        /// set number of OR checks for the AND check
                         uint256 dataHashesLength = timelock.getCalldataChecks(
                             fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                         )[index].dataHashes.length;
                         uint256 indexDataHashes;
+                        /// delete all the OR checks in random order
                         while (dataHashesLength > 0) {
+                            /// current array of OR data hashes
                             bytes32[] memory dataHashes = timelock
                                 .getCalldataChecks(
                                 fuzzyCheckData[i].target,
                                 fuzzyCheckData[i].selector
                             )[index].dataHashes;
+                            /// random index that will be removed
                             indexDataHashes =
                                 randomInRange(0, dataHashesLength - 1, false);
                             vm.prank(address(timelock));
@@ -817,7 +826,7 @@ contract CalldataListUnitTest is Test {
                     }
                     checksLength--;
                 }
-                // assert calldata checks removed
+                /// assert calldata checks removed for the selected pair
                 assertEq(
                     timelock.getCalldataChecks(
                         fuzzyCheckData[i].target, fuzzyCheckData[i].selector
@@ -1108,15 +1117,15 @@ contract CalldataListUnitTest is Test {
         uint256 count,
         uint256 index
     ) internal pure returns (bytes[][] memory) {
-        // length of each calldata for a check
+        /// length of each OR data
         uint256 calldataLength = count;
-        // number of calldatas for each check
+        /// number of OR datas for each check
         count = bound(count, 1, 10);
 
         bytes32 dataHash = keccak256(data);
         bytes[] memory singleCheckCalldata = new bytes[](count);
 
-        // generate count number of calldatas from passed data
+        /// generate count number of OR datas
         for (uint256 i = 0; i < count; i++) {
             singleCheckCalldata[i] = sliceBytes32(dataHash, calldataLength);
             dataHash = keccak256(abi.encode(dataHash));
