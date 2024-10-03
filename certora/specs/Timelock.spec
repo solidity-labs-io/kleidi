@@ -375,6 +375,7 @@ invariant noEmptyChecks(address contract, bytes4 selector, uint256 index)
             }
         }
         preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas) with (env e1) {
+            require t._calldataList[contract][selector][index].dataHashes._inner._values.length < uintMax();
             require getCalldataChecks(c1, s1).length < uintMax();
             if (t._calldataList[c1][s1].length >= 1) {
                 requireInvariant noEmptyChecks(c1, s1, assert_uint256(t._calldataList[c1][s1].length - 1));
