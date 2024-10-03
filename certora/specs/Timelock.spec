@@ -375,6 +375,7 @@ invariant noEmptyChecks(address contract, bytes4 selector, uint256 index)
             }
         }
         preserved addCalldataCheck(address c1 ,bytes4 s1,uint16 startIndex, uint16 endIndex, bytes[] datas) with (env e1) {
+            require t._calldataList[contract][selector][index].dataHashes._inner._values.length < uintMax();
             require getCalldataChecks(c1, s1).length < uintMax();
             if (t._calldataList[c1][s1].length >= 1) {
                 requireInvariant noEmptyChecks(c1, s1, assert_uint256(t._calldataList[c1][s1].length - 1));
@@ -396,16 +397,20 @@ rule removeCalldataCheck(env e, address target, bytes4 selector, uint256 index) 
 rule addCalldataCheck(env e, address target, bytes4 selector, uint16 startIndex, uint16 endIndex, bytes[] data) {
     mathint len = t._calldataList[target][selector].length;
     uint256 uint256Len = t._calldataList[target][selector].length;
+    /// initial number of OR checks at the index where a new check might be added
     uint256 numberValues = t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length;
     require numberValues + data.length <= to_mathint(uintMax());
 
     addCalldataCheck(e, target, selector, startIndex, endIndex, data);
 
     /// verify all state transitions
-    assert to_mathint(t._calldataList[target][selector].length) == len + 1, "one calldata check should be added";
+    mathint afterLen = t._calldataList[target][selector].length;
+    /// length will not update if start index and end index matches with already existing check
+    assert afterLen == len || afterLen == len + 1, "zero or one calldata check should be added";
     assert startIndex >= 4, "start index should be greater than 3";
+    uint256 afterNumberValues = t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length;
     assert endIndex >= startIndex, "end index should be greater than equal to start index";
-    assert t._calldataList[target][selector][uint256Len].dataHashes._inner._values.length == assert_uint256(data.length + numberValues), "All OR data should be added for the check";
+    assert afterNumberValues == assert_uint256(data.length + numberValues) || afterNumberValues == numberValues, "All OR data should be added for the check";
 }
 
 /// addCalldataCheck add 1 calldata check
