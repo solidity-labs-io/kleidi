@@ -34,6 +34,11 @@ The timelock can never have whitelisted calldata to the safe or the timelock its
 
 All calldata checks must be isolated to predefined calldata segments, for example given calldata with three parameters:
 
+ 0xffffeecc000000000000000112818929111111000000000000000112818929111111000000000000000112818929111111
+
+  0xffffeecc
+
+
 ```
                     1.                              2.                             3.
        000000000000000112818929111111
@@ -44,6 +49,10 @@ All calldata checks must be isolated to predefined calldata segments, for exampl
                     D                               E                              F
                  a || d           &&             b || e             &&          c || f
 ```
+
+example hot signer call to function
+
+parameter 1 was A, Parameter 2 was E, parameter 3 was G
 
 checks must be applied in a way such that they do not overlap with each other. It is important that the calldata checks are isolated to specific segments of the calldata to ensure no duplicate checks are allowed.
 
