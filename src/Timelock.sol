@@ -1069,7 +1069,7 @@ contract Timelock is
         if (startIndex == endIndex) {
             require(
                 startIndex == 4,
-                "CalldataList: End index eqauls start index only when 4"
+                "CalldataList: End index equals start index only when 4"
             );
             require(
                 listLength == 0,
