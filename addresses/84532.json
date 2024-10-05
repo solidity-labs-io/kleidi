@@ -15,32 +15,32 @@
         "isContract": true
     },
     {
-        "addr": "0x2c9c0F10E3F8820544522df210dFb0A2BbC75147",
+        "addr": "0x29b28b0ff5b6b26448f3ac02cd209539626d96ab",
         "name": "DEPLOYER_EOA",
         "isContract": false
     },
     {
-        "addr": "0xce7e03b8Aa3675C846a0F279dCE086986d9ea2e4", 
+        "addr": "0xAB7cDa41F9f2Ad1436D95c8E0939a7eED2d19692",
         "isContract": true,
         "name": "TIMELOCK_FACTORY"
     },
     {
-        "addr": "0x0D04Bfa12E48aA028099173b1F28e9109c444f64", 
+        "addr": "0xC2048614f77D211B2E1FF47381811E6d4D21D523",
         "isContract": true,
         "name": "RECOVERY_SPELL_FACTORY"
     },
     {
-        "addr": "0xB5eC77e34917167800db517154a654552bEc0442", 
+        "addr": "0x0dB6Ec314b4fa094630ae76eC53381888eDfEF63",
         "isContract": true,
         "name": "GUARD"
     },
     {
-        "addr": "0x777521837aC0C4a1fB6199e94D30668A422CDe9a", 
+        "addr": "0xa6567A0bc6F0c465e69947E5d45a0b55d197b4a3",
         "isContract": true,
         "name": "INSTANCE_DEPLOYER"
     },
     {
-        "addr": "0xDf03a28A7fFA3D8F2A5D364BDBfeE31cf3e866b7", 
+        "addr": "0x9F43232Aa94042e457633Ffd16b6D583b33A73a4",
         "isContract": true,
         "name": "ADDRESS_CALCULATION"
     }
