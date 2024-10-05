@@ -1,6 +1,6 @@
-# DeFi Self Custody Protocol
+# Kleidi
 
-The DeFi Self Custody Protocol is a collection of smart contracts that can be used to create a fully self-custody system for DeFi users. The protocol is opinionated and is designed to be used with Gnosis Safe multisigs, a timelock, guard contract, and recovery spells. It enables users to access DeFi yields and protocols, pull funds in case of emergency, and recover funds in case of lost keys either through social recovery or predefined backups.
+The Kleidi Wallet is a collection of smart contracts that can be used to create a full self-custody wallet system for DeFi users. The protocol is opinionated and is designed to be used with Gnosis Safe multisigs, a timelock, guard contract, and recovery spells. It enables users to access DeFi yields and protocols, pull funds in case of emergency, and recover funds in case of lost keys either through social recovery or predefined backups.
 
 ## Design Principles
 
