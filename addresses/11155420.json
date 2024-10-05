@@ -1,0 +1,47 @@
+[
+    {
+        "addr": "0x29b28b0ff5b6b26448f3ac02cd209539626d96ab",
+        "name": "DEPLOYER_EOA",
+        "isContract": false
+    },
+    {
+        "addr": "0xcA11bde05977b3631167028862bE2a173976CA11",
+        "name": "MULTICALL3",
+        "isContract": true
+    },
+    {
+        "addr": "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+        "name": "SAFE_FACTORY",
+        "isContract": true
+    },
+    {
+        "addr": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+        "name": "SAFE_LOGIC",
+        "isContract": true
+    },
+    {
+        "addr": "0xAB7cDa41F9f2Ad1436D95c8E0939a7eED2d19692",
+        "isContract": true,
+        "name": "TIMELOCK_FACTORY"
+    },
+    {
+        "addr": "0xC2048614f77D211B2E1FF47381811E6d4D21D523",
+        "isContract": true,
+        "name": "RECOVERY_SPELL_FACTORY"
+    },
+    {
+        "addr": "0x0dB6Ec314b4fa094630ae76eC53381888eDfEF63",
+        "isContract": true,
+        "name": "GUARD"
+    },
+    {
+        "addr": "0xa6567A0bc6F0c465e69947E5d45a0b55d197b4a3",
+        "isContract": true,
+        "name": "INSTANCE_DEPLOYER"
+    },
+    {
+        "addr": "0x9F43232Aa94042e457633Ffd16b6D583b33A73a4",
+        "isContract": true,
+        "name": "ADDRESS_CALCULATION"
+    }
+]
