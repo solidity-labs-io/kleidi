@@ -19,6 +19,7 @@ line_length = 80
 
 [rpc_endpoints]
 base = "https://mainnet.base.org"
+baseSepolia = "https://sepolia.base.org"
 optimismSepolia = "https://sepolia.optimism.io"
 localhost = "http://127.0.0.1:8545"
 
