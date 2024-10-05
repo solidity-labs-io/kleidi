@@ -992,7 +992,7 @@ contract CalldataListUnitTest is Test {
 
         vm.prank(address(timelock));
         vm.expectRevert(
-            "CalldataList: End index eqauls start index only when 4"
+            "CalldataList: End index equals start index only when 4"
         );
         timelock.addCalldataCheck(
             address(lending), MockLending.deposit.selector, 5, 5, datas
