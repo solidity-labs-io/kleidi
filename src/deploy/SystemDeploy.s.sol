@@ -19,10 +19,11 @@ contract SystemDeploy is MultisigProposal {
         0x0000000000000000000000000000000000000000000000000000000000003afe;
 
     constructor() {
-        uint256[] memory chainIds = new uint256[](3);
+        uint256[] memory chainIds = new uint256[](4);
         chainIds[0] = 1;
         chainIds[1] = 8453;
         chainIds[2] = 84532;
+        chainIds[3] = 11155420;
         addresses = new Addresses("./addresses", chainIds);
     }
 
