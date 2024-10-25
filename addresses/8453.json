@@ -23,5 +23,30 @@
         "addr": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
         "name": "SAFE_LOGIC",
         "isContract": true
+    },
+    {
+        "addr": "0xe0C9843F87134e0036823ecb5e003DA2B2bC57d7",
+        "isContract": true,
+        "name": "TIMELOCK_FACTORY"
+    },
+    {
+        "addr": "0x38D1856d010b19dF1043AEdd33baF25e1256eFc6",
+        "isContract": true,
+        "name": "RECOVERY_SPELL_FACTORY"
+    },
+    {
+        "addr": "0x9BEccf76a2aF55793241F079bD4145ED7026F699",
+        "isContract": true,
+        "name": "GUARD"
+    },
+    {
+        "addr": "0xa3D5d6739a657d081A859085eDBef0a54446c437",
+        "isContract": true,
+        "name": "INSTANCE_DEPLOYER"
+    },
+    {
+        "addr": "0x8449F6ca1A6BA82ed62953145577D3d3fBF58A67",
+        "isContract": true,
+        "name": "ADDRESS_CALCULATION"
     }
 ]
