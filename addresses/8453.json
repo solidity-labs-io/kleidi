@@ -25,27 +25,27 @@
         "isContract": true
     },
     {
-        "addr": "0xe0C9843F87134e0036823ecb5e003DA2B2bC57d7",
+        "addr": "0x11abBC55900602B8A3a6DC71e25a1Ea40CE114a7",
         "isContract": true,
         "name": "TIMELOCK_FACTORY"
     },
     {
-        "addr": "0x38D1856d010b19dF1043AEdd33baF25e1256eFc6",
+        "addr": "0x3B957Bf3Fbc615792c3FFa97fce892EF4FA9ee72",
         "isContract": true,
         "name": "RECOVERY_SPELL_FACTORY"
     },
     {
-        "addr": "0x9BEccf76a2aF55793241F079bD4145ED7026F699",
+        "addr": "0xfC2275aD9C251bF3792d52E03B3E10371d18D62d",
         "isContract": true,
         "name": "GUARD"
     },
     {
-        "addr": "0xa3D5d6739a657d081A859085eDBef0a54446c437",
+        "addr": "0x48f351443c58aDFf7e1e5D2B1DF30817F9a1C497",
         "isContract": true,
         "name": "INSTANCE_DEPLOYER"
     },
     {
-        "addr": "0x8449F6ca1A6BA82ed62953145577D3d3fBF58A67",
+        "addr": "0x9aaba81F20B125cE656dC37154CAAF05dfD3049d",
         "isContract": true,
         "name": "ADDRESS_CALCULATION"
     }
