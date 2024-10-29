@@ -20,4 +20,4 @@ jobs:
         uses: ./.github/actions
 
       - name: Integration Test Contracts
-        run: time forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL
+        run: time forge test --mc IntegrationTest -vvv --fork-url $ETH_RPC_URL --libraries src/BytesHelper.sol:BytesHelper:0x98afd3357918eb5d4be1246ead2256a27de369e3
