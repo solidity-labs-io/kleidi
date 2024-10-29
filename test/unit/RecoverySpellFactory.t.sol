@@ -231,6 +231,19 @@ contract RecoverySpellFactoryUnitTest is Test {
         );
     }
 
+    function testCalculateAddressFailsContractOwner() public {
+        address[] memory recoveryOwners = new address[](3);
+        recoveryOwners[0] = address(0x1);
+        recoveryOwners[1] = address(0x2);
+        recoveryOwners[2] = address(0x3333);
+        vm.etch(recoveryOwners[2], hex"3afe");
+
+        vm.expectRevert("RecoverySpell: Owner cannot be a contract");
+        recoveryFactory.calculateAddress(
+            bytes32(0), recoveryOwners, SAFE, 1, 1, 10 days
+        );
+    }
+
     function testParamSubstitutionSaltChangesAddress() public view {
         bytes32 salt = bytes32(uint256(1));
 
