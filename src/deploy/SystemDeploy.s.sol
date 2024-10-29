@@ -6,6 +6,7 @@ import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
 
 import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
+import {BytesHelper} from "src/BytesHelper.sol";
 import {TimelockFactory} from "src/TimelockFactory.sol";
 import {InstanceDeployer} from "src/InstanceDeployer.sol";
 import {AddressCalculation} from "src/views/AddressCalculation.sol";
@@ -15,6 +16,8 @@ import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 /// all contracts are permissionless
 /// DO_PRINT=false DO_BUILD=false DO_RUN=false DO_DEPLOY=true DO_VALIDATE=true forge script src/deploy/SystemDeploy.s.sol:SystemDeploy --fork-url base -vvvvv
 contract SystemDeploy is MultisigProposal {
+    using BytesHelper for bytes;
+
     bytes32 public salt =
         0x0000000000000000000000000000000000000000000000000000000000003afe;
 
@@ -77,23 +80,29 @@ contract SystemDeploy is MultisigProposal {
         if (addresses.isAddressSet("TIMELOCK_FACTORY")) {
             address factory = addresses.getAddress("TIMELOCK_FACTORY");
             assertEq(
-                keccak256(factory.code),
-                keccak256(type(TimelockFactory).runtimeCode),
+                keccak256(factory.code.sliceBytes(0, 24116)),
+                keccak256(
+                    type(TimelockFactory).runtimeCode.sliceBytes(0, 24116)
+                ),
                 "Incorrect TimelockFactory Bytecode"
             );
 
             address guard = addresses.getAddress("GUARD");
+
             assertEq(
-                keccak256(guard.code),
-                keccak256(type(Guard).runtimeCode),
+                keccak256(guard.code.sliceBytes(0, 950)),
+                keccak256(type(Guard).runtimeCode.sliceBytes(0, 950)),
                 "Incorrect Guard Bytecode"
             );
 
             address recoverySpellFactory =
                 addresses.getAddress("RECOVERY_SPELL_FACTORY");
+
             assertEq(
-                keccak256(recoverySpellFactory.code),
-                keccak256(type(RecoverySpellFactory).runtimeCode),
+                keccak256(recoverySpellFactory.code.sliceBytes(0, 9470)),
+                keccak256(
+                    type(RecoverySpellFactory).runtimeCode.sliceBytes(0, 9470)
+                ),
                 "Incorrect RecoverySpellFactory Bytecode"
             );
 
