@@ -95,6 +95,11 @@ contract RecoverySpellFactory {
 
         /// duplicate owner check
         for (uint256 i = 0; i < owners.length; i++) {
+            require(
+                owners[i].code.length == 0,
+                "RecoverySpell: Owner cannot be a contract"
+            );
+
             for (uint256 j = i + 1; j < owners.length; j++) {
                 require(
                     owners[i] != owners[j], "RecoverySpell: Duplicate owner"
