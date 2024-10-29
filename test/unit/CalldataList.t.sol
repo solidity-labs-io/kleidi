@@ -559,7 +559,7 @@ contract CalldataListUnitTest is Test {
 
         uint16[] memory endIndexes = new uint16[](3);
         endIndexes[0] = 36;
-        endIndexes[1] = 40;
+        endIndexes[1] = 56;
         endIndexes[2] = 40;
 
         bytes[][] memory checkedCalldatas = new bytes[][](3);
@@ -574,6 +574,48 @@ contract CalldataListUnitTest is Test {
         bytes[] memory checkedCalldata3 = new bytes[](1);
         checkedCalldata3[0] = abi.encodePacked(bytes4(uint32(100)));
         checkedCalldatas[2] = checkedCalldata3;
+
+        vm.expectRevert("CalldataList: Partial check overlap");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        startIndexes[2] = 15;
+        endIndexes[2] = 60;
+        checkedCalldata3[0] =
+            abi.encodePacked(bytes15(uint120(100)), bytes30(uint240(100)));
+        checkedCalldatas[2] = checkedCalldata3;
+
+        vm.expectRevert("CalldataList: Partial check overlap");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        startIndexes[2] = 13;
+        endIndexes[2] = 17;
+
+        vm.expectRevert("CalldataList: Partial check overlap");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        startIndexes[2] = 13;
+        endIndexes[2] = 17;
 
         vm.expectRevert("CalldataList: Partial check overlap");
         vm.prank(address(timelock));
