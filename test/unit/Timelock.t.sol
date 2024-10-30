@@ -218,6 +218,68 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
     }
 
+    function testScheduleMoreThanMaxProposalsSafeFails() public {
+        for (uint256 i = 0; i < 100; i++) {
+            _schedule({
+                caller: address(safe),
+                timelock: address(timelock),
+                target: address(timelock),
+                value: 0,
+                data: abi.encodeWithSelector(
+                    timelock.updateDelay.selector, MINIMUM_DELAY
+                ),
+                salt: bytes32(i),
+                delay: MINIMUM_DELAY
+            });
+        }
+
+        assertEq(
+            timelock.getAllProposals().length, 100, "proposals not registered"
+        );
+
+        vm.expectRevert("Timelock: too many proposals");
+        vm.prank(address(safe));
+        timelock.schedule(
+            address(timelock),
+            0,
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            bytes32(uint256(100)),
+            MINIMUM_DELAY
+        );
+    }
+
+    function testGuardianPauseRemovesAllProposals() public {
+        for (uint256 i = 0; i < 100; i++) {
+            _schedule({
+                caller: address(safe),
+                timelock: address(timelock),
+                target: address(timelock),
+                value: 0,
+                data: abi.encodeWithSelector(
+                    timelock.updateDelay.selector, MINIMUM_DELAY
+                ),
+                salt: bytes32(i),
+                delay: MINIMUM_DELAY
+            });
+        }
+        assertEq(
+            timelock.getAllProposals().length, 100, "proposals not registered"
+        );
+
+        vm.prank(guardian);
+        uint256 gasBefore = gasleft();
+        timelock.pause();
+        uint256 gasAfter = gasleft();
+
+        console.log("gas used: ", gasBefore - gasAfter);
+
+        assertEq(timelock.pauseStartTime(), block.timestamp, "pauseStartTime");
+        assertTrue(timelock.pauseStartTime() != 0, "pause should be used");
+        assertEq(
+            timelock.getAllProposals().length, 0, "proposals should be cleared"
+        );
+    }
+
     function testScheduleNonSafeFails() public {
         vm.expectRevert("Timelock: caller is not the safe");
         timelock.schedule(
