@@ -30,6 +30,9 @@ function setLength() returns uint256 {
 invariant setLengthInvariant()
     setLength() == getAllProposals().length;
 
+invariant proposalCountLteMax()
+    getAllProposals().length <= 100;
+
 /// this will tell us definitively if direct storage lookups are allowed
 invariant timestampInvariant(bytes32 proposalId)
     t.timestamps[proposalId] == timestamps(proposalId);

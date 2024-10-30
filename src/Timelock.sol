@@ -20,7 +20,12 @@ import {Safe} from "@safe/Safe.sol";
 
 import {BytesHelper} from "src/BytesHelper.sol";
 import {ConfigurablePause} from "src/ConfigurablePause.sol";
-import {_DONE_TIMESTAMP, MIN_DELAY, MAX_DELAY} from "src/utils/Constants.sol";
+import {
+    MIN_DELAY,
+    MAX_DELAY,
+    _DONE_TIMESTAMP,
+    MAX_PROPOSAL_COUNT
+} from "src/utils/Constants.sol";
 
 /// @notice DO NOT DEPLOY OUTSIDE OF INSTANCE DEPLOYER
 
@@ -997,6 +1002,10 @@ contract Timelock is
     /// @param id the identifier of the operation
     /// @param delay the delay before the operation becomes valid
     function _schedule(bytes32 id, uint256 delay) private {
+        require(
+            _liveProposals.length() <= MAX_PROPOSAL_COUNT,
+            "Timelock: too many proposals"
+        );
         /// this line is never reachable as no duplicate id's are enforced before this call is made
         require(!isOperation(id), "Timelock: operation already scheduled");
         /// this line is reachable
