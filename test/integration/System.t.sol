@@ -1,6 +1,9 @@
 pragma solidity 0.8.25;
 
+import {IERC20} from "@openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+
 import "test/utils/SystemIntegrationFixture.sol";
+
 import {WETH9} from "src/interface/WETH9.sol";
 import {CErc20Interface} from "src/interface/CErc20Interface.sol";
 import {CEtherInterface} from "src/interface/CEtherInterface.sol";
@@ -184,6 +187,92 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
         );
     }
 
+    function testInfiniteAllowanceCalldatCheck() public {
+        address owner = vm.addr(uint256(1000000));
+
+        address[] memory newOwners = new address[](1);
+        newOwners[0] = owner;
+
+        address[] memory hotSignerAddresses = new address[](1);
+        hotSignerAddresses[0] = HOT_SIGNER_ONE;
+
+        vm.prank(HOT_SIGNER_ONE);
+        SystemInstance memory wallet = deployer.createSystemInstance(
+            NewInstance({
+                owners: newOwners,
+                threshold: 1,
+                recoverySpells: new address[](0),
+                timelockParams: DeploymentParams(
+                    MIN_DELAY,
+                    EXPIRATION_PERIOD,
+                    guardian,
+                    PAUSE_DURATION,
+                    hotSignerAddresses,
+                    new address[](0),
+                    new bytes4[](0),
+                    new uint16[](0),
+                    new uint16[](0),
+                    new bytes[][](0),
+                    bytes32(0)
+                )
+            })
+        );
+
+        Timelock timelockWallet = wallet.timelock;
+
+        uint256 amount = type(uint256).max;
+        bytes4 selector = IERC20.approve.selector;
+
+        uint16 startIdx = 16;
+        uint16 endIdx = 35;
+        bytes[] memory data = new bytes[](1);
+        data[0] = abi.encodePacked(owner);
+
+        vm.prank(address(timelockWallet));
+        timelockWallet.addCalldataCheck(dai, selector, startIdx, endIdx, data);
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelockWallet.executeWhitelisted(
+            address(dai), 0, abi.encodeWithSelector(selector, owner, amount)
+        );
+
+        assertEq(
+            IERC20(dai).allowance(address(timelockWallet), owner),
+            amount,
+            "dai allowance incorrect"
+        );
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelockWallet.executeWhitelisted(
+            address(dai), 0, abi.encodeWithSelector(selector, owner, 0)
+        );
+
+        assertEq(
+            IERC20(dai).allowance(address(timelockWallet), owner),
+            0,
+            "dai allowance incorrect"
+        );
+
+        startIdx = 36;
+        endIdx = 67;
+        data = new bytes[](1);
+        data[0] = abi.encodePacked(amount);
+
+        vm.prank(address(timelockWallet));
+        timelockWallet.addCalldataCheck(dai, selector, startIdx, endIdx, data);
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelockWallet.executeWhitelisted(
+            address(dai), 0, abi.encodeWithSelector(selector, owner, amount)
+        );
+
+        assertEq(
+            IERC20(dai).allowance(address(timelockWallet), owner),
+            amount,
+            "dai allowance incorrect"
+        );
+    }
+
     ///
     /// construction of all calls within this system outside of setup:
     ///    safe calls timelock, timelock calls external contracts
@@ -237,24 +326,24 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             uint16[] memory endIndexes = new uint16[](14);
             /// morpho blue supply
-            endIndexes[0] = startIndexes[0] + 32 * 5;
+            endIndexes[0] = startIndexes[0] + 32 * 5 - 1;
             /// last twenty bytes represents who supplying on behalf of
-            endIndexes[1] = startIndexes[1] + 20;
+            endIndexes[1] = startIndexes[1] + 19;
             /// ethena usd approve morpho
-            endIndexes[2] = startIndexes[2] + 20;
+            endIndexes[2] = startIndexes[2] + 19;
             /// last twenty bytes represents who is approved to spend the tokens
             /// morpho borrow
-            endIndexes[3] = startIndexes[3] + 20;
+            endIndexes[3] = startIndexes[3] + 19;
             /// morpho repay
-            endIndexes[4] = startIndexes[4] + 20;
+            endIndexes[4] = startIndexes[4] + 19;
             /// morpho withdraw
-            endIndexes[5] = startIndexes[5] + 20;
+            endIndexes[5] = startIndexes[5] + 19;
             /// last twenty bytes represents asset receiver
-            endIndexes[6] = startIndexes[6] + 20;
+            endIndexes[6] = startIndexes[6] + 19;
             /// last twenty bytes represents asset receiver
-            endIndexes[7] = startIndexes[7] + 20;
+            endIndexes[7] = startIndexes[7] + 19;
             /// dai approve morpho
-            endIndexes[8] = startIndexes[8] + 20;
+            endIndexes[8] = startIndexes[8] + 19;
             /// add wildcard for cDai mint
             endIndexes[9] = 4;
             /// deposit ETH to get WETH
@@ -262,7 +351,7 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             /// withdraw ETH from WETH
             endIndexes[11] = 4;
             /// weth approve morpho
-            endIndexes[12] = startIndexes[12] + 20;
+            endIndexes[12] = startIndexes[12] + 19;
             /// mint CEther
             endIndexes[13] = 4;
 
@@ -441,9 +530,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
             uint16[] memory endIndexes = new uint16[](2);
             /// morpho blue supply
-            endIndexes[0] = startIndexes[0] + 32 * 5;
+            endIndexes[0] = startIndexes[0] + 32 * 5 - 1;
             /// last twenty bytes represents who supplying on behalf of
-            endIndexes[1] = startIndexes[1] + 20;
+            endIndexes[1] = startIndexes[1] + 19;
 
             bytes4[] memory selectors = new bytes4[](2);
             selectors[0] = IMorphoBase.supply.selector;
