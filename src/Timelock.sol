@@ -1142,7 +1142,7 @@ contract Timelock is
         for (uint256 i = 0; i < data.length; i++) {
             /// data length must equal delta index
             require(
-                data[i].length == endIndex - startIndex,
+                data[i].length == endIndex - startIndex + 1,
                 "CalldataList: Data length mismatch"
             );
             bytes32 dataHash = keccak256(data[i]);
