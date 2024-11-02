@@ -134,8 +134,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 36;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 68;
+        endIndexes[0] = 35;
+        endIndexes[1] = 67;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -236,9 +236,9 @@ contract CalldataListUnitTest is Test {
         startIndexes[2] = 40;
 
         uint16[] memory endIndexes = new uint16[](3);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
-        endIndexes[2] = 60;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
+        endIndexes[2] = 59;
 
         bytes[][] memory checkedCalldatas = new bytes[][](3);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -322,8 +322,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -413,11 +413,11 @@ contract CalldataListUnitTest is Test {
         /// compare first 20 bytes
         uint16[] memory startIndexes = new uint16[](2);
         startIndexes[0] = 16;
-        startIndexes[1] = 37;
+        startIndexes[1] = 36;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 57;
+        endIndexes[0] = 35;
+        endIndexes[1] = 55;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -517,8 +517,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 20;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 40;
+        endIndexes[0] = 35;
+        endIndexes[1] = 39;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -558,8 +558,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[2] = 39;
 
         uint16[] memory endIndexes = new uint16[](3);
-        endIndexes[0] = 36;
-        endIndexes[1] = 56;
+        endIndexes[0] = 35;
+        endIndexes[1] = 55;
         endIndexes[2] = 40;
 
         bytes[][] memory checkedCalldatas = new bytes[][](3);
@@ -572,7 +572,7 @@ contract CalldataListUnitTest is Test {
         checkedCalldatas[1] = checkedCalldata2;
 
         bytes[] memory checkedCalldata3 = new bytes[](1);
-        checkedCalldata3[0] = abi.encodePacked(bytes4(uint32(100)));
+        checkedCalldata3[0] = abi.encodePacked(bytes2(uint16(100)));
         checkedCalldatas[2] = checkedCalldata3;
 
         vm.expectRevert("CalldataList: Partial check overlap");
@@ -643,8 +643,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -757,8 +757,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -821,8 +821,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -931,7 +931,7 @@ contract CalldataListUnitTest is Test {
                     checkData.startIndexes[index] = currentStartIndex;
                     // set end index to start index + calldata length
                     checkData.endIndexes[index] = checkData.startIndexes[index]
-                        + fuzzyCheckData[i].calldataLength;
+                        + fuzzyCheckData[i].calldataLength - 1;
 
                     /// keep start and end index same for the next check if j <= checkCount / 2
                     /// update start and end index if j > checkCount / 2
@@ -1052,8 +1052,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](0);
 
@@ -1128,7 +1128,7 @@ contract CalldataListUnitTest is Test {
         public
     {
         bytes[] memory datas = new bytes[](1);
-        datas[0] = hex"12";
+        datas[0] = hex"1200";
 
         vm.prank(address(timelock));
         timelock.addCalldataCheck(
