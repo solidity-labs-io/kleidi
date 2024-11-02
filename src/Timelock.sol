@@ -54,7 +54,7 @@ import {
 /// timelock.
 /// - all parameter changes must pass through the timelock proposing to itself
 /// - only safe can propose actions to the timelock.
-/// - only safe owners can execute whitelisted calldatas.
+/// - only hot signers can execute whitelisted calldatas.
 /// - anyone can execute a proposal that has passed the timelock if it has not
 /// expired.
 /// - whitelisted calldata can be executed at any time the contract is not
