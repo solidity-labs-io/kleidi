@@ -862,8 +862,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata = new bytes[](1);
@@ -988,9 +988,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertEq(
             calldataDepositChecks[0].startIndex, 16, "startIndex should be 16"
         );
-        assertEq(
-            calldataDepositChecks[0].endIndex, 36, "startIndex should be 16"
-        );
+        assertEq(calldataDepositChecks[0].endIndex, 35, "endIndex should be 35");
         assertEq(
             calldataDepositChecks[0].dataHashes[0],
             keccak256(abi.encodePacked(address(timelock))),
@@ -1007,7 +1005,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             calldataWithdrawChecks[0].startIndex, 16, "startIndex should be 16"
         );
         assertEq(
-            calldataWithdrawChecks[0].endIndex, 36, "startIndex should be 16"
+            calldataWithdrawChecks[0].endIndex, 35, "endIndex should be 16"
         );
         assertEq(
             calldataWithdrawChecks[0].dataHashes[0],
@@ -1072,8 +1070,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             startIndexes[1] = 16;
 
             uint16[] memory endIndexes = new uint16[](2);
-            endIndexes[0] = 36;
-            endIndexes[1] = 36;
+            endIndexes[0] = 35;
+            endIndexes[1] = 35;
 
             bytes[][] memory checkedCalldatas = new bytes[][](2);
             bytes[] memory checkedCalldata = new bytes[](1);
@@ -1171,7 +1169,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         assertEq(calldataChecks.length, 1, "calldata checks should exist");
         assertEq(calldataChecks[0].startIndex, 16, "startIndex should be 16");
-        assertEq(calldataChecks[0].endIndex, 36, "startIndex should be 16");
+        assertEq(calldataChecks[0].endIndex, 35, "endIndex should be 35");
         assertEq(
             calldataChecks[0].dataHashes[0],
             keccak256(abi.encodePacked(address(timelock))),
