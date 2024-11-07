@@ -1126,8 +1126,8 @@ contract Timelock is
                 /// of 3 is invalid
 
                 require(
-                    startIndex >= indexes[i].endIndex
-                        || endIndex <= indexes[i].startIndex,
+                    startIndex > indexes[i].endIndex
+                        || endIndex < indexes[i].startIndex,
                     "CalldataList: Partial check overlap"
                 );
             }

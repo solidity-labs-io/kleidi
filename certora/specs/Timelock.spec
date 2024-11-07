@@ -341,8 +341,8 @@ invariant singleCheckIfWildcard(address contract, bytes4 selector, uint256 index
 invariant isolatedChecks(address contract, bytes4 selector, uint256 index1, uint256 index2)
     ((index1 != index2) && (index1 < getCalldataChecks(contract, selector).length &&
      index2 < getCalldataChecks(contract, selector).length)) =>
-    (getCalldataChecks(contract, selector)[index1].endIndex <= getCalldataChecks(contract, selector)[index2].startIndex ||
-     getCalldataChecks(contract, selector)[index1].startIndex >= getCalldataChecks(contract, selector)[index2].endIndex)
+    (getCalldataChecks(contract, selector)[index1].endIndex < getCalldataChecks(contract, selector)[index2].startIndex ||
+     getCalldataChecks(contract, selector)[index1].startIndex > getCalldataChecks(contract, selector)[index2].endIndex)
         filtered {
             f -> f.selector != sig:addCalldataChecks(address[],bytes4[],uint16[],uint16[],bytes[][]).selector &&
             f.selector != sig:initialize(address[],bytes4[],uint16[],uint16[],bytes[][]).selector
