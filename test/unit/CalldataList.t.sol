@@ -14,6 +14,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {Timelock} from "src/Timelock.sol";
 import {MockSafe} from "test/mock/MockSafe.sol";
 import {MockLending} from "test/mock/MockLending.sol";
+import {MockTwoParams} from "test/mock/MockTwoParams.sol";
 
 contract CalldataListUnitTest is Test {
     struct CheckData {
@@ -44,6 +45,9 @@ contract CalldataListUnitTest is Test {
 
     /// @notice reference to the MockLending contract
     MockLending private lending;
+
+    /// @notice mock parameters
+    MockTwoParams private mockParams;
 
     /// @notice the 3 hot signers that can execute whitelisted actions
     address[] public hotSigners;
@@ -83,6 +87,8 @@ contract CalldataListUnitTest is Test {
 
         safe = new MockSafe();
 
+        mockParams = new MockTwoParams();
+
         lending = new MockLending();
 
         // Assume the necessary parameters for the constructor
@@ -113,6 +119,105 @@ contract CalldataListUnitTest is Test {
         }
     }
 
+    function testAddCalldataCheckMockTwoParams() public {
+        address[] memory targetAddresses = new address[](2);
+        targetAddresses[0] = address(mockParams);
+        targetAddresses[1] = address(mockParams);
+
+        bytes4[] memory selectors = new bytes4[](2);
+        selectors[0] = MockTwoParams.deposit.selector;
+        selectors[1] = MockTwoParams.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](2);
+        startIndexes[0] = 4;
+        startIndexes[1] = 36;
+
+        uint16[] memory endIndexes = new uint16[](2);
+        endIndexes[0] = 35;
+        endIndexes[1] = 67;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](2);
+        bytes[] memory checkedCalldata1 = new bytes[](1);
+        checkedCalldata1[0] = abi.encodePacked(uint256(uint160(address(this))));
+        checkedCalldatas[0] = checkedCalldata1;
+
+        bytes[] memory checkedCalldata2 = new bytes[](1);
+        checkedCalldata2[0] =
+            abi.encodePacked(uint256(uint160(address(timelock))));
+        checkedCalldatas[1] = checkedCalldata2;
+
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(mockParams), MockTwoParams.deposit.selector
+            ).length,
+            2,
+            "calldata checks not added"
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(mockParams), MockTwoParams.deposit.selector
+            )[0].dataHashes.length,
+            1,
+            "calldata checks not added"
+        );
+        assertEq(
+            timelock.getCalldataChecks(
+                address(mockParams), MockTwoParams.deposit.selector
+            )[1].dataHashes.length,
+            1,
+            "calldata checks not added"
+        );
+
+        vm.prank(HOT_SIGNER_ONE);
+        timelock.executeWhitelisted(
+            address(mockParams),
+            0,
+            abi.encodeWithSelector(
+                MockTwoParams.deposit.selector,
+                address(this),
+                address(timelock),
+                uint256(100)
+            )
+        );
+
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheck(
+            address(mockParams), MockTwoParams.deposit.selector, 0
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(mockParams), MockTwoParams.deposit.selector
+            ).length,
+            1,
+            "calldata check not removed"
+        );
+
+        vm.prank(address(timelock));
+        timelock.removeCalldataCheck(
+            address(mockParams), MockTwoParams.deposit.selector, 0
+        );
+
+        assertEq(
+            timelock.getCalldataChecks(
+                address(mockParams), MockTwoParams.deposit.selector
+            ).length,
+            0,
+            "calldata check not removed"
+        );
+    }
+
     function testAddCalldataCheckAndRemoveCalldataCheckSucceeds() public {
         address[] memory targetAddresses = new address[](3);
         targetAddresses[0] = address(lending);
@@ -131,9 +236,9 @@ contract CalldataListUnitTest is Test {
         startIndexes[2] = 40;
 
         uint16[] memory endIndexes = new uint16[](3);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
-        endIndexes[2] = 60;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
+        endIndexes[2] = 59;
 
         bytes[][] memory checkedCalldatas = new bytes[][](3);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -217,8 +322,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -308,11 +413,11 @@ contract CalldataListUnitTest is Test {
         /// compare first 20 bytes
         uint16[] memory startIndexes = new uint16[](2);
         startIndexes[0] = 16;
-        startIndexes[1] = 37;
+        startIndexes[1] = 36;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 57;
+        endIndexes[0] = 35;
+        endIndexes[1] = 55;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -412,8 +517,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 20;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 40;
+        endIndexes[0] = 35;
+        endIndexes[1] = 39;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -423,6 +528,94 @@ contract CalldataListUnitTest is Test {
         bytes[] memory checkedCalldata2 = new bytes[](1);
         checkedCalldata2[0] = abi.encodePacked(address(timelock));
         checkedCalldatas[1] = checkedCalldata2;
+
+        vm.expectRevert("CalldataList: Partial check overlap");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+    }
+
+    function testAddCalldataCheckFailsWhenOverlapPartTwo() public {
+        address[] memory targetAddresses = new address[](3);
+        targetAddresses[0] = address(lending);
+        targetAddresses[1] = address(lending);
+        targetAddresses[2] = address(lending);
+
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = MockLending.deposit.selector;
+        selectors[1] = MockLending.deposit.selector;
+        selectors[2] = MockLending.deposit.selector;
+
+        /// compare first 20 bytes
+        uint16[] memory startIndexes = new uint16[](3);
+        startIndexes[0] = 16;
+        startIndexes[1] = 36;
+        startIndexes[2] = 39;
+
+        uint16[] memory endIndexes = new uint16[](3);
+        endIndexes[0] = 35;
+        endIndexes[1] = 55;
+        endIndexes[2] = 40;
+
+        bytes[][] memory checkedCalldatas = new bytes[][](3);
+        bytes[] memory checkedCalldata1 = new bytes[](1);
+        checkedCalldata1[0] = abi.encodePacked(address(this));
+        checkedCalldatas[0] = checkedCalldata1;
+
+        bytes[] memory checkedCalldata2 = new bytes[](1);
+        checkedCalldata2[0] = abi.encodePacked(address(timelock));
+        checkedCalldatas[1] = checkedCalldata2;
+
+        bytes[] memory checkedCalldata3 = new bytes[](1);
+        checkedCalldata3[0] = abi.encodePacked(bytes2(uint16(100)));
+        checkedCalldatas[2] = checkedCalldata3;
+
+        vm.expectRevert("CalldataList: Partial check overlap");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        startIndexes[2] = 15;
+        endIndexes[2] = 60;
+        checkedCalldata3[0] =
+            abi.encodePacked(bytes15(uint120(100)), bytes30(uint240(100)));
+        checkedCalldatas[2] = checkedCalldata3;
+
+        vm.expectRevert("CalldataList: Partial check overlap");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        startIndexes[2] = 13;
+        endIndexes[2] = 17;
+
+        vm.expectRevert("CalldataList: Partial check overlap");
+        vm.prank(address(timelock));
+        timelock.addCalldataChecks(
+            targetAddresses,
+            selectors,
+            startIndexes,
+            endIndexes,
+            checkedCalldatas
+        );
+
+        startIndexes[2] = 13;
+        endIndexes[2] = 17;
 
         vm.expectRevert("CalldataList: Partial check overlap");
         vm.prank(address(timelock));
@@ -450,8 +643,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -564,8 +757,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -628,8 +821,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata1 = new bytes[](1);
@@ -738,7 +931,7 @@ contract CalldataListUnitTest is Test {
                     checkData.startIndexes[index] = currentStartIndex;
                     // set end index to start index + calldata length
                     checkData.endIndexes[index] = checkData.startIndexes[index]
-                        + fuzzyCheckData[i].calldataLength;
+                        + fuzzyCheckData[i].calldataLength - 1;
 
                     /// keep start and end index same for the next check if j <= checkCount / 2
                     /// update start and end index if j > checkCount / 2
@@ -859,8 +1052,8 @@ contract CalldataListUnitTest is Test {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](0);
 
@@ -935,7 +1128,7 @@ contract CalldataListUnitTest is Test {
         public
     {
         bytes[] memory datas = new bytes[](1);
-        datas[0] = hex"12";
+        datas[0] = hex"1200";
 
         vm.prank(address(timelock));
         timelock.addCalldataCheck(

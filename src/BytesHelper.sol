@@ -47,9 +47,10 @@ library BytesHelper {
         );
         require(start < end, "Start index not less than end index");
 
-        uint256 length = end - start;
+        uint256 length = end - start + 1;
         bytes memory sliced = new bytes(length);
 
+        /// 16
         for (uint256 i = 0; i < length; i++) {
             sliced[i] = toSlice[i + start];
         }

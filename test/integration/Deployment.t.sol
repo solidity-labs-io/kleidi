@@ -196,29 +196,29 @@ contract DeploymentMultichainTest is SystemDeploy {
 
             uint16[] memory endIndexes = new uint16[](8);
             /// morpho blue supply
-            endIndexes[0] = startIndexes[0] + 32 * 5;
+            endIndexes[0] = startIndexes[0] + 32 * 5 - 1;
 
             /// last twenty bytes represents who supplying on behalf of
-            endIndexes[1] = startIndexes[1] + 20;
+            endIndexes[1] = startIndexes[1] + 19;
 
             /// ethena usd approve morpho
-            endIndexes[2] = startIndexes[2] + 20;
+            endIndexes[2] = startIndexes[2] + 19;
 
             /// last twenty bytes represents who is approved to spend the tokens
             /// morpho borrow
-            endIndexes[3] = startIndexes[3] + 20;
+            endIndexes[3] = startIndexes[3] + 19;
 
             /// morpho repay
-            endIndexes[4] = startIndexes[4] + 20;
+            endIndexes[4] = startIndexes[4] + 19;
 
             /// morpho withdraw
-            endIndexes[5] = startIndexes[5] + 20;
+            endIndexes[5] = startIndexes[5] + 19;
 
             /// last twenty bytes represents asset receiver
-            endIndexes[6] = startIndexes[6] + 20;
+            endIndexes[6] = startIndexes[6] + 19;
 
             /// last twenty bytes represents asset receiver
-            endIndexes[7] = startIndexes[7] + 20;
+            endIndexes[7] = startIndexes[7] + 19;
 
             /// last twenty bytes represents asset receiver
 
@@ -327,7 +327,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         instance.timelockParams.startIndexes[0] = 4;
 
         instance.timelockParams.endIndexes = new uint16[](1);
-        instance.timelockParams.endIndexes[0] = 10;
+        instance.timelockParams.endIndexes[0] = 9;
 
         instance.timelockParams.datas = new bytes[][](1);
         bytes[] memory data = new bytes[](1);

@@ -218,6 +218,68 @@ contract TimelockUnitTest is TimelockUnitFixture {
         );
     }
 
+    function testScheduleMoreThanMaxProposalsSafeFails() public {
+        for (uint256 i = 0; i < 100; i++) {
+            _schedule({
+                caller: address(safe),
+                timelock: address(timelock),
+                target: address(timelock),
+                value: 0,
+                data: abi.encodeWithSelector(
+                    timelock.updateDelay.selector, MINIMUM_DELAY
+                ),
+                salt: bytes32(i),
+                delay: MINIMUM_DELAY
+            });
+        }
+
+        assertEq(
+            timelock.getAllProposals().length, 100, "proposals not registered"
+        );
+
+        vm.expectRevert("Timelock: too many proposals");
+        vm.prank(address(safe));
+        timelock.schedule(
+            address(timelock),
+            0,
+            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            bytes32(uint256(100)),
+            MINIMUM_DELAY
+        );
+    }
+
+    function testGuardianPauseRemovesAllProposals() public {
+        for (uint256 i = 0; i < 100; i++) {
+            _schedule({
+                caller: address(safe),
+                timelock: address(timelock),
+                target: address(timelock),
+                value: 0,
+                data: abi.encodeWithSelector(
+                    timelock.updateDelay.selector, MINIMUM_DELAY
+                ),
+                salt: bytes32(i),
+                delay: MINIMUM_DELAY
+            });
+        }
+        assertEq(
+            timelock.getAllProposals().length, 100, "proposals not registered"
+        );
+
+        vm.prank(guardian);
+        uint256 gasBefore = gasleft();
+        timelock.pause();
+        uint256 gasAfter = gasleft();
+
+        console.log("gas used: ", gasBefore - gasAfter);
+
+        assertEq(timelock.pauseStartTime(), block.timestamp, "pauseStartTime");
+        assertTrue(timelock.pauseStartTime() != 0, "pause should be used");
+        assertEq(
+            timelock.getAllProposals().length, 0, "proposals should be cleared"
+        );
+    }
+
     function testScheduleNonSafeFails() public {
         vm.expectRevert("Timelock: caller is not the safe");
         timelock.schedule(
@@ -800,8 +862,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
         startIndexes[1] = 16;
 
         uint16[] memory endIndexes = new uint16[](2);
-        endIndexes[0] = 36;
-        endIndexes[1] = 36;
+        endIndexes[0] = 35;
+        endIndexes[1] = 35;
 
         bytes[][] memory checkedCalldatas = new bytes[][](2);
         bytes[] memory checkedCalldata = new bytes[](1);
@@ -926,9 +988,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         assertEq(
             calldataDepositChecks[0].startIndex, 16, "startIndex should be 16"
         );
-        assertEq(
-            calldataDepositChecks[0].endIndex, 36, "startIndex should be 16"
-        );
+        assertEq(calldataDepositChecks[0].endIndex, 35, "endIndex should be 35");
         assertEq(
             calldataDepositChecks[0].dataHashes[0],
             keccak256(abi.encodePacked(address(timelock))),
@@ -945,7 +1005,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             calldataWithdrawChecks[0].startIndex, 16, "startIndex should be 16"
         );
         assertEq(
-            calldataWithdrawChecks[0].endIndex, 36, "startIndex should be 16"
+            calldataWithdrawChecks[0].endIndex, 35, "endIndex should be 16"
         );
         assertEq(
             calldataWithdrawChecks[0].dataHashes[0],
@@ -1010,8 +1070,8 @@ contract TimelockUnitTest is TimelockUnitFixture {
             startIndexes[1] = 16;
 
             uint16[] memory endIndexes = new uint16[](2);
-            endIndexes[0] = 36;
-            endIndexes[1] = 36;
+            endIndexes[0] = 35;
+            endIndexes[1] = 35;
 
             bytes[][] memory checkedCalldatas = new bytes[][](2);
             bytes[] memory checkedCalldata = new bytes[](1);
@@ -1109,7 +1169,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
         assertEq(calldataChecks.length, 1, "calldata checks should exist");
         assertEq(calldataChecks[0].startIndex, 16, "startIndex should be 16");
-        assertEq(calldataChecks[0].endIndex, 36, "startIndex should be 16");
+        assertEq(calldataChecks[0].endIndex, 35, "endIndex should be 35");
         assertEq(
             calldataChecks[0].dataHashes[0],
             keccak256(abi.encodePacked(address(timelock))),

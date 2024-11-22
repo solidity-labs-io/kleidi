@@ -53,7 +53,7 @@ contract BytesHelperUnitTest is Test {
 
     function testSliceBytesSucceedsEqEndLength() public pure {
         bytes memory toSlice = new bytes(10);
-        toSlice.sliceBytes(0, 10);
+        toSlice.sliceBytes(0, 9);
     }
 
     function testSliceBytesFailsStartGtEnd() public {
