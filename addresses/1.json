@@ -5,7 +5,7 @@
         "isContract": true
     },
     {
-        "addr": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "addr": "0x29B28B0Ff5B6B26448F3Ac02Cd209539626D96Ab",
         "name": "DEPLOYER_EOA",
         "isContract": false
     },
@@ -68,5 +68,35 @@
         "addr": "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5",
         "name": "C_ETHER",
         "isContract": true
+    },
+    {
+        "addr": "0xCe90BA68BbcdCCe9aed1fCDDcb114d1DCdBc68C9",
+        "isContract": true,
+        "name": "TIMELOCK_FACTORY"
+    },
+    {
+        "addr": "0x56b6d03b995022A612aF6a212C74902f233F52Cc",
+        "isContract": true,
+        "name": "RECOVERY_SPELL_FACTORY"
+    },
+    {
+        "addr": "0xFE49DD6d0CD41C4EC8F151C79f2d4019f5C5AD18",
+        "isContract": true,
+        "name": "GUARD"
+    },
+    {
+        "addr": "0xFF28751f5E56E7A262EC2724c80dE8b7d7E4a3C3",
+        "isContract": true,
+        "name": "INSTANCE_DEPLOYER"
+    },
+    {
+        "addr": "0x508CF523938178048BbFD8191eAD4ECE14855e7F",
+        "isContract": true,
+        "name": "ADDRESS_CALCULATION"
+    },
+    {
+        "addr": "0x146dfd96Da039FDE3B58D5964feF8E8357df2028",
+        "isContract": true,
+        "name": "BYTES_HELPER"
     }
 ]
