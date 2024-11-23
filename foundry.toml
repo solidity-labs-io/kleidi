@@ -18,6 +18,8 @@ line_length = 80
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
 [rpc_endpoints]
+ethereum = "${ETH_RPC_URL}"
+optimism = "${OP_RPC_URL}"
 base = "https://mainnet.base.org"
 baseSepolia = "https://sepolia.base.org"
 optimismSepolia = "https://sepolia.optimism.io"
