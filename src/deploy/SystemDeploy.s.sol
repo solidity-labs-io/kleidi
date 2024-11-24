@@ -82,7 +82,9 @@ contract SystemDeploy is MultisigProposal {
             address factory = addresses.getAddress("TIMELOCK_FACTORY");
             assertEq(
                 keccak256(factory.code.sliceBytes(0, 24310)),
-                keccak256(type(TimelockFactory).runtimeCode.sliceBytes(0, 24310)),
+                keccak256(
+                    type(TimelockFactory).runtimeCode.sliceBytes(0, 24310)
+                ),
                 "Incorrect TimelockFactory Bytecode"
             );
 
@@ -97,7 +99,9 @@ contract SystemDeploy is MultisigProposal {
                 addresses.getAddress("RECOVERY_SPELL_FACTORY");
             assertEq(
                 keccak256(recoverySpellFactory.code.sliceBytes(0, 9603)),
-                keccak256(type(RecoverySpellFactory).runtimeCode.sliceBytes(0, 9603)),
+                keccak256(
+                    type(RecoverySpellFactory).runtimeCode.sliceBytes(0, 9603)
+                ),
                 "Incorrect RecoverySpellFactory Bytecode"
             );
 
