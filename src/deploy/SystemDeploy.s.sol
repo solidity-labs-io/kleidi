@@ -12,6 +12,27 @@ import {InstanceDeployer} from "src/InstanceDeployer.sol";
 import {AddressCalculation} from "src/views/AddressCalculation.sol";
 import {RecoverySpellFactory} from "src/RecoverySpellFactory.sol";
 
+function matchPattern(bytes memory data, bytes4 pattern)
+    pure
+    returns (uint256)
+{
+    require(data.length >= 4, "Data length is less than pattern length");
+
+    for (uint256 i = 0; i <= data.length - 4; i++) {
+        bool isMatch = true;
+        for (uint256 j = 0; j < 4; j++) {
+            if (data[i + j] != pattern[j]) {
+                isMatch = false;
+                break;
+            }
+        }
+        if (isMatch) {
+            return i + 1;
+        }
+    }
+    return 0;
+}
+
 /// @notice system deployment contract
 /// all contracts are permissionless
 /// DO_PRINT=false DO_BUILD=false DO_RUN=false DO_DEPLOY=true DO_VALIDATE=true forge script src/deploy/SystemDeploy.s.sol:SystemDeploy --fork-url base -vvvvv
@@ -20,6 +41,7 @@ contract SystemDeploy is MultisigProposal {
 
     bytes32 public salt =
         0x0000000000000000000000000000000000000000000000000000000000003afe;
+    bytes4 public pattern = 0xa2646970;
 
     constructor() {
         uint256[] memory chainIds = new uint256[](5);
@@ -80,27 +102,37 @@ contract SystemDeploy is MultisigProposal {
     function validate() public view override {
         if (addresses.isAddressSet("TIMELOCK_FACTORY")) {
             address factory = addresses.getAddress("TIMELOCK_FACTORY");
+            uint256 endIndex = matchPattern(factory.code, pattern);
+            endIndex = endIndex == 0 ? factory.code.length - 1 : endIndex - 1;
             assertEq(
-                keccak256(factory.code.sliceBytes(0, 24310)),
+                keccak256(factory.code.sliceBytes(0, endIndex)),
                 keccak256(
-                    type(TimelockFactory).runtimeCode.sliceBytes(0, 24310)
+                    type(TimelockFactory).runtimeCode.sliceBytes(0, endIndex)
                 ),
                 "Incorrect TimelockFactory Bytecode"
             );
 
             address guard = addresses.getAddress("GUARD");
+            endIndex = matchPattern(guard.code, pattern);
+            endIndex = endIndex == 0 ? guard.code.length - 1 : endIndex - 1;
             assertEq(
-                keccak256(guard.code.sliceBytes(0, 950)),
-                keccak256(type(Guard).runtimeCode.sliceBytes(0, 950)),
+                keccak256(guard.code.sliceBytes(0, endIndex)),
+                keccak256(type(Guard).runtimeCode.sliceBytes(0, endIndex)),
                 "Incorrect Guard Bytecode"
             );
 
             address recoverySpellFactory =
                 addresses.getAddress("RECOVERY_SPELL_FACTORY");
+            endIndex = matchPattern(recoverySpellFactory.code, pattern);
+            endIndex = endIndex == 0
+                ? recoverySpellFactory.code.length - 1
+                : endIndex - 1;
             assertEq(
-                keccak256(recoverySpellFactory.code.sliceBytes(0, 9603)),
+                keccak256(recoverySpellFactory.code.sliceBytes(0, endIndex)),
                 keccak256(
-                    type(RecoverySpellFactory).runtimeCode.sliceBytes(0, 9603)
+                    type(RecoverySpellFactory).runtimeCode.sliceBytes(
+                        0, endIndex
+                    )
                 ),
                 "Incorrect RecoverySpellFactory Bytecode"
             );
