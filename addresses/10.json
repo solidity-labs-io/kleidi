@@ -15,13 +15,13 @@
         "isContract": true
     },
     {
-        "addr": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
-        "name": "MORPHO_BLUE",
+        "addr": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+        "name": "SAFE_LOGIC",
         "isContract": true
     },
     {
-        "addr": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
-        "name": "SAFE_LOGIC",
+        "addr": "0x146dfd96da039fde3b58d5964fef8e8357df2028",
+        "name": "BYTES_HELPER",
         "isContract": true
     },
     {
@@ -43,11 +43,6 @@
         "addr": "0xFF28751f5E56E7A262EC2724c80dE8b7d7E4a3C3",
         "isContract": true,
         "name": "INSTANCE_DEPLOYER"
-    },
-    {
-        "addr": "0x146dfd96Da039FDE3B58D5964feF8E8357df2028",
-        "isContract": true,
-        "name": "BYTES_HELPER"
     },
     {
         "addr": "0x508CF523938178048BbFD8191eAD4ECE14855e7F",
