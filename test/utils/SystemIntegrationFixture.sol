@@ -136,6 +136,9 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
     /// @notice logic contract for the safe
     address public logic;
 
+    /// @notice logic contract for the L2 safe
+    address public logicL2;
+
     /// @notice ethena USD contract
     address public ethenaUsd;
 
@@ -215,6 +218,7 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         factory = SafeProxyFactory(addresses.getAddress("SAFE_FACTORY"));
         morphoBlue = addresses.getAddress("MORPHO_BLUE");
         logic = addresses.getAddress("SAFE_LOGIC");
+        logicL2 = addresses.getAddress("SAFE_LOGIC", 8453);
         ethenaUsd = addresses.getAddress("ETHENA_USD");
         dai = addresses.getAddress("DAI");
         wbtc = addresses.getAddress("WBTC");
