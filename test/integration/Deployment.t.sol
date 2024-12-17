@@ -103,28 +103,43 @@ contract DeploymentMultichainTest is SystemDeploy {
 
     function testMultichainDeployment() public view {
         assertEq(
-            addresses.getAddress("TIMELOCK_FACTORY", 1),
+            addresses.getAddress("TIMELOCK_FACTORY", 10),
             addresses.getAddress("TIMELOCK_FACTORY", 8453),
             "TIMELOCK_FACTORY address should be the same"
         );
         assertEq(
-            addresses.getAddress("RECOVERY_SPELL_FACTORY", 1),
+            addresses.getAddress("RECOVERY_SPELL_FACTORY", 10),
             addresses.getAddress("RECOVERY_SPELL_FACTORY", 8453),
             "RECOVERY_SPELL_FACTORY address should be the same"
         );
         assertEq(
-            addresses.getAddress("GUARD", 1),
+            addresses.getAddress("TIMELOCK_FACTORY", 1),
+            addresses.getAddress("TIMELOCK_FACTORY", 8453),
+            "TIMELOCK_FACTORY address should be the same on mainnet and base"
+        );
+        assertEq(
+            addresses.getAddress("RECOVERY_SPELL_FACTORY", 1),
+            addresses.getAddress("RECOVERY_SPELL_FACTORY", 8453),
+            "RECOVERY_SPELL_FACTORY address should be the same on mainnet and base"
+        );
+        assertEq(
+            addresses.getAddress("GUARD", 10),
             addresses.getAddress("GUARD", 8453),
             "GUARD address should be the same"
         );
         assertEq(
-            addresses.getAddress("INSTANCE_DEPLOYER", 1),
+            addresses.getAddress("GUARD", 1),
+            addresses.getAddress("GUARD", 8453),
+            "GUARD address should be the same on mainnet and base"
+        );
+        assertEq(
+            addresses.getAddress("INSTANCE_DEPLOYER", 10),
             addresses.getAddress("INSTANCE_DEPLOYER", 8453),
-            "INSTANCE_DEPLOYER address should be the same"
+            "INSTANCE_DEPLOYER address should be the same on mainnet and base"
         );
     }
 
-    function testDifferentCalldataSameAddresses()
+    function testMainnetAndBaseDifferentAddresses()
         public
         returns (NewInstance memory instance)
     {
@@ -311,6 +326,9 @@ contract DeploymentMultichainTest is SystemDeploy {
 
         vm.selectFork(baseForkId);
 
+        /// assign deployer to L2 deployer contract
+        deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
+
         addressCalculation =
             AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
 
@@ -334,29 +352,38 @@ contract DeploymentMultichainTest is SystemDeploy {
         data[0] = new bytes(6);
         instance.timelockParams.datas[0] = data;
 
+        SystemInstance memory calculatedInstanceBase2 =
+            addressCalculation.calculateAddress(instance);
+
+        assertEq(
+            address(calculatedInstanceBase.safe),
+            address(calculatedInstanceBase2.safe),
+            "Safe addresses should be the same on base"
+        );
+
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
             deployer.createSystemInstance(instance);
 
-        assertEq(
+        assertNotEq(
             address(calculatedInstanceBase.safe),
             address(calculatedInstance.safe),
-            "Safe addresses should be the same across chains"
+            "Safe addresses should not be the same across chains"
         );
         assertEq(
             address(calculatedInstanceBase.safe),
             address(actualInstanceBase.safe),
             "Deployed vs Actual Safe addresses should be the same across chains"
         );
-        assertEq(
+        assertNotEq(
             address(calculatedInstanceBase.timelock),
             address(calculatedInstance.timelock),
-            "Timelock addresses should be the same across chains"
+            "Timelock addresses should not be the same across chains"
         );
         assertEq(
             address(calculatedInstanceBase.timelock),
             address(actualInstanceBase.timelock),
-            "Deployed vs Actual Timelock addresses should be the same"
+            "Deployed vs Calculated Timelock addresses should be the same"
         );
 
         {
@@ -370,6 +397,13 @@ contract DeploymentMultichainTest is SystemDeploy {
 
             vm.selectFork(ethereumForkId);
 
+            /// assign deployer to mainnet deployer contract
+            deployer =
+                InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
+
+            addressCalculation =
+                AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
+
             vm.expectRevert("InstanceDeployer: safe already created");
             addressCalculation.calculateAddress(instance);
 
@@ -379,10 +413,9 @@ contract DeploymentMultichainTest is SystemDeploy {
         }
     }
 
-    function testDifferentRecoverySpellSameAddresses()
-        public
-        returns (NewInstance memory instance)
-    {
+    function testDifferentRecoverySpellSameAddresses() public {
+        NewInstance memory instance;
+
         address[] memory owners = new address[](3);
         owners[0] = vm.addr(10);
         owners[1] = vm.addr(11);
@@ -566,6 +599,8 @@ contract DeploymentMultichainTest is SystemDeploy {
 
         vm.selectFork(baseForkId);
 
+        deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
+
         addressCalculation =
             AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
 
@@ -574,24 +609,30 @@ contract DeploymentMultichainTest is SystemDeploy {
         SystemInstance memory calculatedInstanceBase =
             addressCalculation.calculateAddress(instance);
 
+        assertNotEq(
+            address(calculatedInstanceBase.safe),
+            address(calculatedInstance.safe),
+            "Safe addresses should not be the same across chains"
+        );
+
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
             deployer.createSystemInstance(instance);
 
-        assertEq(
+        assertNotEq(
             address(calculatedInstanceBase.safe),
             address(calculatedInstance.safe),
-            "Safe addresses should be the same across chains"
+            "Safe addresses should not be the same across chains"
+        );
+        assertNotEq(
+            address(calculatedInstanceBase.timelock),
+            address(calculatedInstance.timelock),
+            "Timelock addresses should not be the same on base as mainnet"
         );
         assertEq(
             address(calculatedInstanceBase.safe),
             address(actualInstanceBase.safe),
-            "Deployed vs Actual Safe addresses should be the same across chains"
-        );
-        assertEq(
-            address(calculatedInstanceBase.timelock),
-            address(calculatedInstance.timelock),
-            "Timelock addresses should be the same across chains"
+            "Deployed vs Actual Safe addresses should be the same on base"
         );
         assertEq(
             address(calculatedInstanceBase.timelock),
@@ -609,6 +650,11 @@ contract DeploymentMultichainTest is SystemDeploy {
             deployer.createSystemInstance(instance);
 
             vm.selectFork(ethereumForkId);
+
+            deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
+
+            addressCalculation =
+                AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));    
 
             vm.expectRevert("InstanceDeployer: safe already created");
             addressCalculation.calculateAddress(instance);
