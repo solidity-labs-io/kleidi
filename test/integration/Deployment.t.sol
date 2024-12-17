@@ -651,10 +651,11 @@ contract DeploymentMultichainTest is SystemDeploy {
 
             vm.selectFork(ethereumForkId);
 
-            deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
+            deployer =
+                InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
 
             addressCalculation =
-                AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));    
+                AddressCalculation(addresses.getAddress("ADDRESS_CALCULATION"));
 
             vm.expectRevert("InstanceDeployer: safe already created");
             addressCalculation.calculateAddress(instance);
