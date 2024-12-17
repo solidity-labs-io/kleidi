@@ -1,6 +1,6 @@
 [
     {
-        "addr": "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+        "addr": "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67",
         "name": "SAFE_FACTORY",
         "isContract": true
     },
@@ -20,9 +20,19 @@
         "isContract": true
     },
     {
-        "addr": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+        "addr": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
         "name": "SAFE_LOGIC",
         "isContract": true
+    },
+    {
+        "addr": "0xE138136bFF8c6A9337805DE19177E3b29fef2783",
+        "isContract": true,
+        "name": "INSTANCE_DEPLOYER"
+    },
+    {
+        "addr": "0xd1db2c4A9d2BEBd56d42E59F2d90F4136164faD6",
+        "isContract": true,
+        "name": "ADDRESS_CALCULATION"
     },
     {
         "addr": "0xCe90BA68BbcdCCe9aed1fCDDcb114d1DCdBc68C9",
@@ -40,18 +50,8 @@
         "name": "GUARD"
     },
     {
-        "addr": "0xFF28751f5E56E7A262EC2724c80dE8b7d7E4a3C3",
-        "isContract": true,
-        "name": "INSTANCE_DEPLOYER"
-    },
-    {
         "addr": "0x146dfd96Da039FDE3B58D5964feF8E8357df2028",
         "isContract": true,
         "name": "BYTES_HELPER"
-    },
-    {
-        "addr": "0x508CF523938178048BbFD8191eAD4ECE14855e7F",
-        "isContract": true,
-        "name": "ADDRESS_CALCULATION"
     }
 ]
