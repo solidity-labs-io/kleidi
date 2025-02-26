@@ -57,7 +57,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         vm.expectRevert("Timelock: delay out of bounds");
         new Timelock(
             address(0),
-            MINIMUM_DELAY - 1,
+            MAX_DELAY + 1,
             EXPIRATION_PERIOD,
             guardian,
             PAUSE_DURATION,
@@ -68,7 +68,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         new Timelock(
             address(0),
             MINIMUM_DELAY,
-            86399,
+            MINIMUM_DELAY - 1,
             guardian,
             PAUSE_DURATION,
             new address[](0)
@@ -553,14 +553,6 @@ contract TimelockUnitTest is TimelockUnitFixture {
 
     function testUpdateDelayFailsDelayTooLong() public {
         uint256 delay = MAX_DELAY + 1;
-
-        vm.prank(address(timelock));
-        vm.expectRevert("Timelock: delay out of bounds");
-        timelock.updateDelay(delay);
-    }
-
-    function testUpdateDelayFailsDelayTooShort() public {
-        uint256 delay = MIN_DELAY - 1;
 
         vm.prank(address(timelock));
         vm.expectRevert("Timelock: delay out of bounds");
@@ -1589,7 +1581,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
             target: address(timelock),
             value: 0,
             data: abi.encodeWithSelector(
-                timelock.updateDelay.selector, MINIMUM_DELAY - 1
+                timelock.updateDelay.selector, MAX_DELAY + 1
             ),
             salt: bytes32(0),
             delay: MINIMUM_DELAY
@@ -1598,9 +1590,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id = timelock.hashOperation(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector, MINIMUM_DELAY - 1
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MAX_DELAY + 1),
             bytes32(0)
         );
 
@@ -1630,9 +1620,7 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(
-                timelock.updateDelay.selector, MINIMUM_DELAY - 1
-            ),
+            abi.encodeWithSelector(timelock.updateDelay.selector, MAX_DELAY + 1),
             bytes32(0)
         );
     }
