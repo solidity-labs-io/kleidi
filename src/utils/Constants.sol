@@ -4,6 +4,8 @@ pragma solidity 0.8.25;
 uint256 constant _DONE_TIMESTAMP = uint256(1);
 
 /// @dev minimum delay for timelocked operations
+/// @notice there is no minimum timelock duration enforced when creating a timelock,
+/// however it is recommended to set a timelock duration of at least a few hours as an end user
 uint256 constant MIN_DELAY = 1 days;
 
 /// @dev maximum delay for timelocked operations
