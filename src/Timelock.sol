@@ -120,7 +120,7 @@ contract Timelock is
             => mapping(bytes4 selector => Index[] calldataChecks)
     ) private _calldataList;
 
-    /// minDelay >= MIN_DELAY && minDelay <= MAX_DELAY
+    /// minDelay <= MAX_DELAY
 
     /// 1. proposed and not ready for execution
     ///    - propose
@@ -128,7 +128,7 @@ contract Timelock is
     ///    liveProposals adds id
     ///    timestamps maps the time the proposal will be ready to execute
     ///     - if you have just proposed, timestamps map should be gt 1
-    ///     if proposalId in _liveProposals => timestamps[proposalId] >= MIN_DELAY
+    ///     if proposalId in _liveProposals => timestamps[proposalId] <= MAX_DELAY
 
     /// 2. proposed and ready for execution
     ///    - propose
@@ -283,10 +283,7 @@ contract Timelock is
     ) {
         safe = _safe;
 
-        require(
-            _minDelay >= MIN_DELAY && _minDelay <= MAX_DELAY,
-            "Timelock: delay out of bounds"
-        );
+        require(_minDelay <= MAX_DELAY, "Timelock: delay out of bounds");
 
         minDelay = _minDelay;
         emit MinDelayChange(0, minDelay);
@@ -963,10 +960,7 @@ contract Timelock is
     /// an operation where the timelock is the target and the data is the ABI-encoded call to this function.
     /// @param newDelay the new minimum delay
     function updateDelay(uint256 newDelay) external onlyTimelock {
-        require(
-            newDelay >= MIN_DELAY && newDelay <= MAX_DELAY,
-            "Timelock: delay out of bounds"
-        );
+        require(newDelay <= MAX_DELAY, "Timelock: delay out of bounds");
 
         emit MinDelayChange(minDelay, newDelay);
         minDelay = newDelay;
