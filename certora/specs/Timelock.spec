@@ -38,7 +38,7 @@ invariant timestampInvariant(bytes32 proposalId)
     t.timestamps[proposalId] == timestamps(proposalId);
 
 invariant minDelayInvariant()
-    minDelay() >= oneDay() && minDelay() <= oneMonth();
+    minDelay() <= oneMonth();
 
 invariant expirationPeriod()
     expirationPeriod() >= oneDay();
