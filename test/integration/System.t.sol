@@ -1148,9 +1148,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         collatedSignatures = signTxAllOwners(
             transactionHash,
-            recoveryPrivateKeys[1],
             recoveryPrivateKeys[0],
-            recoveryPrivateKeys[2]
+            recoveryPrivateKeys[2],
+            recoveryPrivateKeys[1]
         );
 
         safe.checkNSignatures(
@@ -1228,9 +1228,9 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
 
         collatedSignatures = signTxAllOwners(
             transactionHash,
-            recoveryPrivateKeys[1],
             recoveryPrivateKeys[0],
-            recoveryPrivateKeys[2]
+            recoveryPrivateKeys[2],
+            recoveryPrivateKeys[1]
         );
 
         safe.checkNSignatures(
