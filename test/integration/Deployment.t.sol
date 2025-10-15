@@ -92,8 +92,9 @@ contract DeploymentMultichainTest is SystemDeploy {
         morphoBlue = addresses.getAddress("MORPHO_BLUE");
 
         guard = Guard(addresses.getAddress("GUARD"));
-        recoveryFactory =
-            RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
+        recoveryFactory = RecoverySpellFactory(
+            addresses.getAddress("RECOVERY_SPELL_FACTORY")
+        );
         deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
         timelockFactory =
             TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
@@ -139,7 +140,7 @@ contract DeploymentMultichainTest is SystemDeploy {
         );
     }
 
-    function testMainnetAndBaseDifferentAddresses()
+    function testMainnetAndBaseSameAddresses()
         public
         returns (NewInstance memory instance)
     {
@@ -365,20 +366,20 @@ contract DeploymentMultichainTest is SystemDeploy {
         SystemInstance memory actualInstanceBase =
             deployer.createSystemInstance(instance);
 
-        assertNotEq(
+        assertEq(
             address(calculatedInstanceBase.safe),
             address(calculatedInstance.safe),
-            "Safe addresses should not be the same across chains"
+            "Safe addresses should be the same across chains"
         );
         assertEq(
             address(calculatedInstanceBase.safe),
             address(actualInstanceBase.safe),
             "Deployed vs Actual Safe addresses should be the same across chains"
         );
-        assertNotEq(
+        assertEq(
             address(calculatedInstanceBase.timelock),
             address(calculatedInstance.timelock),
-            "Timelock addresses should not be the same across chains"
+            "Timelock addresses should be the same across chains"
         );
         assertEq(
             address(calculatedInstanceBase.timelock),
@@ -609,25 +610,25 @@ contract DeploymentMultichainTest is SystemDeploy {
         SystemInstance memory calculatedInstanceBase =
             addressCalculation.calculateAddress(instance);
 
-        assertNotEq(
+        assertEq(
             address(calculatedInstanceBase.safe),
             address(calculatedInstance.safe),
-            "Safe addresses should not be the same across chains"
+            "Safe addresses should be the same across chains"
         );
 
         vm.prank(hotSigners[0]);
         SystemInstance memory actualInstanceBase =
             deployer.createSystemInstance(instance);
 
-        assertNotEq(
+        assertEq(
             address(calculatedInstanceBase.safe),
             address(calculatedInstance.safe),
-            "Safe addresses should not be the same across chains"
+            "Safe addresses should be the same across chains"
         );
-        assertNotEq(
+        assertEq(
             address(calculatedInstanceBase.timelock),
             address(calculatedInstance.timelock),
-            "Timelock addresses should not be the same on base as mainnet"
+            "Timelock addresses should be the same on base as mainnet"
         );
         assertEq(
             address(calculatedInstanceBase.safe),
