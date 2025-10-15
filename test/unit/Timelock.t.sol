@@ -1620,7 +1620,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id = timelock.hashOperation(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MAX_DELAY + 1),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MAX_DELAY + 1
+            ),
             bytes32(0)
         );
 
@@ -1650,7 +1652,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MAX_DELAY + 1),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MAX_DELAY + 1
+            ),
             bytes32(0)
         );
     }
