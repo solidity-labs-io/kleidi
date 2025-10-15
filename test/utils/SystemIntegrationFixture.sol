@@ -1,10 +1,12 @@
 pragma solidity 0.8.25;
 
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {
+    IERC1155Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC721Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import {
     IERC165,
     ERC165
@@ -238,19 +240,26 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         vm.label(owners[1], "Owner 2");
         vm.label(owners[2], "Owner 3");
 
-        recoveryPrivateKeys.push(10);
-        recoveryPrivateKeys.push(11);
-        recoveryPrivateKeys.push(12);
-        recoveryPrivateKeys.push(13);
-        recoveryPrivateKeys.push(14);
+        /// private keys that don't have EIP-7702 bytecode attached to them
+        recoveryPrivateKeys.push(11e19);
+        recoveryPrivateKeys.push(12e19);
+        recoveryPrivateKeys.push(13e19);
+        recoveryPrivateKeys.push(14e19);
+        recoveryPrivateKeys.push(15e19);
 
         for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
             recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
+
+            vm.label(
+                vm.addr(recoveryPrivateKeys[i]),
+                string(abi.encodePacked("recovery address ", i))
+            );
         }
 
         guard = Guard(addresses.getAddress("GUARD"));
-        recoveryFactory =
-            RecoverySpellFactory(addresses.getAddress("RECOVERY_SPELL_FACTORY"));
+        recoveryFactory = RecoverySpellFactory(
+            addresses.getAddress("RECOVERY_SPELL_FACTORY")
+        );
         deployer = InstanceDeployer(addresses.getAddress("INSTANCE_DEPLOYER"));
         timelockFactory =
             TimelockFactory(addresses.getAddress("TIMELOCK_FACTORY"));
@@ -313,8 +322,10 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         returns (bytes32 marketParamsId)
     {
         assembly ("memory-safe") {
-            marketParamsId :=
-                keccak256(marketParams, MARKET_PARAMS_BYTES_LENGTH)
+            marketParamsId := keccak256(
+                marketParams,
+                MARKET_PARAMS_BYTES_LENGTH
+            )
         }
     }
 }

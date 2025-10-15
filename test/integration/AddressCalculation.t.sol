@@ -146,9 +146,7 @@ contract AddressCalculationIntegrationTest is SystemIntegrationFixture {
         addressCalculation.calculateAddress(instance);
     }
 
-    function testCalculateAddressTimelockFailsTimelockAlreadyDeployed()
-        public
-    {
+    function testCalculateAddressTimelockFailsTimelockAlreadyDeployed() public {
         address[] memory recoverySpell = new address[](1);
         recoverySpell[0] = recoverySpellAddress;
 

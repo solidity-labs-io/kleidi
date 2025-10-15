@@ -1,7 +1,8 @@
 pragma solidity 0.8.25;
 
-import {MultisigProposal} from
-    "@forge-proposal-simulator/src/proposals/MultisigProposal.sol";
+import {
+    MultisigProposal
+} from "@forge-proposal-simulator/src/proposals/MultisigProposal.sol";
 import {Addresses} from "@forge-proposal-simulator/addresses/Addresses.sol";
 
 import {Guard} from "src/Guard.sol";
@@ -78,7 +79,9 @@ contract SystemDeploy is MultisigProposal {
             addresses.addAddress("GUARD", address(guard), true);
         }
         if (!addresses.isAddressSet("INSTANCE_DEPLOYER")) {
-            InstanceDeployer deployer = new InstanceDeployer{salt: salt}(
+            InstanceDeployer deployer = new InstanceDeployer{
+                salt: salt
+            }(
                 addresses.getAddress("SAFE_FACTORY"),
                 addresses.getAddress("SAFE_LOGIC"),
                 addresses.getAddress("TIMELOCK_FACTORY"),
@@ -130,9 +133,8 @@ contract SystemDeploy is MultisigProposal {
             assertEq(
                 keccak256(recoverySpellFactory.code.sliceBytes(0, endIndex)),
                 keccak256(
-                    type(RecoverySpellFactory).runtimeCode.sliceBytes(
-                        0, endIndex
-                    )
+                    type(RecoverySpellFactory).runtimeCode
+                        .sliceBytes(0, endIndex)
                 ),
                 "Incorrect RecoverySpellFactory Bytecode"
             );

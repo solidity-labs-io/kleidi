@@ -1,7 +1,8 @@
 pragma solidity 0.8.25;
 
-import {ECDSA} from
-    "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {
+    ECDSA
+} from "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 import {Test, stdError} from "forge-std/Test.sol";
 

@@ -24,7 +24,6 @@ contract TimelockFactory {
     /// ------------------------- EVENT -------------------------
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
-
     /// @notice Emitted when a call is scheduled as part of operation `id`.
     /// @param timelock address of the newly created timelock
     /// @param creationTime of the new timelock

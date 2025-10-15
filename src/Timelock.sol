@@ -4,18 +4,22 @@ import {
     AccessControl,
     IAccessControl
 } from "@openzeppelin-contracts/contracts/access/AccessControl.sol";
-import {AccessControlEnumerable} from
-    "@openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    AccessControlEnumerable
+} from "@openzeppelin-contracts/contracts/access/extensions/AccessControlEnumerable.sol";
+import {
+    IERC1155Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {
+    IERC721Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import {
     IERC165,
     ERC165
 } from "@openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
-import {EnumerableSet} from
-    "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
+import {
+    EnumerableSet
+} from "@openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 import {Safe} from "@safe/Safe.sol";
 
 import {BytesHelper} from "src/BytesHelper.sol";
@@ -495,11 +499,12 @@ contract Timelock is
             }
 
             require(
-                calldataCheck.dataHashes.contains(
-                    data.getSlicedBytesHash(
-                        calldataCheck.startIndex, calldataCheck.endIndex
-                    )
-                ),
+                calldataCheck.dataHashes
+                    .contains(
+                        data.getSlicedBytesHash(
+                            calldataCheck.startIndex, calldataCheck.endIndex
+                        )
+                    ),
                 "CalldataList: Calldata does not match expected value"
             );
         }
@@ -557,7 +562,8 @@ contract Timelock is
         uint256 delay
     ) external onlySafe whenNotPaused {
         require(
-            targets.length == values.length && targets.length == payloads.length,
+            targets.length == values.length
+                && targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
@@ -627,7 +633,8 @@ contract Timelock is
         bytes32 salt
     ) external payable whenNotPaused {
         require(
-            targets.length == values.length && targets.length == payloads.length,
+            targets.length == values.length
+                && targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
@@ -738,7 +745,8 @@ contract Timelock is
         bytes[] calldata payloads
     ) external payable onlyRole(HOT_SIGNER_ROLE) whenNotPaused {
         require(
-            targets.length == values.length && targets.length == payloads.length,
+            targets.length == values.length
+                && targets.length == payloads.length,
             "Timelock: length mismatch"
         );
 
@@ -1305,12 +1313,13 @@ contract Timelock is
     }
 
     /// @dev See {IERC1155Receiver-onERC1155Received}.
-    function onERC1155Received(address, address, uint256, uint256, bytes memory)
-        external
-        pure
-        override
-        returns (bytes4)
-    {
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) external pure override returns (bytes4) {
         return this.onERC1155Received.selector;
     }
 

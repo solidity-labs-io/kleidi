@@ -1,9 +1,11 @@
 pragma solidity 0.8.25;
 
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC1155Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {
+    IERC721Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import {
     IERC165,
     ERC165
@@ -18,7 +20,8 @@ import {MockLending} from "test/mock/MockLending.sol";
 import {MockReentrancyExecutor} from "test/mock/MockReentrancyExecutor.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 import {
-    calculateCreate2Address, Create2Params
+    calculateCreate2Address,
+    Create2Params
 } from "src/utils/Create2Helper.sol";
 import {
     InstanceDeployer,
@@ -76,8 +79,7 @@ contract TimelockUnitFixture is CallHelper {
 
         // Assume the necessary parameters for the constructor
         timelock = Timelock(
-            payable(
-                timelockFactory.createTimelock(
+            payable(timelockFactory.createTimelock(
                     address(safe), // _safe
                     DeploymentParams(
                         MINIMUM_DELAY, // _minDelay
@@ -92,8 +94,7 @@ contract TimelockUnitFixture is CallHelper {
                         new bytes[][](0),
                         salt
                     )
-                )
-            )
+                ))
         );
 
         timelock.initialize(
