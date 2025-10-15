@@ -1298,9 +1298,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 ""
             );
 
-            IMorphoBase(morphoBlue).accrueInterest(
-                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-            );
+            IMorphoBase(morphoBlue)
+                .accrueInterest(
+                    MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
+                );
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -1456,9 +1457,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 ""
             );
 
-            IMorphoBase(morphoBlue).accrueInterest(
-                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-            );
+            IMorphoBase(morphoBlue)
+                .accrueInterest(
+                    MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
+                );
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -1605,9 +1607,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             ""
         );
 
-        IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-        );
+        IMorphoBase(morphoBlue)
+            .accrueInterest(
+                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
+            );
 
         vm.prank(HOT_SIGNER_ONE);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -1650,9 +1653,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             ""
         );
 
-        IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-        );
+        IMorphoBase(morphoBlue)
+            .accrueInterest(
+                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
+            );
 
         vm.prank(HOT_SIGNER_ONE);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -1688,9 +1692,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             address(timelock)
         );
 
-        IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-        );
+        IMorphoBase(morphoBlue)
+            .accrueInterest(
+                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
+            );
 
         vm.prank(HOT_SIGNER_ONE);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -1730,9 +1735,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
             ""
         );
 
-        IMorphoBase(morphoBlue).accrueInterest(
-            MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-        );
+        IMorphoBase(morphoBlue)
+            .accrueInterest(
+                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
+            );
 
         vm.prank(HOT_SIGNER_ONE);
         timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -2281,9 +2287,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 ""
             );
 
-            IMorphoBase(morphoBlue).accrueInterest(
-                MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
-            );
+            IMorphoBase(morphoBlue)
+                .accrueInterest(
+                    MarketParams(dai, ethenaUsd, oracleEusdDai, irm, lltv)
+                );
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);
@@ -2435,9 +2442,10 @@ contract SystemIntegrationTest is SystemIntegrationFixture {
                 ""
             );
 
-            IMorphoBase(morphoBlue).accrueInterest(
-                MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv)
-            );
+            IMorphoBase(morphoBlue)
+                .accrueInterest(
+                    MarketParams(weth, wbtc, oracleWbtcdWeth, irm, lltv)
+                );
 
             vm.prank(HOT_SIGNER_ONE);
             timelock.executeWhitelistedBatch(targets, values, calldatas);

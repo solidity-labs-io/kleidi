@@ -51,7 +51,8 @@ contract SocialRecoveryIntegrationTest is SystemIntegrationFixture {
         }
 
         /// first remove owners until the currentOwnerLength is reached
-        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](
+        IMulticall3.Call3[] memory calls3 = new IMulticall3
+            .Call3[](
             safe.getOwners().length - recoveryFuzz.currentOwnerLength + 1
         );
 

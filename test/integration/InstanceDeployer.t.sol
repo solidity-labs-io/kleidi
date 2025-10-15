@@ -120,8 +120,7 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             deployer.safeProxyLogic(), safeInitData, creationSalt
         );
 
-        (Timelock newTimelock, SafeProxy newSafe) =
-        _createAndValidateSystemInstance(
+        (Timelock newTimelock, SafeProxy newSafe) = _createAndValidateSystemInstance(
             ownersLength, threshold, recoverySpellLength, true
         );
 
@@ -140,9 +139,8 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
 
         for (uint256 i = 0; i < recoverySpellLength; i++) {
             assertTrue(
-                Safe(payable(newSafe)).isModuleEnabled(
-                    instance.recoverySpells[i]
-                ),
+                Safe(payable(newSafe))
+                    .isModuleEnabled(instance.recoverySpells[i]),
                 "module incorrect"
             );
         }
@@ -194,8 +192,7 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
         uint8 threshold = 5;
         uint8 recoverySpellLength = 7;
 
-        (Timelock newTimelock1, SafeProxy newSafe1) =
-        _createAndValidateSystemInstance(
+        (Timelock newTimelock1, SafeProxy newSafe1) = _createAndValidateSystemInstance(
             ownersLength, threshold, recoverySpellLength, true
         );
 
@@ -204,8 +201,7 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
             ownersLength, threshold, recoverySpellLength, false
         );
 
-        (Timelock newTimelock2, SafeProxy newSafe2) =
-        _createAndValidateSystemInstance(
+        (Timelock newTimelock2, SafeProxy newSafe2) = _createAndValidateSystemInstance(
             ownersLength + 1, threshold, recoverySpellLength, true
         );
 
@@ -267,9 +263,8 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
 
             for (uint256 i = 0; i < recoverySpellLength; i++) {
                 assertTrue(
-                    Safe(payable(newSafe)).isModuleEnabled(
-                        instance.recoverySpells[i]
-                    ),
+                    Safe(payable(newSafe))
+                        .isModuleEnabled(instance.recoverySpells[i]),
                     "module incorrect"
                 );
             }
@@ -390,8 +385,8 @@ contract InstanceDeployerIntegrationTest is SystemIntegrationFixture {
 
         SafeProxy safeProxy = SafeProxyFactory(deployer.safeProxyFactory())
             .createProxyWithNonce(
-            deployer.safeProxyLogic(), safeInitdata, creationSalt
-        );
+                deployer.safeProxyLogic(), safeInitdata, creationSalt
+            );
 
         vm.expectEmit(true, true, true, true, address(deployer));
         emit SafeCreationFailed(

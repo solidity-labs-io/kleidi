@@ -1,15 +1,17 @@
 pragma solidity 0.8.25;
 
-import {ECDSA} from
-    "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {
+    ECDSA
+} from "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 import "test/utils/SystemIntegrationFixture.sol";
 
 contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
     using BytesHelper for bytes;
 
-    function testCreateAddAndUseCounterfactualRecoverySpellRecoveryThresholdTwo(
-    ) public {
+    function testCreateAddAndUseCounterfactualRecoverySpellRecoveryThresholdTwo()
+        public
+    {
         assertTrue(
             safe.isModuleEnabled(address(timelock)), "timelock not a module"
         );

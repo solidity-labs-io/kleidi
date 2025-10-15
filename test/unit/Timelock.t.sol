@@ -91,7 +91,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         bytes32 id = timelock.hashOperation(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
         assertGt(timelock.timestamps(id), 1, "operation should be pending");
@@ -242,7 +244,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(uint256(100)),
             MINIMUM_DELAY
         );
@@ -285,7 +289,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -608,7 +614,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -622,7 +630,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY - 1
         );
@@ -745,7 +755,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
     }
@@ -979,8 +991,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
             abi.encodeWithSelector(lending.deposit.selector, address(safe), 100)
         );
 
-        Timelock.IndexData[] memory calldataDepositChecks = timelock
-            .getCalldataChecks(address(lending), MockLending.deposit.selector);
+        Timelock.IndexData[] memory calldataDepositChecks =
+            timelock.getCalldataChecks(
+                address(lending), MockLending.deposit.selector
+            );
 
         assertEq(
             calldataDepositChecks.length, 1, "calldata checks should be added"
@@ -995,8 +1009,10 @@ contract TimelockUnitTest is TimelockUnitFixture {
             "data should be correct"
         );
 
-        Timelock.IndexData[] memory calldataWithdrawChecks = timelock
-            .getCalldataChecks(address(lending), MockLending.withdraw.selector);
+        Timelock.IndexData[] memory calldataWithdrawChecks =
+            timelock.getCalldataChecks(
+                address(lending), MockLending.withdraw.selector
+            );
 
         assertEq(
             calldataWithdrawChecks.length, 1, "calldata checks should be added"
@@ -1310,7 +1326,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
 
@@ -1415,16 +1433,20 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.removeAllCalldataChecks(targets, selectors);
 
         {
-            Timelock.IndexData[] memory calldataChecks = timelock
-                .getCalldataChecks(address(lending), MockLending.deposit.selector);
+            Timelock.IndexData[] memory calldataChecks =
+                timelock.getCalldataChecks(
+                    address(lending), MockLending.deposit.selector
+                );
 
             assertEq(
                 calldataChecks.length, 0, "calldata checks should be removed"
             );
         }
         {
-            Timelock.IndexData[] memory calldataChecks = timelock
-                .getCalldataChecks(address(lending), MockLending.withdraw.selector);
+            Timelock.IndexData[] memory calldataChecks =
+                timelock.getCalldataChecks(
+                    address(lending), MockLending.withdraw.selector
+                );
 
             assertEq(
                 calldataChecks.length, 0, "calldata checks should be removed"
@@ -1473,7 +1495,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
 
@@ -1483,7 +1507,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
     }
@@ -1497,7 +1523,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
 
@@ -1506,7 +1534,9 @@ contract TimelockUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
     }

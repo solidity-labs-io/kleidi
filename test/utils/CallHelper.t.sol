@@ -9,7 +9,6 @@ contract CallHelper is Test {
     /**
      * Guard events *
      */
-
     /// @notice Emitted when the guard is removed from a safe
     /// @param safe address of the safe
     event GuardDisabled(address indexed safe);
@@ -66,8 +65,8 @@ contract CallHelper is Test {
         bytes32 salt,
         uint256 delay
     ) internal {
-        bytes32 id =
-            Timelock(payable(timelock)).hashOperation(target, value, data, salt);
+        bytes32 id = Timelock(payable(timelock))
+            .hashOperation(target, value, data, salt);
         vm.expectEmit(true, true, true, true, timelock);
         emit CallScheduled(id, 0, target, value, data, salt, delay);
 
@@ -90,9 +89,8 @@ contract CallHelper is Test {
         bytes32 salt,
         uint256 delay
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperationBatch(
-            targets, values, payloads, salt
-        );
+        bytes32 id = Timelock(payable(timelock))
+            .hashOperationBatch(targets, values, payloads, salt);
         vm.expectEmit(true, true, true, true, timelock);
         for (uint256 i = 0; i < targets.length; ++i) {
             emit CallScheduled(
@@ -101,9 +99,8 @@ contract CallHelper is Test {
         }
 
         vm.prank(caller);
-        Timelock(payable(timelock)).scheduleBatch(
-            targets, values, payloads, salt, delay
-        );
+        Timelock(payable(timelock))
+            .scheduleBatch(targets, values, payloads, salt, delay);
     }
 
     function _execute(
@@ -114,9 +111,8 @@ contract CallHelper is Test {
         bytes memory payload,
         bytes32 salt
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperation(
-            target, value, payload, salt
-        );
+        bytes32 id = Timelock(payable(timelock))
+            .hashOperation(target, value, payload, salt);
         vm.expectEmit(true, true, true, true, timelock);
         emit CallExecuted(id, 0, target, value, payload);
 
@@ -132,18 +128,16 @@ contract CallHelper is Test {
         bytes[] memory payloads,
         bytes32 salt
     ) internal {
-        bytes32 id = Timelock(payable(timelock)).hashOperationBatch(
-            targets, values, payloads, salt
-        );
+        bytes32 id = Timelock(payable(timelock))
+            .hashOperationBatch(targets, values, payloads, salt);
         for (uint256 i = 0; i < targets.length; ++i) {
             vm.expectEmit(true, true, true, true, timelock);
             emit CallExecuted(id, i, targets[i], values[i], payloads[i]);
         }
 
         vm.prank(caller);
-        Timelock(payable(timelock)).executeBatch(
-            targets, values, payloads, salt
-        );
+        Timelock(payable(timelock))
+            .executeBatch(targets, values, payloads, salt);
     }
 
     function _executeWhiteListed(
@@ -173,8 +167,7 @@ contract CallHelper is Test {
         }
 
         vm.prank(caller);
-        Timelock(payable(timelock)).executeWhitelistedBatch(
-            targets, values, payloads
-        );
+        Timelock(payable(timelock))
+            .executeWhitelistedBatch(targets, values, payloads);
     }
 }
