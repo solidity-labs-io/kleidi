@@ -48,6 +48,8 @@ contract SocialRecoveryIntegrationTest is SystemIntegrationFixture {
         for (uint256 i = 0; i < newRecoveryOwners.length; i++) {
             recoveryKeys[i] = uint256(keccak256(abi.encodePacked(i)));
             newRecoveryOwners[i] = vm.addr(recoveryKeys[i]);
+            // make sure there is no code attached to the EOA's address
+            vm.etch(newRecoveryOwners[i], "");
         }
 
         /// first remove owners until the currentOwnerLength is reached
