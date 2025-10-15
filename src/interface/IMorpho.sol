@@ -96,8 +96,7 @@ interface IMorphoBase {
     /// @notice Sets the `newFee` for the given market `marketParams`.
     /// @param newFee The new fee, scaled by WAD.
     /// @dev Warning: The recipient can be the zero address.
-    function setFee(MarketParams memory marketParams, uint256 newFee)
-        external;
+    function setFee(MarketParams memory marketParams, uint256 newFee) external;
 
     /// @notice Sets `newFeeRecipient` as `feeRecipient` of the fee.
     /// @dev Warning: If the fee recipient is set to the zero address, fees will accrue there and will be lost.
@@ -288,8 +287,7 @@ interface IMorphoBase {
     /// @notice Sets the authorization for `authorized` to manage `msg.sender`'s positions.
     /// @param authorized The authorized address.
     /// @param newIsAuthorized The new authorization status.
-    function setAuthorization(address authorized, bool newIsAuthorized)
-        external;
+    function setAuthorization(address authorized, bool newIsAuthorized) external;
 
     /// @notice Sets the authorization for `authorization.authorized` to manage `authorization.authorizer`'s positions.
     /// @dev Warning: Reverts if the signature has already been submitted.
@@ -378,8 +376,5 @@ interface IMorpho is IMorphoBase {
     /// @notice The market params corresponding to `id`.
     /// @dev This mapping is not used in Morpho. It is there to enable reducing the cost associated to calldata on layer
     /// 2s by creating a wrapper contract with functions that take `id` as input instead of `marketParams`.
-    function idToMarketParams(Id id)
-        external
-        view
-        returns (MarketParams memory);
+    function idToMarketParams(Id id) external view returns (MarketParams memory);
 }
