@@ -1,9 +1,11 @@
 pragma solidity 0.8.25;
 
-import {EIP712} from
-    "@openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
-import {ECDSA} from
-    "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {
+    EIP712
+} from "@openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import {
+    ECDSA
+} from "@openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 import {Enum} from "@safe/common/Enum.sol";
 import {Safe} from "@safe/Safe.sol";
@@ -23,7 +25,6 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
     /// ------------------ STORAGE VARIABLES ------------------
     /// -------------------------------------------------------
     /// -------------------------------------------------------
-
     /// @notice the new owners of the contract once the spell is cast
     /// @dev starts off with non zero array if created by factory
     /// and then is deleted after recovery execution

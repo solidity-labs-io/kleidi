@@ -12,7 +12,6 @@ contract ConfigurablePause {
     /// ------------------- STORAGE VARIABLES -------------------
     /// ---------------------------------------------------------
     /// ---------------------------------------------------------
-
     /// @notice pause start time, starts at 0 so contract is unpaused
     uint128 public pauseStartTime;
 

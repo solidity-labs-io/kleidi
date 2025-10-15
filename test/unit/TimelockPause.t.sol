@@ -32,7 +32,9 @@ contract TimelockPauseUnitTest is TimelockUnitFixture {
         timelock.schedule(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0),
             MINIMUM_DELAY
         );
@@ -61,7 +63,9 @@ contract TimelockPauseUnitTest is TimelockUnitFixture {
         timelock.execute(
             address(timelock),
             0,
-            abi.encodeWithSelector(timelock.updateDelay.selector, MINIMUM_DELAY),
+            abi.encodeWithSelector(
+                timelock.updateDelay.selector, MINIMUM_DELAY
+            ),
             bytes32(0)
         );
     }

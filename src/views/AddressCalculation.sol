@@ -6,7 +6,8 @@ import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
 import {Timelock} from "src/Timelock.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 import {
-    calculateCreate2Address, Create2Params
+    calculateCreate2Address,
+    Create2Params
 } from "src/utils/Create2Helper.sol";
 import {
     InstanceDeployer,
@@ -113,8 +114,7 @@ contract AddressCalculation {
                 InstanceDeployer(instanceDeployer).safeProxyFactory();
 
             walletInstance.safe = SafeProxy(
-                payable(
-                    calculateCreate2Address(
+                payable(calculateCreate2Address(
                         safeProxyFactory,
                         SafeProxyFactory(safeProxyFactory).proxyCreationCode(),
                         abi.encodePacked(
@@ -126,8 +126,7 @@ contract AddressCalculation {
                             )
                         ),
                         salt
-                    )
-                )
+                    ))
             );
         }
         address timelockFactory =

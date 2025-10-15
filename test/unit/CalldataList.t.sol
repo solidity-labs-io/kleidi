@@ -1,9 +1,11 @@
 pragma solidity 0.8.25;
 
-import {IERC1155Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC721Receiver} from
-    "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
+import {
+    IERC1155Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {
+    IERC721Receiver
+} from "@openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
 import {
     IERC165,
     ERC165
@@ -400,8 +402,9 @@ contract CalldataListUnitTest is Test {
         );
     }
 
-    function testAddCalldataCheckAndRemoveCalldataCheckDatahashMultipleIndecesSucceeds(
-    ) public {
+    function testAddCalldataCheckAndRemoveCalldataCheckDatahashMultipleIndecesSucceeds()
+        public
+    {
         address[] memory targetAddresses = new address[](2);
         targetAddresses[0] = address(lending);
         targetAddresses[1] = address(lending);
@@ -804,9 +807,7 @@ contract CalldataListUnitTest is Test {
         );
     }
 
-    function testRemoveCalldataCheckDatahashFailsWhenDataHashNotExist()
-        public
-    {
+    function testRemoveCalldataCheckDatahashFailsWhenDataHashNotExist() public {
         address[] memory targetAddresses = new address[](2);
         targetAddresses[0] = address(lending);
         targetAddresses[1] = address(lending);
@@ -871,9 +872,9 @@ contract CalldataListUnitTest is Test {
     /// @notice fuzz test adding multiple AND and OR checks for each contract and function selector pair
     /// and removing all the checks for each pair by using removeCalldataCheck or removeCalldataCheckDatahash chosen randomly
     /// @param fuzzyCheckData fuzzed CheckDataFuzzParams struct array
-    function testAddAndRemoveCalldataFuzzy(
-        CheckDataFuzzParams[] memory fuzzyCheckData
-    ) public {
+    function testAddAndRemoveCalldataFuzzy(CheckDataFuzzParams[] memory fuzzyCheckData)
+        public
+    {
         /// length of fuzzed contract-selector pair
         uint256 fuzzyLength;
 
@@ -939,8 +940,9 @@ contract CalldataListUnitTest is Test {
                         /// update start index for next check to avoid overlap
                         currentStartIndex = checkData.endIndexes[index] + 1;
                         /// AND checks count only increases if j > checkCount / 2
-                        totalChecks[fuzzyCheckData[i].target][fuzzyCheckData[i]
-                            .selector] += 1;
+                        totalChecks[
+                                fuzzyCheckData[i].target
+                            ][fuzzyCheckData[i].selector] += 1;
                     }
                 }
             }
@@ -956,14 +958,16 @@ contract CalldataListUnitTest is Test {
 
             // assert calldata checks were added
             for (uint256 i = 0; i < fuzzyLength; i++) {
-                uint256 finalCheckLength = timelock.getCalldataChecks(
+                uint256 finalCheckLength =
+                    timelock.getCalldataChecks(
                     fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                 ).length;
                 /// assert added checks count is correct
                 assertTrue(
                     finalCheckLength
-                        == totalChecks[fuzzyCheckData[i].target][fuzzyCheckData[i]
-                            .selector]
+                        == totalChecks[
+                            fuzzyCheckData[i].target
+                        ][fuzzyCheckData[i].selector]
                 );
             }
         }
@@ -972,7 +976,8 @@ contract CalldataListUnitTest is Test {
         {
             for (uint256 i = 0; i < fuzzyLength; i++) {
                 /// get number of AND checks for the selected pair
-                uint256 checksLength = timelock.getCalldataChecks(
+                uint256 checksLength =
+                    timelock.getCalldataChecks(
                     fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                 ).length;
 
@@ -992,15 +997,16 @@ contract CalldataListUnitTest is Test {
                         );
                     } else {
                         /// set number of OR checks for the AND check
-                        uint256 dataHashesLength = timelock.getCalldataChecks(
+                        uint256 dataHashesLength =
+                            timelock.getCalldataChecks(
                             fuzzyCheckData[i].target, fuzzyCheckData[i].selector
                         )[index].dataHashes.length;
                         uint256 indexDataHashes;
                         /// delete all the OR checks in random order
                         while (dataHashesLength > 0) {
                             /// current array of OR data hashes
-                            bytes32[] memory dataHashes = timelock
-                                .getCalldataChecks(
+                            bytes32[] memory dataHashes =
+                            timelock.getCalldataChecks(
                                 fuzzyCheckData[i].target,
                                 fuzzyCheckData[i].selector
                             )[index].dataHashes;
@@ -1352,9 +1358,7 @@ contract CalldataListUnitTest is Test {
         require(min <= max, "randomInRange bad inputs");
         if (max == 0 && nonZero) return 1;
         else if (max == min) return max;
-        return (
-            uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
-                % (max - min + 1)
-        ) + min;
+        return (uint256(keccak256(abi.encodePacked(msg.sender, getNextNonce())))
+                % (max - min + 1)) + min;
     }
 }

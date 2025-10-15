@@ -70,9 +70,9 @@ contract RecoverySpellFactory {
             require(!found, "RecoverySpell: Duplicate owner");
         }
 
-        recovery = new RecoverySpell{salt: salt}(
-            owners, safe, threshold, recoveryThreshold, delay
-        );
+        recovery = new RecoverySpell{
+            salt: salt
+        }(owners, safe, threshold, recoveryThreshold, delay);
 
         emit RecoverySpellCreated(address(recovery), address(safe));
     }

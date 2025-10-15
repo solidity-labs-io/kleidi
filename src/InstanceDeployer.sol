@@ -13,7 +13,8 @@ import {Guard} from "src/Guard.sol";
 import {Timelock} from "src/Timelock.sol";
 import {TimelockFactory, DeploymentParams} from "src/TimelockFactory.sol";
 import {
-    calculateCreate2Address, Create2Params
+    calculateCreate2Address,
+    Create2Params
 } from "src/utils/Create2Helper.sol";
 
 /// @notice deploy a completely set up instance of a contract
@@ -183,9 +184,10 @@ contract InstanceDeployer {
 
         /// safe guard against front-running safe creation with the same
         /// address, init data and creation salt on other chains
-        try SafeProxyFactory(safeProxyFactory).createProxyWithNonce(
-            safeProxyLogic, safeInitdata, creationSalt
-        ) returns (SafeProxy safeProxy) {
+        try SafeProxyFactory(safeProxyFactory)
+            .createProxyWithNonce(
+                safeProxyLogic, safeInitdata, creationSalt
+            ) returns (SafeProxy safeProxy) {
             walletInstance.safe = safeProxy;
         } catch {
             /// calculate salt just like the safe proxy factory does
@@ -193,14 +195,12 @@ contract InstanceDeployer {
                 abi.encodePacked(keccak256(safeInitdata), creationSalt)
             );
             walletInstance.safe = SafeProxy(
-                payable(
-                    calculateCreate2Address(
+                payable(calculateCreate2Address(
                         safeProxyFactory,
                         SafeProxyFactory(safeProxyFactory).proxyCreationCode(),
                         abi.encode(safeProxyLogic),
                         salt
-                    )
-                )
+                    ))
             );
 
             emit SafeCreationFailed(
@@ -221,27 +221,26 @@ contract InstanceDeployer {
         /// the factory uses the msg.sender for creating its salt, so there is
         /// no way to front-run the timelock creation
         walletInstance.timelock = Timelock(
-            payable(
-                TimelockFactory(timelockFactory).createTimelock(
-                    address(walletInstance.safe), instance.timelockParams
-                )
-            )
+            payable(TimelockFactory(timelockFactory)
+                    .createTimelock(
+                        address(walletInstance.safe), instance.timelockParams
+                    ))
         );
 
         require(
-            walletInstance.timelock.hasRole(
-                walletInstance.timelock.HOT_SIGNER_ROLE(), msg.sender
-            ),
+            walletInstance.timelock
+                .hasRole(walletInstance.timelock.HOT_SIGNER_ROLE(), msg.sender),
             "InstanceDeployer: sender must be hot signer"
         );
 
-        walletInstance.timelock.initialize(
-            instance.timelockParams.contractAddresses,
-            instance.timelockParams.selectors,
-            instance.timelockParams.startIndexes,
-            instance.timelockParams.endIndexes,
-            instance.timelockParams.datas
-        );
+        walletInstance.timelock
+            .initialize(
+                instance.timelockParams.contractAddresses,
+                instance.timelockParams.selectors,
+                instance.timelockParams.startIndexes,
+                instance.timelockParams.endIndexes,
+                instance.timelockParams.datas
+            );
 
         /// checks that contracts successfully deployed
         assert(address(walletInstance.timelock).code.length != 0);
@@ -249,7 +248,8 @@ contract InstanceDeployer {
 
         /// 1. setGuard
         /// 2. enable timelock as a module in the safe
-        IMulticall3.Call3[] memory calls3 = new IMulticall3.Call3[](
+        IMulticall3.Call3[] memory calls3 = new IMulticall3
+            .Call3[](
             2 + instance.recoverySpells.length + instance.owners.length
         );
         {
@@ -380,18 +380,21 @@ contract InstanceDeployer {
         }
 
         require(
-            Safe(payable(walletInstance.safe)).execTransaction(
-                multicall3,
-                0,
-                abi.encodeWithSelector(IMulticall3.aggregate3.selector, calls3),
-                Enum.Operation.DelegateCall,
-                0,
-                0,
-                0,
-                address(0),
-                payable(0),
-                signature
-            ),
+            Safe(payable(walletInstance.safe))
+                .execTransaction(
+                    multicall3,
+                    0,
+                    abi.encodeWithSelector(
+                        IMulticall3.aggregate3.selector, calls3
+                    ),
+                    Enum.Operation.DelegateCall,
+                    0,
+                    0,
+                    0,
+                    address(0),
+                    payable(0),
+                    signature
+                ),
             "InstanceDeployer: Safe delegate call failed"
         );
 
