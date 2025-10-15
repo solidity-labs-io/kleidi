@@ -240,14 +240,20 @@ contract SystemIntegrationFixture is Test, SigHelper, SystemDeploy {
         vm.label(owners[1], "Owner 2");
         vm.label(owners[2], "Owner 3");
 
-        recoveryPrivateKeys.push(10);
-        recoveryPrivateKeys.push(11);
-        recoveryPrivateKeys.push(12);
-        recoveryPrivateKeys.push(13);
-        recoveryPrivateKeys.push(14);
+        /// private keys that don't have EIP-7702 bytecode attached to them
+        recoveryPrivateKeys.push(11e19);
+        recoveryPrivateKeys.push(12e19);
+        recoveryPrivateKeys.push(13e19);
+        recoveryPrivateKeys.push(14e19);
+        recoveryPrivateKeys.push(15e19);
 
         for (uint256 i = 0; i < recoveryPrivateKeys.length; i++) {
             recoveryOwners.push(vm.addr(recoveryPrivateKeys[i]));
+
+            vm.label(
+                vm.addr(recoveryPrivateKeys[i]),
+                string(abi.encodePacked("recovery address ", i))
+            );
         }
 
         guard = Guard(addresses.getAddress("GUARD"));
