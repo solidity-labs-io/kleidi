@@ -1,6 +1,4 @@
-# Audits
-
-## Code4rena Audit Competition
+# Code4rena Audit Competition
 
 **October 2024 Kleidi Audit Report**
 
