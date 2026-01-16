@@ -41,7 +41,7 @@ contract SystemDeploy is MultisigProposal {
     using BytesHelper for bytes;
 
     bytes32 public salt =
-        0x0000000000000000000000000000000000000000000000000000000000003afe;
+        0xe3e3000000000000000000000000000000000000000000000000000000003afe;
     bytes4 public pattern = 0xa2646970;
 
     constructor() {
