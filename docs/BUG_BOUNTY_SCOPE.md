@@ -2,7 +2,7 @@
 
 **Program Type:** Immunefi Bug Bounty
 **Max Bounty:** $50,000
-**Audit History:** Alex from Recon conducted a week long audit, Code4rena (October 2024, no Critical or High findings), internal audit log through September 2024
+**Audit History:** Alex from Recon week long audit (no Critical, High or Medium findings), Code4rena (October 2024, no Critical or High findings)
 **Deployed Chains:** Ethereum Mainnet, Base, Optimism
 **Scope Version:** 1.0
 **Last Updated:** 2026-02-03
