@@ -394,13 +394,13 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         }
     }
 
-    function _enableRecoveryModule(address recovery) internal {
+    function _enableRecoveryModule(address recoveryModule) internal {
         bytes memory calldatas = abi.encodeWithSelector(
             ModuleManager.execTransactionFromModule.selector,
             address(safe),
             0,
             abi.encodeWithSelector(
-                ModuleManager.enableModule.selector, recovery
+                ModuleManager.enableModule.selector, recoveryModule
             ),
             Enum.Operation.Call
         );
@@ -450,7 +450,8 @@ contract RecoverySpellsIntegrationTest is SystemIntegrationFixture {
         timelock.execute(address(safe), 0, calldatas, bytes32(0));
 
         assertTrue(
-            safe.isModuleEnabled(recovery), "recovery spell should be enabled"
+            safe.isModuleEnabled(recoveryModule),
+            "recovery spell should be enabled"
         );
     }
 }
