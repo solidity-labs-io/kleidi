@@ -246,11 +246,12 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
         address[] memory existingOwners = safe.getOwners();
         uint256 existingOwnersLength = existingOwners.length;
 
-        /// + 1 is for the module removal
-        /// new owner length = 1
-        /// existing owner length = 1
-        IMulticall3.Call3[] memory calls3 =
-            new IMulticall3.Call3[](owners.length + existingOwnersLength + 1);
+        bool firstOwnerAlreadySafeOwner =
+            existingOwners[existingOwnersLength - 1] == owners[0];
+        uint256 swapCallCount = firstOwnerAlreadySafeOwner ? 0 : 1;
+
+        IMulticall3.Call3[] memory calls3 = new IMulticall3
+            .Call3[](owners.length + existingOwnersLength + swapCallCount);
 
         uint256 index = 0;
 
@@ -266,12 +267,15 @@ contract RecoverySpell is EIP712("Recovery Spell", "0.1.0") {
             );
         }
 
-        calls3[index++].callData = abi.encodeWithSelector(
-            OwnerManager.swapOwner.selector,
-            SENTINEL,
-            existingOwners[existingOwnersLength - 1],
-            owners[0]
-        );
+        /// Safe rejects swapOwner(oldOwner, oldOwner) with GS204.
+        if (!firstOwnerAlreadySafeOwner) {
+            calls3[index++].callData = abi.encodeWithSelector(
+                OwnerManager.swapOwner.selector,
+                SENTINEL,
+                existingOwners[existingOwnersLength - 1],
+                owners[0]
+            );
+        }
 
         /// only cover indexes 1 through new owners length
         for (uint256 i = 1; i < owners.length; i++) {
